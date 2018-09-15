@@ -1,0 +1,5 @@
+# .xsession
+xrdb -merge .Xresources
+xpmroot ~/background.xpm &
+/usr/local/bin/pulse-audio.sh mute
+$HOME/bin/xmonad
