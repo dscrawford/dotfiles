@@ -25,3 +25,6 @@ unset __conda_setup
 
 export PATH=$PATH:/home/daniel/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/202.7660.27/bin/
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/cuda-8.0/lib64:/usr/local/cuda-8.0/extras/CUPTI/lib64:/usr/local/cuda-8.0/targets/x86_64-linux/lib/"
+alias ls='ls --color=auto'
+alias copy='xclip -selection clipboard'
+alias ll='ls --color=auto -al'
