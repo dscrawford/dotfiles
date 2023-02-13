@@ -15,8 +15,8 @@
 (require 'fill-column-indicator)
 (define-globalized-minor-mode global-fci-mode fci-mode (lambda () (fci-mode 1)))
 
-;;(add-hook 'c-mode-hook `fci-mode)
-;;(add-hook `c++-mode-hook `fci-mode)
+;(add-hook 'c-mode-hook `fci-mode)
+;(add-hook `c++-mode-hook `fci-mode)
 (add-hook `c-mode-common-hook `fci-mode)
 (add-hook `emacs-lisp-mode-hook `fci-mode)
 (setq fci-rule-column 80)
