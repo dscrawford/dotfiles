@@ -21,6 +21,7 @@
         ip = "192.168.0.2";
         extraModules = [
           ./hosts/node1/hardware-configuration.nix
+          ./hosts/node1/boot.nix
           ./kubernetes.nix
         ];
       };
@@ -29,6 +30,7 @@
         ip = "192.168.0.3";
         extraModules = [
           ./hosts/node2/hardware-configuration.nix
+          ./hosts/node2/boot.nix
           ./kubernetes.nix
         ];
       };
