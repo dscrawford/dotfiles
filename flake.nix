@@ -8,7 +8,11 @@
   let
     mkServer = { hostname, ip, extraModules ? [] }: nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
-      specialArgs = { inherit hostname ip; };  # pass to all modules
+      kubeMasterIP = "192.168.0.2";
+      kubeMasterHostname = "api.kube";
+      kubeMasterAPIServerPort = 6443;
+      isMaster = ip == kubeMasterIP;
+      specialArgs = { inherit hostname ip kubeMasterIP kubeMasterHostName, kubeMasterAPIServerPort; };  # pass to all modules
       modules = [
         ./common.nix
         ./server-common.nix

@@ -1,14 +1,6 @@
 # kubernetes.nix
-{ config, pkgs, lib, hostname, ip, ... }:
-let
-  kubeMasterIP = "192.168.0.2";
-  kubeMasterHostname = "api.kube";
-  kubeMasterAPIServerPort = 6443;
-  isMaster = ip == kubeMasterIP;
-in
+{ config, pkgs, lib, hostname, ip, kubeMasterIP, kubeMasterHostName, kubeMasterAPIServerPort, isMaster, ... }:
 {
-  networking.extraHosts = "${kubeMasterIP} ${kubeMasterHostname}";
-
   environment.systemPackages = with pkgs; [
     kompose
     kubectl

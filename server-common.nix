@@ -1,19 +1,25 @@
 # server-common.nix
-{ hostname, ip, ... }:
+{ hostname, ip, isMaster, kubeMasterIP, kubeMasterHostname, ... }:
 {
-  networking.hostName = hostname;
-  networking.useDHCP = false;
-  networking.interfaces.eno1 = {
+  networking = {
+    hostName = hostname;
     useDHCP = false;
-    ipv4.addresses = [{
-      address = ip;
-      prefixLength = 24;
-    }];
+    
+    interfaces.eno1 = {
+      useDHCP = false;
+      ipv4.addresses = [{
+        address = ip;
+        prefixLength = 24;
+      }];
+    };
+    
+    defaultGateway = "192.168.0.1";
+    nameservers = [ "192.168.0.1" "1.1.1.1" ];
+    
+    extraHosts = ''
+      ${kubeMasterIP} ${kubeMasterHostname}
+      192.168.0.2 node1
+      192.168.0.3 node2
+    '';
   };
-  networking.defaultGateway = "192.168.0.1";
-  networking.nameservers = [ "192.168.0.1" "1.1.1.1" ];
-  networking.extraHosts = ''
-    192.168.0.2 node1
-    192.168.0.3 node2
-  '';
 }
