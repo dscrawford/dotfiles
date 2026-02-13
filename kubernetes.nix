@@ -17,7 +17,7 @@ in
 
   services.kubernetes = {
     roles = if isMaster then [ "master" "node" ] else [ "node" ];
-    masterAddress = kubeMasterHostname;
+    masterAddress = if isMaster then "127.0.0.1" else kubeMasterHostname;
     apiserverAddress = "https://${kubeMasterHostname}:${toString kubeMasterAPIServerPort}";
     easyCerts = true;
 
@@ -37,7 +37,7 @@ in
       enable = true;
       nodeIp = ip;
       extraOpts = "--anonymous-auth=true";
-    } // lib.optionalAttrs (!isMaster) {masterAddress = kubeMasterIP;};
+    }
   };
 
   systemd.services = lib.mkIf isMaster {
