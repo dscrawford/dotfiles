@@ -54,8 +54,17 @@
   };
   services.certmgr.renewInterval = "24h";
 
+  # NFS Support
   boot.supportedFilesystems = [ "nfs" ];
   services.rpcbind.enable = true;
+
+  # Longhorn NFS mount path fix
+  system.activationScripts.longhornMountFix = ''
+  mkdir -p /usr/bin
+  ln -sf /run/wrappers/bin/mount /usr/bin/mount
+  ln -sf /run/current-system/sw/bin/mount.nfs /usr/bin/mount.nfs
+  ln -sf /run/wrappers/bin/umount /usr/bin/umount
+  '';
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
