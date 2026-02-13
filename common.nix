@@ -13,6 +13,7 @@
     openssl
     less
     coreutils
+    nfs-utils
   ];
 
   services.openssh = {
@@ -52,6 +53,9 @@
     extraUpFlags = [ "--hostname=${hostname}" ];
   };
   services.certmgr.renewInterval = "24h";
+
+  boot.supportedFilesystems = [ "nfs" ];
+  services.rpcbind.enable = true;
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
