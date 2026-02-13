@@ -35,7 +35,7 @@ in
     addons.dns.enable = true;
     kubelet = {
       enable = true;
-      nodeIp = ip
+      nodeIp = ip;
       extraOpts = "--anonymous-auth=true";
     };
     apiserver = {

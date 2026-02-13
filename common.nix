@@ -49,7 +49,7 @@
 
   services.tailscale.enable = {
     enable = true;
-    extraUpFlags = [ "--hostname=${hostname}" ]
+    extraUpFlags = [ "--hostname=${hostname}" ];
   };
   services.certmgr.renewInterval = "24h";
 
