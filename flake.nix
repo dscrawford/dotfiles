@@ -12,6 +12,7 @@
       modules = [
         ./common.nix
         ./server-common.nix
+        ./users.nix
       ] ++ extraModules;
     };
   in {
@@ -23,6 +24,7 @@
           ./hosts/node1/hardware-configuration.nix
           ./hosts/node1/boot.nix
           ./kubernetes.nix
+          ./iscsi.nix
         ];
       };
       node2 = mkServer {
@@ -32,6 +34,7 @@
           ./hosts/node2/hardware-configuration.nix
           ./hosts/node2/boot.nix
           ./kubernetes.nix
+          ./iscsi.nix
         ];
       };
     };
