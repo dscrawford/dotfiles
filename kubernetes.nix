@@ -37,10 +37,7 @@ in
       enable = true;
       nodeIp = ip;
       extraOpts = "--anonymous-auth=true";
-    };
-    apiserver = {
-      advertiseAddress = ip;
-    };
+    } // lib.optionalAttrs (!isMaster) {masterAddress = kubeMasterIP;};
   };
 
   systemd.services = lib.mkIf isMaster {
