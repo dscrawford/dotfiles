@@ -33,7 +33,14 @@ in
 
     proxy.enable = true;
     addons.dns.enable = true;
-    kubelet.extraOpts = "--anonymous-auth=true";
+    kubelet = {
+      enable = true;
+      nodeIp = ip
+      extraOpts = "--anonymous-auth=true";
+    };
+    apiserver = {
+      advertiseAddress = ip;
+    };
   };
 
   systemd.services = lib.mkIf isMaster {
