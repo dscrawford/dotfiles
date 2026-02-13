@@ -1,7 +1,7 @@
 # kubernetes.nix
 { config, pkgs, lib, hostname, ip, kubeMasterIP, kubeMasterHostName, kubeMasterAPIServerPort, ... }:
 let
-  isMaster = ip == kubeMasterIP
+  isMaster = ip == kubeMasterIP;
 in
 {
   environment.systemPackages = with pkgs; [
