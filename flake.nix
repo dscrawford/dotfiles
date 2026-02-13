@@ -1,0 +1,37 @@
+# flake.nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  };
+
+  outputs = { self, nixpkgs }: 
+  let
+    mkServer = { hostname, ip, extraModules ? [] }: nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      specialArgs = { inherit hostname ip; };  # pass to all modules
+      modules = [
+        ./common.nix
+        ./server-common.nix
+      ] ++ extraModules;
+    };
+  in {
+    nixosConfigurations = {
+      node1 = mkServer {
+        hostname = "node1";
+        ip = "192.168.0.2";
+        extraModules = [
+          ./hosts/node1/hardware-configuration.nix
+          ./kubernetes.nix
+        ];
+      };
+      node2 = mkServer {
+        hostname = "node2";
+        ip = "192.168.0.3";
+        extraModules = [
+          ./hosts/node2/hardware-configuration.nix
+          ./kubernetes.nix
+        ];
+      };
+    };
+  };
+}
