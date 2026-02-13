@@ -47,7 +47,7 @@
     };
   };
 
-  services.tailscale.enable = {
+  services.tailscale = {
     enable = true;
     extraUpFlags = [ "--hostname=${hostname}" ];
   };
