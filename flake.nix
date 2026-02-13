@@ -6,7 +6,7 @@
 
   outputs = { self, nixpkgs }: 
   let
-    mkServer = { hostname, ip, extraModules ? [] }: nixpkgs.lib.nixosSystem {
+    mkServer = { hostname, ip, extraModules ? [] }: nixpkgs.lib.nixosSystem rec {
       system = "x86_64-linux";
       kubeMasterIP = "192.168.0.2";
       kubeMasterHostname = "api.kube";
