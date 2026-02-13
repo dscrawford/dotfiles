@@ -47,7 +47,10 @@
     };
   };
 
-  services.tailscale.enable = true;
+  services.tailscale.enable = {
+    enable = true;
+    extraUpFlags = [ "--hostname=${hostname}" ]
+  };
   services.certmgr.renewInterval = "24h";
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
