@@ -12,4 +12,8 @@
   };
   networking.defaultGateway = "192.168.0.1";
   networking.nameservers = [ "192.168.0.1" "1.1.1.1" ];
+  networking.extraHosts = ''
+    192.168.0.2 node1
+    192.168.0.3 node2
+  '';
 }
