@@ -37,7 +37,7 @@ in
       enable = true;
       nodeIp = ip;
       extraOpts = "--anonymous-auth=true";
-    }
+    };
   };
 
   systemd.services = lib.mkIf isMaster {
