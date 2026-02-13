@@ -1,5 +1,5 @@
 # kubernetes.nix
-{ config, pkgs, lib, hostname, ip, kubeMasterIP, kubeMasterHostName, kubeMasterAPIServerPort, ... }:
+{ config, pkgs, lib, hostname, ip, kubeMasterIP, kubeMasterHostname, kubeMasterAPIServerPort, ... }:
 let
   isMaster = ip == kubeMasterIP;
 in
