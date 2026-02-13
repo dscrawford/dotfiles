@@ -11,7 +11,7 @@
       kubeMasterIP = "192.168.0.2";
       kubeMasterHostname = "api.kube";
       kubeMasterAPIServerPort = 6443;
-      specialArgs = { inherit hostname ip kubeMasterIP kubeMasterHostName kubeMasterAPIServerPort; };  # pass to all modules
+      specialArgs = { inherit hostname ip kubeMasterIP kubeMasterHostname kubeMasterAPIServerPort; };  # pass to all modules
       modules = [
         ./common.nix
         ./server-common.nix
