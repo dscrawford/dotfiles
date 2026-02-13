@@ -17,7 +17,7 @@ in
 
   services.kubernetes = {
     roles = if isMaster then [ "master" "node" ] else [ "node" ];
-    masterAddress = kubeMasterHostname
+    masterAddress = kubeMasterHostname;
     apiserverAddress = "https://${kubeMasterHostname}:${toString kubeMasterAPIServerPort}";
     easyCerts = true;
 
