@@ -19,7 +19,7 @@
     extraHosts = ''
       ${kubeMasterIP} ${kubeMasterHostname}
       192.168.0.2 node1
-      192.168.0.3 node2
+      192.168.0.4 node2
     '';
   };
 }

@@ -34,7 +34,7 @@
       };
       node2 = mkServer {
         hostname = "node2";
-        ip = "192.168.0.3";
+        ip = "192.168.0.4";
         extraModules = [
           ./hosts/node2/hardware-configuration.nix
           ./hosts/node2/boot.nix
