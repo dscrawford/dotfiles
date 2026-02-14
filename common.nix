@@ -66,6 +66,9 @@
   ln -sf /run/wrappers/bin/umount /usr/bin/umount
   '';
 
+  # Sensor support
+  hardware.sensor.enable = true;
+
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
   system.stateVersion = "25.11";
