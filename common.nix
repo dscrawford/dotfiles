@@ -14,6 +14,7 @@
     less
     coreutils
     nfs-utils
+    lm_sensors
   ];
 
   services.openssh = {
@@ -66,8 +67,7 @@
   ln -sf /run/wrappers/bin/umount /usr/bin/umount
   '';
 
-  # Sensor support
-  hardware.sensor.enable = true;
+  boot.kernelModules = [ "coretemp" ];
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
