@@ -1,30 +1,40 @@
-# iscsi.nix
+# iSCSI and NFS storage configuration for Kubernetes
 { config, pkgs, ... }:
+
 {
-  services.openiscsi = {
-    enable = true;
-    name = "iqn.2026-01.com.dcraw:${config.networking.hostName}";
+  # === Boot ===
+  boot = {
+    kernelModules = [ "iscsi_tcp" ];
+    supportedFilesystems = [ "nfs" "nfs4" ];
   };
 
-  boot.kernelModules = [ "iscsi_tcp" ];
+  # === Services ===
+  services = {
+    # iSCSI initiator configuration
+    openiscsi = {
+      enable = true;
+      name = "iqn.2026-01.com.dcraw:${config.networking.hostName}";
+    };
 
-  # NFS Support for Kubernetes storage
-  services.rpcbind.enable = true;
+    # NFS support for Kubernetes storage
+    rpcbind.enable = true;
+    nfs.server.enable = false;
+  };
 
+  # === Systemd ===
+  systemd.services.iscsid = {
+    wantedBy = [ "multi-user.target" ];
+    before = [ "kubelet.service" ];
+  };
+
+  # === Environment ===
   environment.systemPackages = with pkgs; [
     nfs-utils
     util-linux
     openiscsi
   ];
 
-  services.nfs.server.enable = false;
-  boot.supportedFilesystems = [ "nfs" "nfs4" ];
-
-  systemd.services.iscsid = {
-    wantedBy = [ "multi-user.target" ];
-    before = [ "kubelet.service" ];
-  };
-
+  # === System Activation ===
   system.activationScripts.longhorn-compat = let
     iscsi = pkgs.openiscsi;
     nfs = pkgs.nfs-utils;
