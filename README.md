@@ -1,6 +1,6 @@
 # NixOS Configuration
 
-Daniel's NixOS configuration using flakes for multiple systems.
+Daniel's NixOS configuration using flakes for multiple systems. Yes I used Claude to make a lot of this kinda, I just told it to turn all my configs into a flake. I am horrible at documentation and would never write this much detail below.
 
 ## Systems
 
