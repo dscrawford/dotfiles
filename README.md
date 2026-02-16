@@ -64,8 +64,9 @@ nix flake update nixpkgs
 ├── boot-common.nix        # Boot and garbage collection settings
 ├── .sops.yaml             # Sops encryption configuration
 ├── .gitignore             # Git ignore rules
-├── secrets/               # Encrypted secrets (gitignored)
-│   └── README.md          # Secrets management documentation
+├── secrets/               # Encrypted secrets
+│   ├── README.md          # Secrets management documentation
+│   └── secrets.yaml       # Encrypted secrets to ingest into your environment
 └── hosts/
     ├── node1/             # Node 1 configuration
     ├── node2/             # Node 2 configuration
