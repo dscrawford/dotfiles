@@ -135,12 +135,11 @@
 
       eval "$(direnv hook bash)"
     '';
-    # Uncomment if you want to load secrets via SOPS
-    # initExtra = ''
-    #   if [ -f ${config.sops.secrets.anthropic_api_key.path} ]; then
-    #     export ANTHROPIC_API_KEY=$(cat ${config.sops.secrets.anthropic_api_key.path})
-    #   fi
-    # '';
+    initExtra = ''
+      if [ -f ${config.sops.secrets.anthropic_api_key.path} ]; then
+        export ANTHROPIC_API_KEY=$(cat ${config.sops.secrets.anthropic_api_key.path})
+      fi
+    '';
   };
 
   # Tmux configuration
@@ -189,10 +188,8 @@
 
   # SOPS configuration for secrets management
   sops = {
-    age.keyFile = "/home/${username}/.config/sops/age/keys.txt";
-    defaultSopsFile = ../../secrets/example.yaml;
-    
-    # Example secrets - uncomment and customize as needed
-    # secrets.anthropic_api_key = { };
+    age.keyFile = "/home/daniel/.config/sops/age/keys.txt";
+    defaultSopsFile = ../../secrets/secrets.yaml;
+    secrets.anthropic_api_key = {};
   };
 }

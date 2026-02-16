@@ -3,7 +3,6 @@ result
 result-*
 
 # Secrets - NEVER commit encrypted secrets!
-secrets/
 *.age
 *.enc
 
