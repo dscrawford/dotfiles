@@ -2,9 +2,17 @@
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    home-manager = {
+      url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs }: 
+  outputs = { self, nixpkgs, home-manager, sops-nix }: 
   let
     mkServer = { hostname, ip, extraModules ? [] }: nixpkgs.lib.nixosSystem rec {
       system = "x86_64-linux";
@@ -18,6 +26,36 @@
         ./common.nix
         ./server-common.nix
         ./users.nix
+        ./boot-common.nix
+      ] ++ extraModules;
+    };
+
+    mkLocal = { hostname, username, extraModules ? [] }: nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      specialArgs = {
+        inherit hostname username;
+      };
+      modules = [
+        ./common.nix
+        ./boot-common.nix
+        ./hosts/local/local-common.nix
+        ./hosts/local/local.nix
+        ./hosts/local/hardware-configuration.nix
+        
+        # Sops integration
+        sops-nix.nixosModules.sops
+        
+        # Home Manager integration
+        home-manager.nixosModules.home-manager
+        {
+          home-manager.useGlobalPkgs = true;
+          home-manager.useUserPackages = true;
+          home-manager.users.${username} = import ./hosts/local/home.nix;
+          home-manager.extraSpecialArgs = { inherit hostname username; };
+          home-manager.sharedModules = [
+            sops-nix.homeManagerModules.sops
+          ];
+        }
       ] ++ extraModules;
     };
   in {
@@ -41,6 +79,11 @@
           ./kubernetes.nix
           ./iscsi.nix
         ];
+      };
+      local = mkLocal {
+        hostname = "nixos";
+        username = "daniel";
+        extraModules = [];
       };
     };
   };

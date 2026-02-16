@@ -1,0 +1,21 @@
+# Nix build results
+result
+result-*
+
+# Secrets - NEVER commit encrypted secrets!
+secrets/
+*.age
+*.enc
+
+# Sops temporary files
+.sops.pub
+
+# Editor backups
+*~
+*.swp
+*.swo
+.*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
