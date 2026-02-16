@@ -78,9 +78,6 @@ nix flake update nixpkgs
 
 ## Important Notes
 
-### Secrets
-⚠️ **Never commit secrets to git!** The `secrets/` directory is intentionally gitignored. Each user must create their own secrets files locally.
-
 ### Boot Configuration
 The boot-common.nix module is automatically imported by all systems and handles:
 - Limiting boot menu entries to prevent /boot partition from filling up
