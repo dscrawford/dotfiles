@@ -8,7 +8,7 @@ This directory contains the NixOS configuration for the local desktop computer.
 hosts/local/
 ├── README.md                    # This file
 ├── hardware-configuration.nix   # Auto-generated hardware config
-├── local-common.nix             # Overrides for common.nix (disables server features)
+├── ../../local-common.nix       # Desktop-specific overrides (in base directory)
 ├── local.nix                    # Desktop-specific configuration
 └── home.nix                     # Home Manager user configuration
 ```
@@ -64,11 +64,13 @@ sudo nixos-rebuild switch --flake .#local
 
 The local configuration differs from the server configuration in several ways:
 
-1. **No Server Services**: Disabled fail2ban, tailscale, certmgr
+1. **No Server Services**: Server-specific services (fail2ban, tailscale, certmgr, NFS, Longhorn) are only in `server-common.nix`
 2. **Firewall**: Disabled for desktop convenience (can be re-enabled if needed)
-3. **SSH**: Allows password authentication and X11 forwarding
-4. **No NFS Server**: Client support disabled (no kubernetes/longhorn requirements)
+3. **SSH**: Allows password authentication and X11 forwarding (overrides secure defaults from `common.nix`)
+4. **Filesystem Support**: NTFS support for dual-boot scenarios
 5. **Desktop Stack**: Full XFCE + i3 + NVIDIA + gaming support
+
+The refactored structure means `local-common.nix` only needs to override a few settings rather than disable many server features.
 
 ## Customization
 
@@ -82,10 +84,12 @@ Edit `hosts/local/local.nix` to modify desktop-specific settings:
 
 ### Overriding Common Settings
 
-Edit `hosts/local/local-common.nix` to override settings from `common.nix`:
-- Network configuration
-- Security settings
-- System services
+Edit `local-common.nix` (in the base directory) to override settings from `common.nix`:
+- SSH settings (currently enables password auth and X11 forwarding)
+- Firewall configuration (currently disabled for desktop)
+- Filesystem support (currently adds NTFS support)
+
+The file is minimal by design - server-specific features are in `server-common.nix`, not `common.nix`.
 
 ### User Configuration (Home Manager)
 
@@ -174,11 +178,20 @@ The `.emacs.d` directory can be managed in three ways:
 
 The mkLocal function in flake.nix loads modules in this order:
 
-1. `common.nix` - Base system configuration
-2. `local-common.nix` - Override server-oriented settings
-3. `local.nix` - Desktop-specific configuration  
-4. `hardware-configuration.nix` - Hardware detection
-5. `home-manager` module - User-level configuration for specified user
+1. `boot-common.nix` - Boot loader and garbage collection settings
+2. `common.nix` - Base system configuration (shared by all systems)
+3. `local-common.nix` - Desktop-specific overrides (SSH, firewall, filesystem)
+4. `local.nix` - Full desktop environment configuration  
+5. `hardware-configuration.nix` - Hardware detection
+6. `home-manager` module - User-level configuration for specified user
+
+For servers, the mkServer function loads:
+
+1. `boot-common.nix` - Boot loader and garbage collection settings
+2. `common.nix` - Base system configuration (shared by all systems)
+3. `server-common.nix` - Server-specific configuration (networking, kubernetes, security)
+4. Host-specific config (e.g., `node1.nix`)
+5. `hardware-configuration.nix` - Hardware detection
 
 Later modules can override settings from earlier ones using `lib.mkForce`.
 

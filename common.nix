@@ -1,4 +1,5 @@
 # common.nix
+# Shared configuration for all systems (servers and desktops)
 { config, lib, pkgs, hostname, ... }:
 {
   networking.hostName = hostname;
@@ -13,10 +14,9 @@
     openssl
     less
     coreutils
-    nfs-utils
-    lm_sensors
   ];
 
+  # SSH with secure defaults (can be overridden per-system)
   services.openssh = {
     enable = true;
     settings = {
@@ -28,44 +28,12 @@
     };
   };
 
+  # Basic firewall (allow SSH only)
   networking.firewall = {
     enable = true;
-    allowedTCPPorts = [ 22 8080 6443 10250 8888 ];
-    allowedTCPPortRanges = [
-      { from = 30500; to = 30799; }
-    ];
-    allowedUDPPortRanges = [
-      { from = 30800; to = 30899; }
-    ];
+    allowedTCPPorts = [ 22 ];
     allowPing = false;
   };
-
-  services.fail2ban = {
-    enable = true;
-    maxretry = 10;
-    bantime = "15m";
-    jails = {
-      sshd.enabled = true;
-    };
-  };
-
-  services.tailscale = {
-    enable = true;
-    extraUpFlags = [ "--hostname=${hostname}" "--accept-dns=false" ];
-  };
-  services.certmgr.renewInterval = "24h";
-
-  # NFS Support
-  boot.supportedFilesystems = [ "nfs" ];
-  services.rpcbind.enable = true;
-
-  # Longhorn NFS mount path fix
-  system.activationScripts.longhornMountFix = ''
-  mkdir -p /usr/bin
-  ln -sf /run/wrappers/bin/mount /usr/bin/mount
-  ln -sf /run/current-system/sw/bin/mount.nfs /usr/bin/mount.nfs
-  ln -sf /run/wrappers/bin/umount /usr/bin/umount
-  '';
 
   boot.kernelModules = [ "coretemp" ];
 

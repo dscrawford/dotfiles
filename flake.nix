@@ -38,7 +38,7 @@
       modules = [
         ./common.nix
         ./boot-common.nix
-        ./hosts/local/local-common.nix
+        ./local-common.nix
         ./hosts/local/local.nix
         ./hosts/local/hardware-configuration.nix
         
