@@ -8,6 +8,9 @@
 
   boot.kernelModules = [ "iscsi_tcp" ];
 
+  # NFS Support for Kubernetes storage
+  services.rpcbind.enable = true;
+
   environment.systemPackages = with pkgs; [
     nfs-utils
     util-linux

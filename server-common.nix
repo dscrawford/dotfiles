@@ -61,10 +61,6 @@
   # Certificate management
   services.certmgr.renewInterval = "24h";
 
-  # NFS Support for Kubernetes storage
-  boot.supportedFilesystems = [ "nfs" ];
-  services.rpcbind.enable = true;
-
   # Longhorn NFS mount path fix for Kubernetes
   system.activationScripts.longhornMountFix = ''
     mkdir -p /usr/bin
