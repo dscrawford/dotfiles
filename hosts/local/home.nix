@@ -107,12 +107,36 @@
       use-package
       emacsql
       dockerfile-mode
+      # Godot development support
+      gdscript-mode
     ]);
     extraConfig = ''
       (setq backup-directory-alist `(("." . "~/.saves")))
       ;; Enable clipboard integration
       (setq select-enable-clipboard t)
       (setq select-enable-primary t)
+
+      ;; Godot file type associations
+      (with-eval-after-load 'gdscript-mode
+        ;; GDScript files (.gd)
+        (add-to-list 'auto-mode-alist '("\\.gd\\'" . gdscript-mode))
+        
+        ;; Godot scene files (.tscn) - treat as conf/text mode with syntax
+        (add-to-list 'auto-mode-alist '("\\.tscn\\'" . conf-mode))
+        
+        ;; Godot resource files (.tres) - treat as conf/text mode
+        (add-to-list 'auto-mode-alist '("\\.tres\\'" . conf-mode))
+        
+        ;; Godot project files (.godot)
+        (add-to-list 'auto-mode-alist '("\\.godot\\'" . conf-mode))
+        
+        ;; Godot import files (.import)
+        (add-to-list 'auto-mode-alist '("\\.import\\'" . conf-mode))
+        
+        ;; GDScript mode configuration
+        (setq gdscript-use-tab-indents nil)  ; Use spaces instead of tabs
+        (setq gdscript-indent-offset 4)      ; 4 spaces per indent level
+        (setq gdscript-gdformat-save-enabled nil)) ; Disable auto-format on save (optional)
     '';
   };
 
