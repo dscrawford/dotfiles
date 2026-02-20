@@ -162,6 +162,8 @@ in
       use-package
       emacsql
       dockerfile-mode
+      # Clipboard integration for emacs-nox
+      xclip
       # Godot development support
       gdscript-mode
       # Claude Code IDE dependencies
@@ -194,7 +196,8 @@ in
         (claude-code-ide-terminal-backend 'eat)
         :config
         (claude-code-ide-emacs-tools-setup))
-      ;; Enable clipboard integration
+      ;; Enable clipboard integration (xclip bridges emacs-nox to system clipboard)
+      (xclip-mode 1)
       (setq select-enable-clipboard t)
       (setq select-enable-primary t)
 
