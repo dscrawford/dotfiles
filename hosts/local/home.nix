@@ -66,6 +66,8 @@ in
     
     # IDE
     jetbrains.pycharm-oss  # Open source version (formerly pycharm-community)
+    claude-code
+    nodejs  # Provides npx for keegancsmith/emacs-mcp-server
     
     # Game dev
     godot_4
@@ -86,6 +88,16 @@ in
     #   source = ./emacs.d;  # Create hosts/local/emacs.d/ directory
     #   recursive = true;
     # };
+
+    # MCP server config for Claude Code (keegancsmith/emacs-mcp-server)
+    ".claude/.mcp.json".text = builtins.toJSON {
+      mcpServers = {
+        emacs-mcp = {
+          command = "npx";
+          args = [ "-y" "@keegancsmith/emacs-mcp-server" ];
+        };
+      };
+    };
   };
 
   # Environment variables
@@ -152,9 +164,36 @@ in
       dockerfile-mode
       # Godot development support
       gdscript-mode
+      # Claude Code IDE dependencies
+      websocket
+      transient
+      web-server
+      eat
+      (trivialBuild {
+        pname = "claude-code-ide";
+        version = "0-unstable-2025";
+        src = pkgs.fetchFromGitHub {
+          owner = "manzaltu";
+          repo = "claude-code-ide.el";
+          rev = "5f12e60c6d2d1802c8c1b7944bbdf935d5db1364";
+          hash = "sha256-tivRvgfI/8XBRImE3wuZ1UD0t2dNWYscv3Aa53BmHZE=";
+        };
+        packageRequires = with epkgs; [ websocket transient web-server ];
+      })
     ]);
     extraConfig = ''
       (setq backup-directory-alist `(("." . "~/.saves")))
+
+      ;; Start Emacs server for emacsclient (needed by emacs-mcp-server)
+      (server-start)
+
+      ;; Claude Code IDE
+      (use-package claude-code-ide
+        :bind ("C-c a" . claude-code-ide-menu)
+        :custom
+        (claude-code-ide-terminal-backend 'eat)
+        :config
+        (claude-code-ide-emacs-tools-setup))
       ;; Enable clipboard integration
       (setq select-enable-clipboard t)
       (setq select-enable-primary t)
