@@ -20,6 +20,8 @@
       xclip
       # Godot development support
       gdscript-mode
+      # Quick window switching
+      ace-window
       # Claude Code IDE dependencies
       websocket
       transient
@@ -50,6 +52,10 @@
         (claude-code-ide-terminal-backend 'eat)
         :config
         (claude-code-ide-emacs-tools-setup))
+      ;; Window navigation
+      (windmove-default-keybindings) ; Shift+arrow to move between windows
+      (global-set-key (kbd "M-o") 'ace-window) ; M-o to jump to a window by number
+
       ;; Enable clipboard integration (xclip bridges emacs-nox to system clipboard)
       (xclip-mode 1)
       (setq select-enable-clipboard t)
