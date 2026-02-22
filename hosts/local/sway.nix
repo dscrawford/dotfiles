@@ -27,7 +27,7 @@
 
     # Mouse+$mod to drag floating windows
     floating_modifier $mod
-    tiling_drag modifier titlebar
+
 
     # Terminal
     bindsym $mod+Shift+Return exec foot
