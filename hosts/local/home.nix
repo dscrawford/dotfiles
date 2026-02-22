@@ -148,8 +148,8 @@ in
     };
   };
 
-  # Emacs configuration (see ./emacs.nix)
-  imports = [ ./emacs.nix ];
+  # Modular configs: Emacs editor, Sway window manager
+  imports = [ ./emacs.nix ./sway.nix ];
 
   # Direnv for development environments
   programs.direnv = {
