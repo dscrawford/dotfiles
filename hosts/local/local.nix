@@ -85,6 +85,7 @@
       foot           # Wayland-native terminal
       nwg-displays   # GUI monitor configuration
       wl-clipboard   # Wayland clipboard (replaces xclip)
+      slurp          # Region/output selector for screen sharing
     ];
   };
   services.greetd = {
