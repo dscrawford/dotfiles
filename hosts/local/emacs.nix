@@ -59,7 +59,8 @@
       (windmove-default-keybindings) ; Shift+arrow to move between windows
       (global-set-key (kbd "M-o") 'ace-window) ; M-o to jump to a window by number
 
-      ;; Enable clipboard integration (xclip bridges emacs-nox to system clipboard)
+      ;; Clipboard integration (wl-copy/wl-paste for Wayland)
+      (setq xclip-method 'wl-copy)
       (xclip-mode 1)
       (setq select-enable-clipboard t)
       (setq select-enable-primary t)
