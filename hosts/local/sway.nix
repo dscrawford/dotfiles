@@ -7,6 +7,8 @@
   home.file.".config/sway/config".text = ''
     # Sway config (migrated from i3)
 
+    xwayland enable
+
     set $mod Mod4
 
     font pango:monospace 20

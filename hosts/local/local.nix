@@ -73,6 +73,7 @@
   };
 
   # === Display ===
+  services.xserver.videoDrivers = [ "nvidia" ];
   programs.sway = {
     enable = true;
     wrapperFeatures.gtk = true;
@@ -88,7 +89,7 @@
   };
   services.greetd = {
     enable = true;
-    settings.default_session.command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd sway";
+    settings.default_session.command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd 'sway --unsupported-gpu'";
   };
 
   # === Audio ===
@@ -151,10 +152,12 @@
   programs = {
     dconf.enable = true;
     gamemode.enable = true;
+    gamescope.enable = true;
     steam = {
       enable = true;
+      gamescopeSession.enable = true;
       package = pkgs.steam.override {
-        extraPkgs = pkgs: with pkgs; [ gamemode ];
+        extraPkgs = pkgs: with pkgs; [ gamemode gamescope ];
       };
     };
     alvr = {
@@ -188,6 +191,7 @@
     ];
     variables = {
       GSETTINGS_SCHEMA_DIR = "${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}/glib-2.0/schemas";
+      XDG_CURRENT_DESKTOP = "sway";
       # NVIDIA Wayland workarounds
       WLR_NO_HARDWARE_CURSORS = "1";
       NIXOS_OZONE_WL = "1";       # Electron/Chromium apps use Wayland
