@@ -82,11 +82,13 @@
       wmenu          # Wayland-native launcher (replaces dmenu)
       i3status       # status bar (compatible with Sway)
       foot           # Wayland-native terminal
+      nwg-displays   # GUI monitor configuration
+      wl-clipboard   # Wayland clipboard (replaces xclip)
     ];
   };
   services.greetd = {
     enable = true;
-    settings.default_session.command = "${pkgs.greetd.tuigreet}/bin/tuigreet --time --cmd sway";
+    settings.default_session.command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd sway";
   };
 
   # === Audio ===
