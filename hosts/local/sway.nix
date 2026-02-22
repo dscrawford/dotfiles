@@ -13,6 +13,12 @@
 
     font pango:monospace 20
 
+    # Include NixOS defaults (critical for xdg-desktop-portal/dbus/systemd integration)
+    include /etc/sway/config.d/*
+
+    # Monitor layout (managed by nwg-displays)
+    include ~/.config/sway/outputs
+
     # Idle and lock
     exec swayidle -w \
       timeout 300 'swaylock -f' \
