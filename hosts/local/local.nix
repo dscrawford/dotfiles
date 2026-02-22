@@ -84,6 +84,10 @@
       foot           # Wayland-native terminal
     ];
   };
+  services.greetd = {
+    enable = true;
+    settings.default_session.command = "${pkgs.greetd.tuigreet}/bin/tuigreet --time --cmd sway";
+  };
 
   # === Audio ===
   security.rtkit.enable = true;
