@@ -2,9 +2,6 @@
 # Home Manager configuration for local desktop user
 { config, lib, pkgs, username, ... }:
 
-let
-  wallpaperDir = "/home/${username}/Pictures/DarkSpacePictures";
-in
 {
   # Basic user info
   home.username = username;
@@ -25,8 +22,6 @@ in
     simplescreenrecorder
     virtualenv
     docker-compose
-    feh
-    
     # Python
     python3
     python311Packages.protonup-ng
@@ -103,50 +98,10 @@ in
   # Environment variables
   home.sessionVariables = {
     EDITOR = "emacs -nw";
-    WALLPAPER_DIR = wallpaperDir;
   };
 
   # Enable home-manager
   programs.home-manager.enable = true;
-
-  # X session configuration - random wallpaper on login
-  xsession = {
-    enable = true;
-    profileExtra = ''
-      # Add local bin to PATH (from your existing .xprofile)
-      export PATH=$PATH:/home/${username}/.local/bin/
-    '';
-    initExtra = ''
-      # Set a random wallpaper from wallpaperDir
-      if [ -d "${wallpaperDir}" ] && [ "$(ls -A ${wallpaperDir} 2>/dev/null)" ]; then
-        ${pkgs.feh}/bin/feh --bg-scale --randomize "${wallpaperDir}"/*
-      fi
-    '';
-  };
-
-  # Optional: Systemd service to change wallpaper periodically (every 30 minutes)
-  systemd.user.services.random-wallpaper = {
-    Unit = {
-      Description = "Change wallpaper randomly";
-    };
-    Service = {
-      Type = "oneshot";
-      ExecStart = "${pkgs.bash}/bin/bash -c 'if [ -d \"${wallpaperDir}\" ] && [ \"$(ls -A ${wallpaperDir} 2>/dev/null)\" ]; then ${pkgs.feh}/bin/feh --bg-scale --randomize \"${wallpaperDir}\"/*; fi'";
-    };
-  };
-
-  systemd.user.timers.random-wallpaper = {
-    Unit = {
-      Description = "Change wallpaper randomly every 30 minutes";
-    };
-    Timer = {
-      OnBootSec = "5min";
-      OnUnitActiveSec = "30min";
-    };
-    Install = {
-      WantedBy = [ "timers.target" ];
-    };
-  };
 
   # Modular configs: Emacs editor, Sway window manager
   imports = [ ./emacs.nix ./sway.nix ];
