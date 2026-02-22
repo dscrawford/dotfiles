@@ -73,23 +73,17 @@
   };
 
   # === Display ===
-  services.xserver = {
+  programs.sway = {
     enable = true;
-    videoDrivers = [ "nvidia" ];
-    desktopManager = {
-      xterm.enable = false;
-      xfce = {
-        enable = true;
-        noDesktop = true;
-        enableXfwm = false;
-      };
-    };
-    windowManager.i3 = {
-      enable = true;
-      extraPackages = with pkgs; [ dmenu i3status i3lock ];
-    };
+    wrapperFeatures.gtk = true;
+    extraPackages = with pkgs; [
+      swaylock       # screen locker (replaces i3lock)
+      swayidle       # idle management
+      wmenu          # Wayland-native launcher (replaces dmenu)
+      i3status       # status bar (compatible with Sway)
+      foot           # Wayland-native terminal
+    ];
   };
-  services.displayManager.defaultSession = "xfce+i3";
 
   # === Audio ===
   security.rtkit.enable = true;
