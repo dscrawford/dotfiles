@@ -15,6 +15,7 @@
 
     # Include NixOS defaults (critical for xdg-desktop-portal/dbus/systemd integration)
     include /etc/sway/config.d/*
+    exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP
 
     # Monitor layout (managed by nwg-displays)
     include ~/.config/sway/outputs
