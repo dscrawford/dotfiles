@@ -52,6 +52,9 @@
         (claude-code-ide-terminal-backend 'eat)
         :config
         (claude-code-ide-emacs-tools-setup))
+      ;; Auto-revert buffers when files change on disk
+      (global-auto-revert-mode 1)
+
       ;; Window navigation
       (windmove-default-keybindings) ; Shift+arrow to move between windows
       (global-set-key (kbd "M-o") 'ace-window) ; M-o to jump to a window by number
