@@ -86,6 +86,9 @@
       nwg-displays   # GUI monitor configuration
       wl-clipboard   # Wayland clipboard (replaces xclip)
       slurp          # Region/output selector for screen sharing
+      grim           # Screenshot tool for Wayland
+      mako           # Notification daemon for Wayland
+      libnotify      # notify-send command
     ];
   };
   services.greetd = {

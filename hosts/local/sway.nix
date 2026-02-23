@@ -4,6 +4,36 @@
 { pkgs, ... }:
 
 {
+  home.file.".local/bin/volume.sh" = {
+    executable = true;
+    text = ''
+      #!/bin/bash
+      WPCTL=/run/current-system/sw/bin/wpctl
+      NOTIFY=/run/current-system/sw/bin/notify-send
+
+      case "$1" in
+        up)       $WPCTL set-volume @DEFAULT_AUDIO_SINK@ 0.05+ ;;
+        down)     $WPCTL set-volume @DEFAULT_AUDIO_SINK@ 0.05- ;;
+        mute)     $WPCTL set-mute @DEFAULT_AUDIO_SINK@ toggle ;;
+        mic-mute) $WPCTL set-mute @DEFAULT_AUDIO_SOURCE@ toggle ;;
+      esac
+
+      VOL_RAW=$($WPCTL get-volume @DEFAULT_AUDIO_SINK@)
+      VOL_PCT=$(echo "$VOL_RAW" | awk '{printf "%.0f", $2 * 100}')
+      MUTED=$(echo "$VOL_RAW" | grep -c MUTED)
+
+      if [ "$MUTED" -eq 1 ]; then
+        $NOTIFY -h string:x-canonical-private-synchronous:volume -h int:value:$VOL_PCT -t 1500 "Volume: Muted"
+      else
+        $NOTIFY -h string:x-canonical-private-synchronous:volume -h int:value:$VOL_PCT -t 1500 "Volume: $VOL_PCT%"
+      fi
+    '';
+  };
+
+  home.file.".config/mako/config".text = ''
+    default-timeout=5000
+  '';
+
   home.file.".config/xdg-desktop-portal-wlr/config".text = ''
     [screencast]
     max_fps=60
@@ -23,6 +53,7 @@
     # Include NixOS defaults (critical for xdg-desktop-portal/dbus/systemd integration)
     include /etc/sway/config.d/*
     exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP
+    exec mako
 
     # Monitor layout (managed by nwg-displays)
     include ~/.config/sway/outputs
@@ -34,12 +65,12 @@
       resume 'swaymsg "output * power on"' \
       before-sleep 'swaylock -f'
 
-    # Volume controls (wpctl/PipeWire)
+    # Volume controls (wpctl/PipeWire) with notifications
     set $refresh_i3status killall -SIGUSR1 i3status
-    bindsym XF86AudioRaiseVolume exec wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.05+
-    bindsym XF86AudioLowerVolume exec wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.05-
-    bindsym XF86AudioMute exec wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle && $refresh_i3status
-    bindsym XF86AudioMicMute exec wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle && $refresh_i3status
+    bindsym XF86AudioRaiseVolume exec ~/.local/bin/volume.sh up
+    bindsym XF86AudioLowerVolume exec ~/.local/bin/volume.sh down
+    bindsym XF86AudioMute exec ~/.local/bin/volume.sh mute
+    bindsym XF86AudioMicMute exec ~/.local/bin/volume.sh mic-mute
 
     # Mouse+$mod to drag floating windows
     floating_modifier $mod
@@ -141,8 +172,21 @@
     bindsym $mod+Control+Up resize shrink height 1 px
     bindsym $mod+Control+Right resize grow width 1 px
 
+    # Screenshots
+    bindsym Control+Shift+Mod1+s exec grim -g "$(slurp)" - | wl-copy
+
     # Applications
     bindsym Control+Shift+Mod1+f exec firefox
+
+    # Float popup/dialog windows automatically
+    for_window [window_role="pop-up"] floating enable
+    for_window [window_role="dialog"] floating enable
+    for_window [window_role="task_dialog"] floating enable
+    for_window [window_type="dialog"] floating enable
+    for_window [window_type="menu"] floating enable
+    for_window [window_type="splash"] floating enable
+    for_window [window_type="tooltip"] floating enable
+    for_window [window_type="utility"] floating enable
 
     # Status bar
     bar {
