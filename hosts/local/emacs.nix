@@ -45,7 +45,8 @@
       (setq backup-directory-alist `(("." . "~/.saves")))
 
       ;; Start Emacs server for emacsclient (needed by emacs-mcp-server)
-      (server-start)
+      (require 'server)
+      (unless (server-running-p) (server-force-delete) (server-start))
 
       ;; Claude Code IDE
       (use-package claude-code-ide
