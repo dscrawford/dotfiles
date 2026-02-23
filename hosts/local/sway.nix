@@ -4,6 +4,29 @@
 { pkgs, ... }:
 
 {
+  home.file.".local/bin/workspace.sh" = {
+    executable = true;
+    text = ''
+      #!/bin/bash
+      SWAYMSG=/run/current-system/sw/bin/swaymsg
+      JQ=/run/current-system/sw/bin/jq
+
+      OUTPUT=$($SWAYMSG -t get_outputs | $JQ -r '.[] | select(.focused) | .name')
+
+      case "$OUTPUT" in
+        DP-1) PREFIX="A" ;;
+        DP-2) PREFIX="B" ;;
+        DP-3) PREFIX="C" ;;
+        *)    PREFIX="A" ;;
+      esac
+
+      case "$1" in
+        switch) $SWAYMSG workspace "''${PREFIX}$2" ;;
+        move)   $SWAYMSG move container to workspace "''${PREFIX}$2" ;;
+      esac
+    '';
+  };
+
   home.file.".local/bin/volume.sh" = {
     executable = true;
     text = ''
@@ -226,39 +249,39 @@
     # Focus parent
     bindsym $mod+a focus parent
 
-    # Workspaces
-    set $ws1 "1"
-    set $ws2 "2"
-    set $ws3 "3"
-    set $ws4 "4"
-    set $ws5 "5"
-    set $ws6 "6"
-    set $ws7 "7"
-    set $ws8 "8"
-    set $ws9 "9"
-    set $ws10 "10"
+    # Desktop switching (focus output/monitor)
+    bindsym $mod+F1 focus output DP-1
+    bindsym $mod+F2 focus output DP-2
+    bindsym $mod+F3 focus output DP-3
 
-    bindsym $mod+1 workspace number $ws1
-    bindsym $mod+2 workspace number $ws2
-    bindsym $mod+3 workspace number $ws3
-    bindsym $mod+4 workspace number $ws4
-    bindsym $mod+5 workspace number $ws5
-    bindsym $mod+6 workspace number $ws6
-    bindsym $mod+7 workspace number $ws7
-    bindsym $mod+8 workspace number $ws8
-    bindsym $mod+9 workspace number $ws9
-    bindsym $mod+0 workspace number $ws10
+    # Workspace assignments per output
+    workspace A1 output DP-1
+    workspace B1 output DP-2
+    workspace C1 output DP-3
 
-    bindsym $mod+Shift+1 move container to workspace number $ws1
-    bindsym $mod+Shift+2 move container to workspace number $ws2
-    bindsym $mod+Shift+3 move container to workspace number $ws3
-    bindsym $mod+Shift+4 move container to workspace number $ws4
-    bindsym $mod+Shift+5 move container to workspace number $ws5
-    bindsym $mod+Shift+6 move container to workspace number $ws6
-    bindsym $mod+Shift+7 move container to workspace number $ws7
-    bindsym $mod+Shift+8 move container to workspace number $ws8
-    bindsym $mod+Shift+9 move container to workspace number $ws9
-    bindsym $mod+Shift+0 move container to workspace number $ws10
+    # Switch workspace on focused desktop
+    bindsym $mod+1 exec ~/.local/bin/workspace.sh switch 1
+    bindsym $mod+2 exec ~/.local/bin/workspace.sh switch 2
+    bindsym $mod+3 exec ~/.local/bin/workspace.sh switch 3
+    bindsym $mod+4 exec ~/.local/bin/workspace.sh switch 4
+    bindsym $mod+5 exec ~/.local/bin/workspace.sh switch 5
+    bindsym $mod+6 exec ~/.local/bin/workspace.sh switch 6
+    bindsym $mod+7 exec ~/.local/bin/workspace.sh switch 7
+    bindsym $mod+8 exec ~/.local/bin/workspace.sh switch 8
+    bindsym $mod+9 exec ~/.local/bin/workspace.sh switch 9
+    bindsym $mod+0 exec ~/.local/bin/workspace.sh switch 10
+
+    # Move window to workspace on focused desktop
+    bindsym $mod+Shift+1 exec ~/.local/bin/workspace.sh move 1
+    bindsym $mod+Shift+2 exec ~/.local/bin/workspace.sh move 2
+    bindsym $mod+Shift+3 exec ~/.local/bin/workspace.sh move 3
+    bindsym $mod+Shift+4 exec ~/.local/bin/workspace.sh move 4
+    bindsym $mod+Shift+5 exec ~/.local/bin/workspace.sh move 5
+    bindsym $mod+Shift+6 exec ~/.local/bin/workspace.sh move 6
+    bindsym $mod+Shift+7 exec ~/.local/bin/workspace.sh move 7
+    bindsym $mod+Shift+8 exec ~/.local/bin/workspace.sh move 8
+    bindsym $mod+Shift+9 exec ~/.local/bin/workspace.sh move 9
+    bindsym $mod+Shift+0 exec ~/.local/bin/workspace.sh move 10
 
     # Reload config
     bindsym $mod+Shift+slash reload

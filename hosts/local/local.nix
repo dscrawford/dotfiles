@@ -197,6 +197,7 @@
       gnused
       gawk
       util-linux
+      jq
     ];
     variables = {
       GSETTINGS_SCHEMA_DIR = "${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}/glib-2.0/schemas";
