@@ -42,7 +42,7 @@
       format = "{name}";
     };
     clock = {
-      format = "{:%a %b %d  %H:%M}";
+      format = "{:%a %b %d  %I:%M %p}";
       tooltip-format = "{:%Y-%m-%d %A}";
     };
     cpu = {
