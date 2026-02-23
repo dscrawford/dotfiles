@@ -26,6 +26,11 @@
     python3
     python311Packages.protonup-ng
     
+    # Linting tools
+    ruff           # Python linter
+    statix         # Nix linter
+    nil            # Nix language server
+
     # Development tools
     openssl
     nghttp2

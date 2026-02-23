@@ -16,6 +16,8 @@
       use-package
       emacsql
       dockerfile-mode
+      # Inline error checking
+      flycheck
       # Clipboard integration for emacs-nox
       xclip
       # Godot development support
@@ -64,6 +66,12 @@
       (xclip-mode 1)
       (setq select-enable-clipboard t)
       (setq select-enable-primary t)
+
+      ;; Inline error checking
+      (global-flycheck-mode)
+      (setq flycheck-python-ruff-executable "ruff")
+      (with-eval-after-load 'flycheck
+        (setq flycheck-checker-error-threshold 400))
 
       ;; Godot file type associations
       (with-eval-after-load 'gdscript-mode
