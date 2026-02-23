@@ -10,19 +10,38 @@
       #!/bin/bash
       SWAYMSG=/run/current-system/sw/bin/swaymsg
       JQ=/run/current-system/sw/bin/jq
+      PREFIXES=(A B C D E F G H I J)
 
-      OUTPUT=$($SWAYMSG -t get_outputs | $JQ -r '.[] | select(.focused) | .name')
+      # Get sorted list of active outputs
+      OUTPUTS=($($SWAYMSG -t get_outputs | $JQ -r '.[] | select(.active) | .name' | sort))
+      FOCUSED=$($SWAYMSG -t get_outputs | $JQ -r '.[] | select(.focused) | .name')
 
-      case "$OUTPUT" in
-        DP-1) PREFIX="A" ;;
-        DP-2) PREFIX="B" ;;
-        DP-3) PREFIX="C" ;;
-        *)    PREFIX="A" ;;
-      esac
+      # Map focused output to its prefix
+      PREFIX="A"
+      for i in "''${!OUTPUTS[@]}"; do
+        if [ "''${OUTPUTS[$i]}" = "$FOCUSED" ]; then
+          PREFIX="''${PREFIXES[$i]}"
+          break
+        fi
+      done
 
       case "$1" in
         switch) $SWAYMSG workspace "''${PREFIX}$2" ;;
         move)   $SWAYMSG move container to workspace "''${PREFIX}$2" ;;
+        focus)
+          # Focus the Nth output (1-indexed)
+          IDX=$(($2 - 1))
+          if [ $IDX -lt ''${#OUTPUTS[@]} ]; then
+            $SWAYMSG focus output "''${OUTPUTS[$IDX]}"
+          fi
+          ;;
+        move-to)
+          # Move container to the Nth output (1-indexed)
+          IDX=$(($2 - 1))
+          if [ $IDX -lt ''${#OUTPUTS[@]} ]; then
+            $SWAYMSG move container to output "''${OUTPUTS[$IDX]}"
+          fi
+          ;;
       esac
     '';
   };
@@ -250,19 +269,28 @@
     bindsym $mod+a focus parent
 
     # Desktop switching (focus output/monitor)
-    bindsym $mod+F1 focus output DP-1
-    bindsym $mod+F2 focus output DP-2
-    bindsym $mod+F3 focus output DP-3
+    bindsym $mod+F1 exec ~/.local/bin/workspace.sh focus 1
+    bindsym $mod+F2 exec ~/.local/bin/workspace.sh focus 2
+    bindsym $mod+F3 exec ~/.local/bin/workspace.sh focus 3
+    bindsym $mod+F4 exec ~/.local/bin/workspace.sh focus 4
+    bindsym $mod+F5 exec ~/.local/bin/workspace.sh focus 5
+    bindsym $mod+F6 exec ~/.local/bin/workspace.sh focus 6
+    bindsym $mod+F7 exec ~/.local/bin/workspace.sh focus 7
+    bindsym $mod+F8 exec ~/.local/bin/workspace.sh focus 8
+    bindsym $mod+F9 exec ~/.local/bin/workspace.sh focus 9
+    bindsym $mod+F10 exec ~/.local/bin/workspace.sh focus 10
 
     # Move focused window to another desktop
-    bindsym $mod+Shift+F1 move container to output DP-1
-    bindsym $mod+Shift+F2 move container to output DP-2
-    bindsym $mod+Shift+F3 move container to output DP-3
-
-    # Workspace assignments per output
-    workspace A1 output DP-1
-    workspace B1 output DP-2
-    workspace C1 output DP-3
+    bindsym $mod+Shift+F1 exec ~/.local/bin/workspace.sh move-to 1
+    bindsym $mod+Shift+F2 exec ~/.local/bin/workspace.sh move-to 2
+    bindsym $mod+Shift+F3 exec ~/.local/bin/workspace.sh move-to 3
+    bindsym $mod+Shift+F4 exec ~/.local/bin/workspace.sh move-to 4
+    bindsym $mod+Shift+F5 exec ~/.local/bin/workspace.sh move-to 5
+    bindsym $mod+Shift+F6 exec ~/.local/bin/workspace.sh move-to 6
+    bindsym $mod+Shift+F7 exec ~/.local/bin/workspace.sh move-to 7
+    bindsym $mod+Shift+F8 exec ~/.local/bin/workspace.sh move-to 8
+    bindsym $mod+Shift+F9 exec ~/.local/bin/workspace.sh move-to 9
+    bindsym $mod+Shift+F10 exec ~/.local/bin/workspace.sh move-to 10
 
     # Switch workspace on focused desktop
     bindsym $mod+1 exec ~/.local/bin/workspace.sh switch 1
