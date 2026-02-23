@@ -81,7 +81,7 @@
       swaylock       # screen locker (replaces i3lock)
       swayidle       # idle management
       wmenu          # Wayland-native launcher (replaces dmenu)
-      i3status       # status bar (compatible with Sway)
+      waybar         # status bar
       foot           # Wayland-native terminal
       nwg-displays   # GUI monitor configuration
       wl-clipboard   # Wayland clipboard (replaces xclip)

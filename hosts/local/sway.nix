@@ -30,6 +30,106 @@
     '';
   };
 
+  home.file.".config/waybar/config".text = builtins.toJSON {
+    layer = "top";
+    position = "top";
+    height = 30;
+    modules-left = [ "sway/workspaces" "sway/mode" ];
+    modules-center = [ "clock" ];
+    modules-right = [ "pulseaudio" "cpu" "memory" "disk" "network" "tray" ];
+    "sway/workspaces" = {
+      disable-scroll = true;
+      format = "{name}";
+    };
+    clock = {
+      format = "{:%a %b %d  %H:%M}";
+      tooltip-format = "{:%Y-%m-%d %A}";
+    };
+    cpu = {
+      format = "CPU {usage}%";
+      interval = 5;
+    };
+    memory = {
+      format = "MEM {percentage}%";
+      interval = 5;
+    };
+    disk = {
+      format = "DISK {percentage_used}%";
+      path = "/";
+      interval = 30;
+    };
+    network = {
+      format-ethernet = "ETH {ipaddr}";
+      format-wifi = "WIFI {signalStrength}%";
+      format-disconnected = "DISCONNECTED";
+      interval = 10;
+    };
+    pulseaudio = {
+      format = "VOL {volume}%";
+      format-muted = "MUTED";
+      on-click = "pavucontrol";
+    };
+    tray = {
+      spacing = 8;
+    };
+  };
+
+  home.file.".config/waybar/style.css".text = ''
+    * {
+      font-family: monospace;
+      font-size: 14px;
+    }
+
+    window#waybar {
+      background-color: rgba(30, 30, 40, 0.9);
+      color: #cccccc;
+    }
+
+    #workspaces button {
+      padding: 0 8px;
+      color: #888888;
+      border-bottom: 2px solid transparent;
+    }
+
+    #workspaces button.focused {
+      color: #ffffff;
+      border-bottom: 2px solid #5294e2;
+    }
+
+    #workspaces button.urgent {
+      color: #ff5555;
+    }
+
+    #clock, #cpu, #memory, #disk, #network, #pulseaudio, #tray {
+      padding: 0 12px;
+    }
+
+    #pulseaudio {
+      color: #8be9fd;
+    }
+
+    #cpu {
+      color: #ff79c6;
+    }
+
+    #memory {
+      color: #bd93f9;
+    }
+
+    #disk {
+      color: #f1fa8c;
+    }
+
+    #network {
+      color: #50fa7b;
+    }
+
+    #clock {
+      color: #ffffff;
+      font-weight: bold;
+    }
+  '';
+
   home.file.".config/mako/config".text = ''
     default-timeout=5000
   '';
@@ -190,7 +290,7 @@
 
     # Status bar
     bar {
-        status_command i3status
+        swaybar_command waybar
     }
   '';
 }
