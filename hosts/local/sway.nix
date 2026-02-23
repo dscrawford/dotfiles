@@ -254,6 +254,11 @@
     bindsym $mod+F2 focus output DP-2
     bindsym $mod+F3 focus output DP-3
 
+    # Move focused window to another desktop
+    bindsym $mod+Shift+F1 move container to output DP-1
+    bindsym $mod+Shift+F2 move container to output DP-2
+    bindsym $mod+Shift+F3 move container to output DP-3
+
     # Workspace assignments per output
     workspace A1 output DP-1
     workspace B1 output DP-2
