@@ -23,10 +23,10 @@
         kubeMasterAPIServerPort = 6443;
       };
       modules = [
-        ./common.nix
-        ./server-common.nix
-        ./users.nix
-        ./boot-common.nix
+        ./shared/common.nix
+        ./shared/server-common.nix
+        ./shared/users.nix
+        ./shared/boot-common.nix
       ] ++ extraModules;
     };
 
@@ -36,9 +36,9 @@
         inherit hostname username;
       };
       modules = [
-        ./common.nix
-        ./boot-common.nix
-        ./local-common.nix
+        ./shared/common.nix
+        ./shared/boot-common.nix
+        ./shared/local-common.nix
         ./hosts/local/local.nix
         ./hosts/local/hardware-configuration.nix
         
@@ -66,8 +66,8 @@
         extraModules = [
           ./hosts/node1/hardware-configuration.nix
           ./hosts/node1/boot.nix
-          ./kubernetes.nix
-          ./iscsi.nix
+          ./shared/kubernetes.nix
+          ./shared/iscsi.nix
         ];
       };
       node2 = mkServer {
@@ -76,8 +76,8 @@
         extraModules = [
           ./hosts/node2/hardware-configuration.nix
           ./hosts/node2/boot.nix
-          ./kubernetes.nix
-          ./iscsi.nix
+          ./shared/kubernetes.nix
+          ./shared/iscsi.nix
         ];
       };
       local = mkLocal {
