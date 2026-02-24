@@ -201,9 +201,9 @@
     include ~/.config/sway/outputs
 
     # Idle and lock
-    exec swayidle -w \
-      timeout 300 'swaylock -f' \
-      timeout 600 'swaymsg "output * power off"' \
+    exec_always pkill swayidle; swayidle -w \
+      timeout 1800 'swaylock -f' \
+      timeout 3600 'swaymsg "output * power off"' \
       resume 'swaymsg "output * power on"' \
       before-sleep 'swaylock -f'
 
