@@ -61,6 +61,9 @@
       ;; Auto-revert buffers when files change on disk
       (global-auto-revert-mode 1)
 
+      ;; Compile
+      (global-set-key (kbd "C-c C-k") 'compile)
+
       ;; Window navigation
       (windmove-default-keybindings) ; Shift+arrow to move between windows
       (global-set-key (kbd "M-o") 'ace-window) ; M-o to jump to a window by number
@@ -75,12 +78,17 @@
       ;; Automatically start eglot for supported modes
       (add-hook 'nix-mode-hook 'eglot-ensure)
       (add-hook 'python-mode-hook 'eglot-ensure)
-      ;; Use nil for Nix, pyright for Python
+      (add-hook 'gdscript-mode-hook 'eglot-ensure)
+      ;; Use nil for Nix, pyright for Python, Godot built-in LSP for GDScript
       (with-eval-after-load 'eglot
         (add-to-list 'eglot-server-programs '(nix-mode . ("nil")))
-        (add-to-list 'eglot-server-programs '(python-mode . ("pyright-langserver" "--stdio"))))
+        (add-to-list 'eglot-server-programs '(python-mode . ("pyright-langserver" "--stdio")))
+        (add-to-list 'eglot-server-programs '(gdscript-mode . ("localhost" 6005))))
 
       ;; Autocomplete
+      (setq corfu-auto t)          ;; popup automatically
+      (setq corfu-auto-delay 0.2)  ;; after 0.2s
+      (setq corfu-auto-prefix 2)   ;; after typing 2 chars
       (global-corfu-mode)
 
       ;; Inline error checking (for modes without LSP)
