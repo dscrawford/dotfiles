@@ -1,24 +1,24 @@
-# hosts/local/home.nix
-# Home Manager configuration for local desktop user
+# shared/home.nix
+# Home Manager configuration (cross-platform: Linux and macOS)
 { config, lib, pkgs, username, ... }:
 
+let
+  isDarwin = pkgs.stdenv.isDarwin;
+  isLinux = pkgs.stdenv.isLinux;
+  homeDir = if isDarwin then "/Users/${username}" else "/home/${username}";
+in
 {
   # Basic user info
   home.username = username;
-  home.homeDirectory = "/home/${username}";
+  home.homeDirectory = homeDir;
   home.stateVersion = "23.05";
 
   # User packages
   home.packages = with pkgs; [
     # Utilities
-    xclip
-    zsync
-    appstream
-    appimage-run
     zip
     unzip
     cachix
-    simplescreenrecorder
     virtualenv
     docker-compose
     # Python
@@ -31,16 +31,29 @@
 
     # Development tools
     openssl
+    curl
+    kubectl
+
+    # IDE
+    claude-code
+    nodejs  # Provides npx for keegancsmith/emacs-mcp-server
+
+    # Other
+    goose-cli
+  ] ++ lib.optionals isLinux [
+    xclip
+    zsync
+    appstream
+    appimage-run
+    simplescreenrecorder
     nghttp2
     libidn2
     rtmpdump
     libpsl
-    curl
     krb5
     keyutils
-    kubectl
-    
-    # Applications
+
+    # GUI Applications (Linux)
     firefox
     chromium
     brave
@@ -52,28 +65,11 @@
     vesktop
     discord
     neofetch
-
-    # IDE
-    jetbrains.pycharm-oss  # Open source version (formerly pycharm-community)
-    claude-code
-    nodejs  # Provides npx for keegancsmith/emacs-mcp-server
-
-    # Other
-    goose-cli
+    jetbrains.pycharm-oss
   ];
 
   # Dotfiles and configuration files
-  # Note: If you want to manage .emacs.d, you can either:
-  # 1. Copy it to this repo and reference it: source = ./emacs.d;
-  # 2. Manage it separately outside of home-manager
-  # 3. Use impure evaluation: nix build --impure
-  # For now, we'll let you manage .emacs.d manually
   home.file = {
-    # ".emacs.d" = {
-    #   source = ./emacs.d;  # Create hosts/local/emacs.d/ directory
-    #   recursive = true;
-    # };
-
     # MCP server config for Claude Code (keegancsmith/emacs-mcp-server)
     ".claude/.mcp.json".text = builtins.toJSON {
       mcpServers = {
@@ -93,7 +89,7 @@
   # Enable home-manager
   programs.home-manager.enable = true;
 
-  # Modular configs: Emacs editor, Sway window manager
+  # Modular configs
   imports = [ ./emacs.nix ];
 
   # Direnv for development environments
@@ -107,10 +103,10 @@
   programs.bash = {
     enable = true;
     bashrcExtra = ''
-      export PATH=/home/${username}/.local/bin/:$PATH
+      export PATH=${homeDir}/.local/bin/:$PATH
 
       if command -v tmux &> /dev/null && [ -n "$PS1" ] && [[ ! "$TERM" =~ screen ]] && [[ ! "$TERM" =~ tmux ]] && [ -z "$TMUX" ]; then
-         exec tmux -f /home/${username}/.config/tmux/tmux.conf
+         exec tmux -f ${homeDir}/.config/tmux/tmux.conf
       fi
 
       eval "$(direnv hook bash)"
@@ -131,8 +127,8 @@
     '';
   };
 
-  # GPG agent
-  services.gpg-agent = {
+  # GPG agent (Linux only)
+  services.gpg-agent = lib.mkIf isLinux {
     enable = true;
     defaultCacheTtl = 1800;
     enableSshSupport = true;
@@ -161,14 +157,13 @@
   };
 
   # Nix settings (flakes support)
-  # Note: nix.package is set by system configuration, don't override here
   nix = {
     settings.experimental-features = [ "nix-command" "flakes" ];
   };
 
   # SOPS configuration for secrets management
   sops = {
-    age.keyFile = "/home/daniel/.config/sops/age/keys.txt";
+    age.keyFile = "${homeDir}/.config/sops/age/keys.txt";
     defaultSopsFile = ../secrets/secrets.yaml;
     secrets.anthropic_api_key = {};
   };

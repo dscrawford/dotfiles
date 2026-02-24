@@ -10,9 +10,13 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    nix-darwin = {
+      url = "github:LnL7/nix-darwin";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, sops-nix }: 
+  outputs = { self, nixpkgs, home-manager, sops-nix, nix-darwin }:
   let
     mkServer = { hostname, ip, extraModules ? [] }: nixpkgs.lib.nixosSystem rec {
       system = "x86_64-linux";
@@ -30,8 +34,8 @@
       ] ++ extraModules;
     };
 
-    mkLocal = { hostname, username, homeModules ? [ ./shared/home.nix ], extraModules ? [] }: nixpkgs.lib.nixosSystem {
-      system = "x86_64-linux";
+    mkLocal = { hostname, username, system ? "x86_64-linux", homeModules ? [ ./shared/home.nix ], extraModules ? [] }: nixpkgs.lib.nixosSystem {
+      inherit system;
       specialArgs = {
         inherit hostname username;
       };
@@ -47,6 +51,33 @@
 
         # Home Manager integration
         home-manager.nixosModules.home-manager
+        {
+          home-manager.useGlobalPkgs = true;
+          home-manager.useUserPackages = true;
+          home-manager.users.${username} = {
+            imports = homeModules;
+          };
+          home-manager.extraSpecialArgs = { inherit hostname username; };
+          home-manager.sharedModules = [
+            sops-nix.homeManagerModules.sops
+          ];
+        }
+      ] ++ extraModules;
+    };
+
+    mkDarwin = { hostname, username, system, homeModules ? [ ./shared/home.nix ], extraModules ? [] }: nix-darwin.lib.darwinSystem {
+      inherit system;
+      specialArgs = {
+        inherit hostname username;
+      };
+      modules = [
+        ./shared/darwin-common.nix
+
+        # Sops integration
+        sops-nix.darwinModules.sops
+
+        # Home Manager integration
+        home-manager.darwinModules.home-manager
         {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
@@ -90,6 +121,23 @@
       terminal = mkLocal {
         hostname = "nixos";
         username = "daniel";
+      };
+      terminal-arm = mkLocal {
+        hostname = "nixos";
+        username = "daniel";
+        system = "aarch64-linux";
+      };
+    };
+    darwinConfigurations = {
+      terminal-darwin-arm = mkDarwin {
+        hostname = "nixos";
+        username = "daniel";
+        system = "aarch64-darwin";
+      };
+      terminal-darwin-x86 = mkDarwin {
+        hostname = "nixos";
+        username = "daniel";
+        system = "x86_64-darwin";
       };
     };
   };

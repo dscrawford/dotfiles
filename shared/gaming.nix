@@ -19,6 +19,6 @@
     godot_4
 
     # Game streaming
-    sunshine
+    # sunshine  # disabled: broken in nixpkgs (boost build failure)
   ];
 }
