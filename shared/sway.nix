@@ -48,6 +48,26 @@
     '';
   };
 
+  home.file.".local/bin/wallpaper.sh" = {
+    executable = true;
+    text = ''
+      #!/bin/bash
+      SWAYMSG=/run/current-system/sw/bin/swaymsg
+      WALLPAPER_DIR="$HOME/.local/share/wallpapers"
+
+      if [ ! -d "$WALLPAPER_DIR" ] || [ -z "$(ls -A "$WALLPAPER_DIR" 2>/dev/null)" ]; then
+        exit 0
+      fi
+
+      for OUTPUT in $($SWAYMSG -t get_outputs | /run/current-system/sw/bin/jq -r '.[] | select(.active) | .name'); do
+        IMG=$(find "$WALLPAPER_DIR" -type f \( -name '*.jpg' -o -name '*.jpeg' -o -name '*.png' -o -name '*.webp' \) | shuf -n 1)
+        if [ -n "$IMG" ]; then
+          $SWAYMSG "output $OUTPUT bg '$IMG' fill"
+        fi
+      done
+    '';
+  };
+
   home.file.".local/bin/volume.sh" = {
     executable = true;
     text = ''
@@ -202,6 +222,10 @@
 
     # Monitor layout (managed by nwg-displays)
     include ~/.config/sway/outputs
+
+    # Randomized wallpaper (on startup and every 30 minutes)
+    exec_always ~/.local/bin/wallpaper.sh
+    exec bash -c 'while true; do sleep 1800; ~/.local/bin/wallpaper.sh; done'
 
     # Idle and lock
     exec_always pkill swayidle; swayidle -w \
