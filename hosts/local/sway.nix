@@ -25,9 +25,11 @@
         fi
       done
 
+      NUM=$(printf "%02d" "$2")
+
       case "$1" in
-        switch) $SWAYMSG workspace "''${PREFIX}$2" ;;
-        move)   $SWAYMSG move container to workspace "''${PREFIX}$2" ;;
+        switch) $SWAYMSG workspace "''${PREFIX}$NUM" ;;
+        move)   $SWAYMSG move container to workspace "''${PREFIX}$NUM" ;;
         focus)
           # Focus the Nth output (1-indexed)
           IDX=$(($2 - 1))
@@ -82,6 +84,7 @@
     "sway/workspaces" = {
       disable-scroll = true;
       format = "{name}";
+      alphabetical_sort = true;
     };
     clock = {
       format = "{:%a %b %d  %I:%M %p}";
