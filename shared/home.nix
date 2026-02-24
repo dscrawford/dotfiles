@@ -109,7 +109,7 @@
   programs.home-manager.enable = true;
 
   # Modular configs: Emacs editor, Sway window manager
-  imports = [ ../../shared/emacs.nix ../../shared/sway.nix ];
+  imports = [ ./emacs.nix ./sway.nix ];
 
   # Direnv for development environments
   programs.direnv = {
@@ -184,7 +184,7 @@
   # SOPS configuration for secrets management
   sops = {
     age.keyFile = "/home/daniel/.config/sops/age/keys.txt";
-    defaultSopsFile = ../../secrets/secrets.yaml;
+    defaultSopsFile = ../secrets/secrets.yaml;
     secrets.anthropic_api_key = {};
   };
 }

@@ -50,7 +50,7 @@
         {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
-          home-manager.users.${username} = import ./hosts/local/home.nix;
+          home-manager.users.${username} = import ./shared/home.nix;
           home-manager.extraSpecialArgs = { inherit hostname username; };
           home-manager.sharedModules = [
             sops-nix.homeManagerModules.sops
