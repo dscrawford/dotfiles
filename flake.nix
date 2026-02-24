@@ -30,7 +30,7 @@
       ] ++ extraModules;
     };
 
-    mkLocal = { hostname, username, extraModules ? [] }: nixpkgs.lib.nixosSystem {
+    mkLocal = { hostname, username, homeModules ? [ ./shared/home.nix ], extraModules ? [] }: nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       specialArgs = {
         inherit hostname username;
@@ -41,16 +41,18 @@
         ./shared/local-common.nix
         ./hosts/local/local.nix
         ./hosts/local/hardware-configuration.nix
-        
+
         # Sops integration
         sops-nix.nixosModules.sops
-        
+
         # Home Manager integration
         home-manager.nixosModules.home-manager
         {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
-          home-manager.users.${username} = import ./shared/home.nix;
+          home-manager.users.${username} = {
+            imports = homeModules;
+          };
           home-manager.extraSpecialArgs = { inherit hostname username; };
           home-manager.sharedModules = [
             sops-nix.homeManagerModules.sops
@@ -83,7 +85,11 @@
       local = mkLocal {
         hostname = "nixos";
         username = "daniel";
-        extraModules = [];
+        homeModules = [ ./shared/home.nix ./shared/sway.nix ./shared/gaming.nix ];
+      };
+      terminal = mkLocal {
+        hostname = "nixos";
+        username = "daniel";
       };
     };
   };

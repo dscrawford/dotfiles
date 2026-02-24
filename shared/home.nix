@@ -94,7 +94,7 @@
   programs.home-manager.enable = true;
 
   # Modular configs: Emacs editor, Sway window manager
-  imports = [ ./emacs.nix ./sway.nix ./gaming.nix ];
+  imports = [ ./emacs.nix ];
 
   # Direnv for development environments
   programs.direnv = {
