@@ -42,7 +42,8 @@
       })
     ]);
     extraConfig = ''
-      (setq backup-directory-alist `(("." . "~/.saves")))
+      (setq backup-directory-alist `(("." . "~/.emacs.d/backups/")))
+      (setq auto-save-file-name-transforms `((".*" "~/.emacs.d/auto-saves/" t)))
 
       ;; Start Emacs server for emacsclient (needed by emacs-mcp-server)
       (require 'server)
