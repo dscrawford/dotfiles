@@ -12,7 +12,6 @@
   home.packages = with pkgs; [
     # Utilities
     xclip
-    protontricks
     zsync
     appstream
     appimage-run
@@ -24,8 +23,7 @@
     docker-compose
     # Python
     python3
-    python311Packages.protonup-ng
-    
+
     # Linting tools
     ruff           # Python linter
     statix         # Nix linter
@@ -54,26 +52,13 @@
     vesktop
     discord
     neofetch
-    
-    # Gaming
-    wine
-    winetricks
-    lutris
-    prismlauncher
-    heroic
-    r2modman
-    ferium
-    
+
     # IDE
     jetbrains.pycharm-oss  # Open source version (formerly pycharm-community)
     claude-code
     nodejs  # Provides npx for keegancsmith/emacs-mcp-server
-    
-    # Game dev
-    godot_4
-    
+
     # Other
-    sunshine
     goose-cli
   ];
 
@@ -109,7 +94,7 @@
   programs.home-manager.enable = true;
 
   # Modular configs: Emacs editor, Sway window manager
-  imports = [ ./emacs.nix ./sway.nix ];
+  imports = [ ./emacs.nix ./sway.nix ./gaming.nix ];
 
   # Direnv for development environments
   programs.direnv = {
