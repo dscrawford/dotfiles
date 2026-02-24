@@ -26,6 +26,7 @@ in
 
     # Linting tools
     ruff           # Python linter
+    pyright        # Python language server
     statix         # Nix linter
     nil            # Nix language server
 

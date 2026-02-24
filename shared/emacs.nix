@@ -18,6 +18,8 @@
       dockerfile-mode
       # Inline error checking
       flycheck
+      # Autocomplete
+      corfu
       # Clipboard integration for emacs-nox
       xclip
       # Godot development support
@@ -69,9 +71,20 @@
       (setq select-enable-clipboard t)
       (setq select-enable-primary t)
 
-      ;; Inline error checking
+      ;; LSP (eglot is built-in to Emacs 29+)
+      ;; Automatically start eglot for supported modes
+      (add-hook 'nix-mode-hook 'eglot-ensure)
+      (add-hook 'python-mode-hook 'eglot-ensure)
+      ;; Use nil for Nix, pyright for Python
+      (with-eval-after-load 'eglot
+        (add-to-list 'eglot-server-programs '(nix-mode . ("nil")))
+        (add-to-list 'eglot-server-programs '(python-mode . ("pyright-langserver" "--stdio"))))
+
+      ;; Autocomplete
+      (global-corfu-mode)
+
+      ;; Inline error checking (for modes without LSP)
       (global-flycheck-mode)
-      (setq flycheck-python-ruff-executable "ruff")
       (with-eval-after-load 'flycheck
         (setq flycheck-checker-error-threshold 400))
 
