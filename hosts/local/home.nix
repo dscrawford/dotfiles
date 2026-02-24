@@ -102,7 +102,7 @@
 
   # Environment variables
   home.sessionVariables = {
-    EDITOR = "emacs -nw";
+    EDITOR = "emacsclient";
   };
 
   # Enable home-manager
