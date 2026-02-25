@@ -44,6 +44,17 @@
             $SWAYMSG move container to output "''${OUTPUTS[$IDX]}"
           fi
           ;;
+        init)
+          # Bind all workspaces to their outputs and switch each to X01
+          for i in "''${!OUTPUTS[@]}"; do
+            P="''${PREFIXES[$i]}"
+            O="''${OUTPUTS[$i]}"
+            for W in $(seq 1 10); do
+              $SWAYMSG workspace "''${P}$(printf '%02d' $W)" output "$O"
+            done
+            $SWAYMSG workspace "''${P}01"
+          done
+          ;;
       esac
     '';
   };
@@ -222,6 +233,10 @@
 
     # Monitor layout (managed by nwg-displays)
     include ~/.config/sway/outputs
+
+    # Initialize workspaces on startup and when monitors change
+    exec_always ~/.local/bin/workspace.sh init
+    exec swaymsg -t subscribe -m '["output"]' | while read -r _; do sleep 1; ~/.local/bin/workspace.sh init; done
 
     # Randomized wallpaper (on startup and every 30 minutes)
     exec_always ~/.local/bin/wallpaper.sh
