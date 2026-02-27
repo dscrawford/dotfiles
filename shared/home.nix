@@ -160,6 +160,8 @@ in
     extraConfig = ''
       set -g default-terminal "screen-256color"
       set-option -g status-position top
+      set-option -g default-shell "${pkgs.bash}/bin/bash"
+      set-option -g default-command "${pkgs.bash}/bin/bash"
     '';
   };
 
