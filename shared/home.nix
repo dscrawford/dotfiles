@@ -106,11 +106,21 @@ in
     bashrcExtra = ''
       export PATH=${homeDir}/.local/bin/:$PATH
 
+      # Inside Emacs (eat), open files in a new Emacs window instead of nested instance
+      if [ -n "$INSIDE_EMACS" ]; then
+        emacs() {
+          emacsclient -n --eval "(progn (split-window-right) (other-window 1) (find-file \"$(realpath "$1")\"))"
+        }
+      fi
+
       if command -v tmux &> /dev/null && [ -n "$PS1" ] && [[ ! "$TERM" =~ screen ]] && [[ ! "$TERM" =~ tmux ]] && [ -z "$TMUX" ]; then
          exec tmux -f ${homeDir}/.config/tmux/tmux.conf
       fi
 
       eval "$(direnv hook bash)"
+
+      # Eat shell integration (directory tracking, etc.)
+      [ -n "$EAT_SHELL_INTEGRATION_DIR" ] && source "$EAT_SHELL_INTEGRATION_DIR/bash"
     '';
     initExtra = ''
       if [ -f ${config.sops.secrets.anthropic_api_key.path} ]; then

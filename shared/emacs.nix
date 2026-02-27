@@ -53,6 +53,7 @@
       (require 'server)
       (unless (server-running-p) (server-force-delete) (server-start))
 
+
       ;; Claude Code IDE
       (use-package claude-code-ide
         :bind ("C-c a" . claude-code-ide-menu)
