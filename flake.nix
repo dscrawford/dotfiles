@@ -92,6 +92,8 @@
       ] ++ extraModules;
     };
   in {
+    lib = { inherit mkServer mkLocal mkDarwin; };
+
     nixosConfigurations = {
       node1 = mkServer {
         hostname = "node1";
