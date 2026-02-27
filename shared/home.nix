@@ -1,6 +1,6 @@
 # shared/home.nix
 # Home Manager configuration (cross-platform: Linux and macOS)
-{ config, lib, pkgs, username, gitUser ? null, ... }:
+{ config, lib, pkgs, username, gitUser ? null, enableSecrets ? false, ... }:
 
 let
   isDarwin = pkgs.stdenv.isDarwin;
@@ -29,11 +29,9 @@ in
     sops
 
     # Python
-    python3
-    (python3.withPackages (ps: with ps; [ numpy pandas fastparquet fsspec s3fs pip ]))
+    (python3.withPackages (ps: with ps; [ numpy pandas fastparquet fsspec s3fs pip black ]))
     uv
     poetry
-    python3Packages.black
 
     # Linting tools
     ruff           # Python linter
@@ -138,7 +136,7 @@ in
 
       eval "$(direnv hook bash)"
     '';
-    initExtra = lib.mkIf (config.sops.secrets ? anthropic_api_key) ''
+    initExtra = lib.mkIf enableSecrets ''
       if [ -f ${config.sops.secrets.anthropic_api_key.path} ]; then
         export ANTHROPIC_API_KEY=$(cat ${config.sops.secrets.anthropic_api_key.path})
       fi
@@ -187,8 +185,8 @@ in
   nix = {
     settings.experimental-features = [ "nix-command" "flakes" ];
   };
-
-  # SOPS configuration for secrets management
+} // lib.optionalAttrs enableSecrets {
+  # SOPS configuration for secrets management (only when enableSecrets is true)
   sops = {
     age.keyFile = "${homeDir}/.config/sops/age/keys.txt";
     defaultSopsFile = ../secrets/secrets.yaml;
