@@ -191,7 +191,8 @@ in
     };
   };
 
-  # Nix settings (flakes support)
+} // lib.optionalAttrs isLinux {
+  # Nix settings (flakes support) - only on Linux, Darwin uses Determinate Nix
   nix = {
     settings.experimental-features = [ "nix-command" "flakes" ];
   };
