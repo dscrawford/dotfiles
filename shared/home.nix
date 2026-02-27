@@ -133,17 +133,17 @@ in
       export PATH=${homeDir}/.local/bin/:$PATH
       export EDITOR="emacs -nw"
       export SHELL="${pkgs.bash}/bin/bash"
-      alias emacs="emacs -nw"
     '' + lib.optionalString isDarwin ''
       export PATH=$PATH:/opt/homebrew/bin
     '' + ''
 
       # Inside Emacs (eat), open files in a new Emacs window instead of nested instance
       if [ -n "$INSIDE_EMACS" ]; then
-        unalias emacs 2>/dev/null
         emacs() {
           emacsclient -n --eval "(progn (split-window-right) (other-window 1) (find-file \"$(realpath "$1")\"))"
         }
+      else
+        alias emacs="emacs -nw"
       fi
 
       eval "$(direnv hook bash)"
