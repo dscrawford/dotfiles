@@ -44,8 +44,8 @@
 
   security.pam.services.sudo_local.touchIdAuth = true;
 
-  # nix-daemon is automatically managed when nix.enable is on
-  nix.enable = true;
+  # Disable nix-daemon management (using Determinate Nix)
+  nix.enable = false;
 
   # Allow unfree packages (e.g., claude-code)
   nixpkgs.config.allowUnfree = true;
