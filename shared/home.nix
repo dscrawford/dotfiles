@@ -191,14 +191,13 @@ in
     };
   };
 
-} // lib.optionalAttrs isLinux {
   # Nix settings (flakes support) - only on Linux, Darwin uses Determinate Nix
-  nix = {
+  nix = lib.mkIf isLinux {
     settings.experimental-features = [ "nix-command" "flakes" ];
   };
-} // lib.optionalAttrs enableSecrets {
+
   # SOPS configuration for secrets management (only when enableSecrets is true)
-  sops = {
+  sops = lib.mkIf enableSecrets {
     age.keyFile = "${homeDir}/.config/sops/age/keys.txt";
     defaultSopsFile = ../secrets/secrets.yaml;
     secrets.anthropic_api_key = {};
