@@ -1,11 +1,14 @@
 # hosts/local/emacs.nix
 # Emacs configuration for Home Manager
-{ pkgs, ... }:
+{ config, pkgs, ... }:
 
+let
+  isDarwin = pkgs.stdenv.isDarwin;
+in
 {
   programs.emacs = {
     enable = true;
-    package = pkgs.emacs-nox;
+    package = if isDarwin then pkgs.emacs-macport else pkgs.emacs-nox;
     extraPackages = epkgs: (with epkgs; [
       nix-mode
       magit
@@ -33,6 +36,9 @@
       transient
       web-server
       eat
+      vterm
+      # Copilot inline completions
+      copilot
       (trivialBuild {
         pname = "claude-code-ide";
         version = "0-unstable-2025";
@@ -46,13 +52,41 @@
       })
     ]);
     extraConfig = ''
+      ;; Performance optimizations for macOS
+      (setq gc-cons-threshold (* 100 1024 1024))  ; 100MB - reduce GC pauses
+      (setq read-process-output-max (* 1024 1024))  ; 1MB - faster subprocess communication
+      (setq inhibit-compacting-font-caches t)
+      (setq-default bidi-display-reordering nil)  ; Disable bidirectional text
+      (setq-default bidi-paragraph-direction 'left-to-right)
+
+      ;; Reset GC after startup
+      (add-hook 'emacs-startup-hook
+        (lambda () (setq gc-cons-threshold (* 50 1024 1024))))
+
+      ;; Run GC when idle
+      (run-with-idle-timer 5 t #'garbage-collect)
+
       (setq backup-directory-alist `(("." . "~/.emacs.d/backups/")))
       (setq auto-save-file-name-transforms `((".*" "~/.emacs.d/auto-saves/" t)))
+      (setq find-file-visit-truename t)
+
+      ;; macOS modifier keys (for emacs-macport)
+      (when (eq system-type 'darwin)
+        (setq mac-option-modifier 'meta)
+        (setq mac-command-modifier 'super)
+        (setq mac-right-option-modifier 'none))  ; Allow special characters with right Option
 
       ;; Start Emacs server for emacsclient (needed by emacs-mcp-server)
       (require 'server)
       (unless (server-running-p) (server-force-delete) (server-start))
 
+      ;; Copilot inline completions
+      (setq copilot-node-executable "${pkgs.nodejs}/bin/node")
+      (require 'copilot)
+      (global-set-key (kbd "C-c p") 'copilot-mode)
+      (with-eval-after-load 'copilot
+        (define-key copilot-completion-map (kbd "TAB") 'copilot-accept-completion)
+        (define-key copilot-completion-map (kbd "<tab>") 'copilot-accept-completion))
 
       ;; Claude Code IDE
       (use-package claude-code-ide
@@ -72,12 +106,38 @@
       (global-set-key (kbd "M-o") 'ace-window) ; M-o to jump to a window by number
       (global-set-key (kbd "C-c w") 'windresize) ; C-c w to enter resize mode, arrows to resize, q to quit
 
+      ;; Eat terminal (pure elisp, fast, less flicker than vterm)
+      ;; C-c t spawns a new eat terminal, C-c r lists existing eat sessions
+      (require 'eat)
+      (global-set-key (kbd "C-c t") #'(lambda () (interactive) (let ((current-prefix-arg '(4))) (call-interactively 'eat))))
+      (global-set-key (kbd "C-c r") #'(lambda () (interactive)
+        (let ((eat-buffers (cl-remove-if-not
+                            (lambda (buf) (with-current-buffer buf (derived-mode-p 'eat-mode)))
+                            (buffer-list))))
+          (if eat-buffers
+              (switch-to-buffer (completing-read "Select eat session: "
+                                                 (mapcar #'buffer-name eat-buffers) nil t))
+            (message "No eat sessions open")))))
+      (add-hook 'eshell-load-hook #'eat-eshell-mode)
+      (add-hook 'eshell-load-hook #'eat-eshell-visual-command-mode)
 
-      ;; Clipboard integration (wl-copy/wl-paste for Wayland)
-      (setq xclip-method 'wl-copy)
-      (xclip-mode 1)
-      (setq select-enable-clipboard t)
-      (setq select-enable-primary t)
+      ;; Magit
+      (require 'magit)
+      (global-set-key (kbd "C-c g") 'magit-status)
+
+      ;; Clipboard integration (platform-specific)
+      (if (eq system-type 'darwin)
+          ;; macOS: use pbcopy/pbpaste
+          (progn
+            (setq xclip-method 'pbcopy)
+            (xclip-mode 1)
+            (setq select-enable-clipboard t))
+        ;; Linux: use wl-copy for Wayland
+        (progn
+          (setq xclip-method 'wl-copy)
+          (xclip-mode 1)
+          (setq select-enable-clipboard t)
+          (setq select-enable-primary t)))
 
       ;; LSP (eglot is built-in to Emacs 29+)
       ;; Automatically start eglot for supported modes
@@ -89,6 +149,10 @@
         (add-to-list 'eglot-server-programs '(nix-mode . ("nil")))
         (add-to-list 'eglot-server-programs '(python-mode . ("pyright-langserver" "--stdio")))
         (add-to-list 'eglot-server-programs '(gdscript-mode . ("localhost" 6005))))
+
+      ;; Flymake for linting (works with eglot)
+      (add-hook 'python-mode-hook 'flymake-mode)
+      (add-hook 'nix-mode-hook 'flymake-mode)
 
       ;; Autocomplete
       (setq corfu-auto t)          ;; popup automatically

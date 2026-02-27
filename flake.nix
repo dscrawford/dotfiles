@@ -65,7 +65,7 @@
       ] ++ extraModules;
     };
 
-    mkDarwin = { hostname, username, system, homeModules ? [ ./shared/home.nix ], extraModules ? [] }: nix-darwin.lib.darwinSystem {
+    mkDarwin = { hostname, username, system, gitUser ? null, homeModules ? [ ./shared/home.nix ], extraModules ? [] }: nix-darwin.lib.darwinSystem {
       inherit system;
       specialArgs = {
         inherit hostname username;
@@ -84,7 +84,7 @@
           home-manager.users.${username} = {
             imports = homeModules;
           };
-          home-manager.extraSpecialArgs = { inherit hostname username; };
+          home-manager.extraSpecialArgs = { inherit hostname username gitUser; };
           home-manager.sharedModules = [
             sops-nix.homeManagerModules.sops
           ];

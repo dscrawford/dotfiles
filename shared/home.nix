@@ -1,6 +1,6 @@
 # shared/home.nix
 # Home Manager configuration (cross-platform: Linux and macOS)
-{ config, lib, pkgs, username, ... }:
+{ config, lib, pkgs, username, gitUser ? null, ... }:
 
 let
   isDarwin = pkgs.stdenv.isDarwin;
@@ -21,26 +21,52 @@ in
     cachix
     virtualenv
     docker-compose
+    atool
+    httpie
+    yq
+    gnupg
+    cacert
+    sops
+
     # Python
     python3
+    (python3.withPackages (ps: with ps; [ numpy pandas fastparquet fsspec s3fs pip ]))
+    uv
+    poetry
+    python3Packages.black
 
     # Linting tools
     ruff           # Python linter
     pyright        # Python language server
     statix         # Nix linter
     nil            # Nix language server
+    nixfmt         # Nix formatter
 
     # Development tools
     openssl
     curl
+    gcc
+    redis
+
+    # Cloud & Kubernetes
     kubectl
+    awscli2
+    kubernetes-helm
+    argo-rollouts
+
+    # Database
+    postgresql
 
     # IDE
     claude-code
-    nodejs  # Provides npx for keegancsmith/emacs-mcp-server
+    github-copilot-cli
+    nodejs  # Provides npx for keegancsmith/emacs-mcp-server and copilot.el
 
     # Other
     goose-cli
+  ] ++ lib.optionals isDarwin [
+    docker
+    docker-buildx
   ] ++ lib.optionals isLinux [
     xclip
     zsync
@@ -122,7 +148,7 @@ in
       # Eat shell integration (directory tracking, etc.)
       [ -n "$EAT_SHELL_INTEGRATION_DIR" ] && source "$EAT_SHELL_INTEGRATION_DIR/bash"
     '';
-    initExtra = ''
+    initExtra = lib.mkIf (config.sops.secrets ? anthropic_api_key) ''
       if [ -f ${config.sops.secrets.anthropic_api_key.path} ]; then
         export ANTHROPIC_API_KEY=$(cat ${config.sops.secrets.anthropic_api_key.path})
       fi
@@ -149,7 +175,7 @@ in
   programs.git = {
     enable = true;
     settings = {
-      user = {
+      user = if gitUser != null then gitUser else {
         name = "Daniel Crawford";
         email = "daniel.sc.crawford@gmail.com";
       };
