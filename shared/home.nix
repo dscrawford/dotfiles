@@ -127,8 +127,15 @@ in
   # Bash configuration
   programs.bash = {
     enable = true;
+    enableCompletion = true;
     bashrcExtra = ''
       export PATH=${homeDir}/.local/bin/:$PATH
+      export EDITOR="emacs -nw"
+      export SHELL="${pkgs.bash}/bin/bash"
+      alias emacs="emacs -nw"
+    '' + lib.optionalString isDarwin ''
+      export PATH=$PATH:/opt/homebrew/bin
+    '' + ''
 
       # Inside Emacs (eat), open files in a new Emacs window instead of nested instance
       if [ -n "$INSIDE_EMACS" ]; then
