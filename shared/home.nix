@@ -185,9 +185,9 @@ in
   nix = lib.mkIf isLinux {
     settings.experimental-features = [ "nix-command" "flakes" ];
   };
-
+} // lib.optionalAttrs enableSecrets {
   # SOPS configuration for secrets management (only when enableSecrets is true)
-  sops = lib.mkIf enableSecrets {
+  sops = {
     age.keyFile = "${homeDir}/.config/sops/age/keys.txt";
     defaultSopsFile = ../secrets/secrets.yaml;
     secrets.anthropic_api_key = {};
