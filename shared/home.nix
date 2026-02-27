@@ -146,6 +146,7 @@ in
   # Tmux configuration
   programs.tmux = {
     enable = true;
+    shell = "${pkgs.bash}/bin/bash";
     extraConfig = ''
       set -g default-terminal "screen-256color"
       set-option -g status-position top
