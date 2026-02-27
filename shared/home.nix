@@ -129,6 +129,7 @@ in
     enable = true;
     enableCompletion = true;
     bashrcExtra = ''
+      PS1='\u:\W\$ '
       export PATH=${homeDir}/.local/bin/:$PATH
       export EDITOR="emacs -nw"
       export SHELL="${pkgs.bash}/bin/bash"
