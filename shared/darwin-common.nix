@@ -28,13 +28,6 @@
     done
   '';
 
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
-  nix.settings.trusted-users = [ "root" username ];
-  nix.extraOptions = ''
-    extra-platforms = x86_64-darwin aarch64-darwin
-    download-buffer-size = 2147483648
-  '';
-
   programs.zsh.enable = true;
 
   system = {
@@ -46,7 +39,6 @@
 
   # Disable nix-daemon management (using Determinate Nix)
   nix.enable = false;
-  nix.package = pkgs.nix;  # Required for nix.conf generation
 
   # Allow unfree packages (e.g., claude-code)
   nixpkgs.config.allowUnfree = true;
