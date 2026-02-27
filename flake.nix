@@ -35,7 +35,7 @@
       ] ++ extraModules;
     };
 
-    mkLocal = { hostname, username, system ? "x86_64-linux", enableSecrets ? true, homeModules ? [ ./shared/home.nix ], extraModules ? [] }: nixpkgs.lib.nixosSystem {
+    mkLocal = { hostname, username, system ? "x86_64-linux", gitUser ? null, enableSecrets ? true, homeModules ? [ ./shared/home.nix ], extraModules ? [] }: nixpkgs.lib.nixosSystem {
       inherit system;
       specialArgs = {
         inherit hostname username;
@@ -55,7 +55,7 @@
           home-manager.users.${username} = {
             imports = homeModules;
           };
-          home-manager.extraSpecialArgs = { inherit hostname username enableSecrets; };
+          home-manager.extraSpecialArgs = { inherit hostname username gitUser enableSecrets; };
           home-manager.sharedModules = lib.optionals enableSecrets [
             sops-nix.homeManagerModules.sops
           ];
