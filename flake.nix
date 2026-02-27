@@ -18,6 +18,7 @@
 
   outputs = { self, nixpkgs, home-manager, sops-nix, nix-darwin }:
   let
+    lib = nixpkgs.lib;
     mkServer = { hostname, ip, extraModules ? [] }: nixpkgs.lib.nixosSystem rec {
       system = "x86_64-linux";
       specialArgs = {
@@ -34,7 +35,7 @@
       ] ++ extraModules;
     };
 
-    mkLocal = { hostname, username, system ? "x86_64-linux", homeModules ? [ ./shared/home.nix ], extraModules ? [] }: nixpkgs.lib.nixosSystem {
+    mkLocal = { hostname, username, system ? "x86_64-linux", enableSecrets ? true, homeModules ? [ ./shared/home.nix ], extraModules ? [] }: nixpkgs.lib.nixosSystem {
       inherit system;
       specialArgs = {
         inherit hostname username;
@@ -46,9 +47,6 @@
         ./hosts/local/local.nix
         ./hosts/local/hardware-configuration.nix
 
-        # Sops integration
-        sops-nix.nixosModules.sops
-
         # Home Manager integration
         home-manager.nixosModules.home-manager
         {
@@ -57,24 +55,23 @@
           home-manager.users.${username} = {
             imports = homeModules;
           };
-          home-manager.extraSpecialArgs = { inherit hostname username; };
-          home-manager.sharedModules = [
+          home-manager.extraSpecialArgs = { inherit hostname username enableSecrets; };
+          home-manager.sharedModules = lib.optionals enableSecrets [
             sops-nix.homeManagerModules.sops
           ];
         }
+      ] ++ lib.optionals enableSecrets [
+        sops-nix.nixosModules.sops
       ] ++ extraModules;
     };
 
-    mkDarwin = { hostname, username, system, gitUser ? null, homeModules ? [ ./shared/home.nix ], extraModules ? [] }: nix-darwin.lib.darwinSystem {
+    mkDarwin = { hostname, username, system, gitUser ? null, enableSecrets ? false, homeModules ? [ ./shared/home.nix ], extraModules ? [] }: nix-darwin.lib.darwinSystem {
       inherit system;
       specialArgs = {
         inherit hostname username;
       };
       modules = [
         ./shared/darwin-common.nix
-
-        # Sops integration
-        sops-nix.darwinModules.sops
 
         # Home Manager integration
         home-manager.darwinModules.home-manager
@@ -84,11 +81,13 @@
           home-manager.users.${username} = {
             imports = homeModules;
           };
-          home-manager.extraSpecialArgs = { inherit hostname username gitUser; };
-          home-manager.sharedModules = [
+          home-manager.extraSpecialArgs = { inherit hostname username gitUser enableSecrets; };
+          home-manager.sharedModules = lib.optionals enableSecrets [
             sops-nix.homeManagerModules.sops
           ];
         }
+      ] ++ lib.optionals enableSecrets [
+        sops-nix.darwinModules.sops
       ] ++ extraModules;
     };
   in {
