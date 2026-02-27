@@ -79,6 +79,20 @@
     '';
   };
 
+  home.file.".local/bin/lock.sh" = {
+    executable = true;
+    text = ''
+      #!/bin/bash
+      WALLPAPER_DIR="$HOME/.local/share/wallpapers"
+      IMG=$(find "$WALLPAPER_DIR" -type f \( -name '*.jpg' -o -name '*.jpeg' -o -name '*.png' -o -name '*.webp' \) 2>/dev/null | shuf -n 1)
+      if [ -n "$IMG" ]; then
+        swaylock -f -i "$IMG" -s fill
+      else
+        swaylock -f
+      fi
+    '';
+  };
+
   home.file.".local/bin/volume.sh" = {
     executable = true;
     text = ''
@@ -253,10 +267,10 @@
 
     # Idle and lock
     exec_always pkill swayidle; swayidle -w \
-      timeout 1800 'swaylock -f' \
+      timeout 1800 '~/.local/bin/lock.sh' \
       timeout 3600 'swaymsg "output * power off"' \
       resume 'swaymsg "output * power on"' \
-      before-sleep 'swaylock -f'
+      before-sleep '~/.local/bin/lock.sh'
 
     # Volume controls (wpctl/PipeWire) with notifications
     set $refresh_i3status killall -SIGUSR1 i3status
