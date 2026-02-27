@@ -26,6 +26,8 @@
       gdscript-mode
       # Quick window switching
       ace-window
+      # Window resizing
+      windresize
       # Claude Code IDE dependencies
       websocket
       transient
@@ -67,6 +69,8 @@
       ;; Window navigation
       (windmove-default-keybindings) ; Shift+arrow to move between windows
       (global-set-key (kbd "M-o") 'ace-window) ; M-o to jump to a window by number
+      (global-set-key (kbd "C-c w") 'windresize) ; C-c w to enter resize mode, arrows to resize, q to quit
+
 
       ;; Clipboard integration (wl-copy/wl-paste for Wayland)
       (setq xclip-method 'wl-copy)
