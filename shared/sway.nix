@@ -111,7 +111,7 @@
     height = 30;
     modules-left = [ "sway/workspaces" "sway/mode" ];
     modules-center = [ "clock" ];
-    modules-right = [ "pulseaudio" "cpu" "memory" "disk" "network" "tray" ];
+    modules-right = [ "pulseaudio" "custom/gpu" "cpu" "memory" "disk" "network" "tray" ];
     "sway/workspaces" = {
       disable-scroll = true;
       format = "{name}";
@@ -144,6 +144,11 @@
       format = "VOL {volume}%";
       format-muted = "MUTED";
       on-click = "pavucontrol";
+    };
+    "custom/gpu" = {
+      exec = "nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits 2>/dev/null || echo N/A";
+      format = "GPU {}%";
+      interval = 5;
     };
     tray = {
       spacing = 8;
@@ -182,6 +187,10 @@
 
     #pulseaudio {
       color: #8be9fd;
+    }
+
+    #custom-gpu {
+      color: #ffb86c;
     }
 
     #cpu {
