@@ -46,6 +46,7 @@
 
   # Disable nix-daemon management (using Determinate Nix)
   nix.enable = false;
+  nix.package = pkgs.nix;  # Required for nix.conf generation
 
   # Allow unfree packages (e.g., claude-code)
   nixpkgs.config.allowUnfree = true;
