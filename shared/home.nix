@@ -127,8 +127,15 @@ in
   # Bash configuration
   programs.bash = {
     enable = true;
+    enableCompletion = true;
     bashrcExtra = ''
       export PATH=${homeDir}/.local/bin/:$PATH
+      export EDITOR="emacs -nw"
+      export SHELL="${pkgs.bash}/bin/bash"
+      alias emacs="emacs -nw"
+    '' + lib.optionalString isDarwin ''
+      export PATH=$PATH:/opt/homebrew/bin
+    '' + ''
 
       if command -v tmux &> /dev/null && [ -n "$PS1" ] && [[ ! "$TERM" =~ screen ]] && [[ ! "$TERM" =~ tmux ]] && [ -z "$TMUX" ]; then
          exec tmux -f ${homeDir}/.config/tmux/tmux.conf
