@@ -137,10 +137,16 @@ in
       export PATH=$PATH:/opt/homebrew/bin
     '' + ''
 
+      # Set emacsclient socket name to match the current tmux pane's server
+      if [ -n "$TMUX_PANE" ]; then
+        export EMACS_SERVER="emacs-$(echo $TMUX_PANE | tr -d %)"
+        export EDITOR="emacsclient -s $EMACS_SERVER"
+      fi
+
       # Inside Emacs (eat), open files in a new Emacs window instead of nested instance
       if [ -n "$INSIDE_EMACS" ]; then
         emacs() {
-          emacsclient -n --eval "(progn (split-window-right) (other-window 1) (find-file \"$(realpath "$1")\"))"
+          emacsclient -s "$EMACS_SERVER" -n --eval "(progn (split-window-right) (other-window 1) (find-file \"$(realpath "$1")\"))"
         }
       else
         alias emacs="emacs -nw"

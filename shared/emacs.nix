@@ -76,8 +76,10 @@ in
         (setq mac-command-modifier 'super)
         (setq mac-right-option-modifier 'none))  ; Allow special characters with right Option
 
-      ;; Start Emacs server for emacsclient (needed by emacs-mcp-server)
+      ;; Start Emacs server with unique name per tmux pane
       (require 'server)
+      (let ((pane (getenv "TMUX_PANE")))
+        (when pane (setq server-name (format "emacs-%s" (replace-regexp-in-string "%" "" pane)))))
       (unless (server-running-p) (server-force-delete) (server-start))
 
       ;; Copilot inline completions
@@ -100,6 +102,10 @@ in
 
       ;; Compile
       (global-set-key (kbd "C-c C-k") 'compile)
+
+      ;; Move between paragraphs (like Ctrl-up/Ctrl-down in terminals)
+      (global-set-key (kbd "M-<up>") 'backward-paragraph)
+      (global-set-key (kbd "M-<down>") 'forward-paragraph)
 
       ;; Window navigation
       (windmove-default-keybindings) ; Shift+arrow to move between windows
