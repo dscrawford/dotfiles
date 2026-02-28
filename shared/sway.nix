@@ -4,6 +4,10 @@
 { pkgs, ... }:
 
 {
+  home.packages = with pkgs; [
+    thunar
+    xdg-desktop-portal-gtk
+  ];
   home.file.".local/bin/workspace.sh" = {
     executable = true;
     text = ''
@@ -398,6 +402,9 @@
 
     # Applications
     bindsym Control+Shift+Mod1+f exec firefox
+
+    # Gamescope focus fix (prevents frame stalling on sway)
+    for_window [app_id="gamescope"] focus, fullscreen enable
 
     # Float popup/dialog windows automatically
     for_window [window_role="pop-up"] floating enable

@@ -15,6 +15,9 @@
     r2modman
     ferium
 
+    # Wayland game display management
+    gamescope
+
     # Game dev
     godot_4
 
