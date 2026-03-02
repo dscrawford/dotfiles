@@ -100,6 +100,10 @@ in
       ;; Auto-revert buffers when files change on disk
       (global-auto-revert-mode 1)
 
+      ;; Render ANSI color/style codes in compilation buffer
+      (require 'ansi-color)
+      (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter)
+
       ;; Compile — per-directory history stored in ~/.emacs.d/compile-history/
       (defvar my/compile-history-dir "~/.emacs.d/compile-history/")
       (defun my/compile-history-file ()
