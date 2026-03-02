@@ -19,6 +19,9 @@ in
       use-package
       emacsql
       dockerfile-mode
+      groovy-mode        # Jenkinsfile syntax
+      json-mode          # Enhanced JSON (highlighting, formatting, paths)
+      terraform-mode
       # Inline error checking
       flycheck
       # Autocomplete
@@ -195,6 +198,9 @@ in
       (global-flycheck-mode)
       (with-eval-after-load 'flycheck
         (setq flycheck-checker-error-threshold 400))
+
+      ;; Jenkinsfile syntax
+      (add-to-list 'auto-mode-alist '("Jenkinsfile\\'" . groovy-mode))
 
       ;; Godot file type associations
       (with-eval-after-load 'gdscript-mode
