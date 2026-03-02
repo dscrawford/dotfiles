@@ -100,8 +100,29 @@ in
       ;; Auto-revert buffers when files change on disk
       (global-auto-revert-mode 1)
 
-      ;; Compile
-      (global-set-key (kbd "C-c C-k") 'compile)
+      ;; Compile — per-directory history stored in ~/.emacs.d/compile-history/
+      (defvar my/compile-history-dir "~/.emacs.d/compile-history/")
+      (defun my/compile-history-file ()
+        (let ((dir (md5 (abbreviate-file-name default-directory))))
+          (expand-file-name dir my/compile-history-dir)))
+      (defun my/compile-history-load ()
+        (let ((file (my/compile-history-file)))
+          (when (file-exists-p file)
+            (with-temp-buffer (insert-file-contents file)
+              (read (current-buffer))))))
+      (defun my/compile-history-save (history)
+        (make-directory my/compile-history-dir t)
+        (with-temp-file (my/compile-history-file)
+          (prin1 history (current-buffer))))
+      (defun my/compile ()
+        "Compile with per-directory command history."
+        (interactive)
+        (let* ((history (my/compile-history-load))
+               (default (or (car history) compile-command))
+               (cmd (read-string (format "Compile [%s]: " default) nil 'history default)))
+          (my/compile-history-save (delete-dups (cons cmd history)))
+          (compile cmd)))
+      (global-set-key (kbd "C-c C-k") 'my/compile)
 
       ;; Move between paragraphs (like Ctrl-up/Ctrl-down in terminals)
       (global-set-key (kbd "M-<up>") 'backward-paragraph)
