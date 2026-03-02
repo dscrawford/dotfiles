@@ -27,6 +27,7 @@ in
     gnupg
     cacert
     sops
+    lynx
 
     # Python
     (python3.withPackages (ps: with ps; [ numpy pandas fastparquet fsspec s3fs pip black ]))
