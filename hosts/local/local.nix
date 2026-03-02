@@ -139,10 +139,6 @@
       KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="28de", ATTRS{idProduct}=="2301", MODE="0660", TAG+="uaccess"
       SUBSYSTEM=="tty", ATTRS{idVendor}=="28de", ATTRS{idProduct}=="2102", MODE="0660", TAG+="uaccess"
     '';
-    openvpn.servers.homeVPN = {
-      config = '' config /root/nixos/openvpn/homeVPN.ovpn '';
-      autoStart = false;
-    };
   };
 
   # === XDG ===
