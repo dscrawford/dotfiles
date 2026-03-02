@@ -163,7 +163,7 @@ in
       (if (eq system-type 'darwin)
           ;; macOS: use pbcopy/pbpaste
           (progn
-            (setq xclip-method 'pbcopy)
+            (setq xclip-method 'pbpaste)
             (xclip-mode 1)
             (setq select-enable-clipboard t))
         ;; Linux: use wl-copy for Wayland
