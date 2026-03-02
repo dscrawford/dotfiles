@@ -103,7 +103,7 @@ in
       ;; Compile — per-directory history stored in ~/.emacs.d/compile-history/
       (defvar my/compile-history-dir "~/.emacs.d/compile-history/")
       (defun my/compile-history-file ()
-        (let ((dir (md5 (abbreviate-file-name default-directory))))
+        (let ((dir (replace-regexp-in-string "/" "!" (abbreviate-file-name default-directory))))
           (expand-file-name dir my/compile-history-dir)))
       (defun my/compile-history-load ()
         (let ((file (my/compile-history-file)))
