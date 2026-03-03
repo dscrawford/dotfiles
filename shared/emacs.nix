@@ -71,6 +71,14 @@ in
 
       (setq backup-directory-alist `(("." . "~/.emacs.d/backups/")))
       (setq auto-save-file-name-transforms `((".*" "~/.emacs.d/auto-saves/" t)))
+      (make-directory "~/.emacs.d/backups/" t)
+      (make-directory "~/.emacs.d/auto-saves/" t)
+      (make-directory "~/.emacs.d/compile-history/" t)
+
+      ;; Persist minibuffer history (shell commands, M-x, etc.) across sessions
+      (setq savehist-file "~/.emacs.d/savehist")
+      (setq savehist-additional-variables '(shell-command-history search-ring regexp-search-ring))
+      (savehist-mode 1)
       (setq find-file-visit-truename t)
 
       ;; macOS modifier keys (for emacs-macport)
