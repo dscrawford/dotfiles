@@ -70,7 +70,11 @@ in
       (run-with-idle-timer 5 t #'garbage-collect)
 
       (setq backup-directory-alist `(("." . "~/.emacs.d/backups/")))
+      (setq make-backup-files t)
       (setq auto-save-file-name-transforms `((".*" "~/.emacs.d/auto-saves/" t)))
+      (setq auto-save-default t)
+      (setq auto-save-timeout 20)
+      (setq auto-save-interval 200)
       (make-directory "~/.emacs.d/backups/" t)
       (make-directory "~/.emacs.d/auto-saves/" t)
       (make-directory "~/.emacs.d/compile-history/" t)
