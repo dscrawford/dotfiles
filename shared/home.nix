@@ -113,6 +113,8 @@ in
   # Environment variables
   home.sessionVariables = {
     EDITOR = "emacsclient";
+  } // lib.optionalAttrs isDarwin {
+    TERM = "xterm-256color";
   };
 
   # Enable home-manager
