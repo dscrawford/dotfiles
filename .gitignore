@@ -15,6 +15,9 @@ result-*
 *.swo
 .*.swp
 
+# Emacs lock files
+.#*
+
 # OS files
 .DS_Store
 Thumbs.db

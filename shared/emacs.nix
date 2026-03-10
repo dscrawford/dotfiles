@@ -45,6 +45,13 @@ in
           hash = "sha256-hKgwjs4qZikbvHKjWIJFlkI/4LXR6qovCoTBM5miVr8=";
         };
       })
+      # PDF viewing
+      pdf-tools
+      # Modern modeline
+      doom-modeline
+      nerd-icons
+      # Show available keybindings
+      which-key
       # Claude Code IDE dependencies
       websocket
       transient
@@ -71,8 +78,30 @@ in
       (menu-bar-mode -1)
       (scroll-bar-mode -1)
       (load-theme 'modus-vivendi t)
+
+      ;; Tab bar — named by project/directory
+      (tab-bar-mode 1)
+      (defun my/tab-bar-name ()
+        (let ((project (project-current)))
+          (if project
+              (file-name-nondirectory (directory-file-name (project-root project)))
+            (file-name-nondirectory (directory-file-name default-directory)))))
+      (setq tab-bar-tab-name-function #'my/tab-bar-name)
       (require 'ultra-scroll)
       (ultra-scroll-mode 1)
+
+      ;; PDF support
+      (pdf-tools-install :no-query)
+
+      ;; Modern modeline
+      (require 'doom-modeline)
+      (doom-modeline-mode 1)
+      (setq doom-modeline-icon t)
+
+      ;; Show available keybindings after prefix key press
+      (require 'which-key)
+      (which-key-mode 1)
+      (setq which-key-idle-delay 0.5)
 
       ;; Performance optimizations
       (setq gc-cons-threshold (* 100 1024 1024))  ; 100MB - reduce GC pauses
@@ -94,9 +123,11 @@ in
       (setq auto-save-default t)
       (setq auto-save-timeout 20)
       (setq auto-save-interval 200)
+      (setq lock-file-name-transforms `((".*" "~/.emacs.d/lockfiles/" t)))
       (make-directory "~/.emacs.d/backups/" t)
       (make-directory "~/.emacs.d/auto-saves/" t)
       (make-directory "~/.emacs.d/compile-history/" t)
+      (make-directory "~/.emacs.d/lockfiles/" t)
 
       ;; Persist minibuffer history (shell commands, M-x, etc.) across sessions
       (setq savehist-file "~/.emacs.d/savehist")
