@@ -15,6 +15,9 @@ in
 
   # User packages
   home.packages = with pkgs; [
+    # Fonts
+    nerd-fonts.symbols-only
+
     # Utilities
     zip
     unzip
