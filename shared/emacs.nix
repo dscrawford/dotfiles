@@ -8,7 +8,7 @@ in
 {
   programs.emacs = {
     enable = true;
-    package = if isDarwin then pkgs.emacs-macport else pkgs.emacs-nox;
+    package = if isDarwin then pkgs.emacs-macport else pkgs.emacs-pgtk;
     extraPackages = epkgs: (with epkgs; [
       nix-mode
       magit
@@ -55,7 +55,10 @@ in
       })
     ]);
     extraConfig = ''
-      ;; Performance optimizations for macOS
+      ;; Disable GUI scroll bar
+      (scroll-bar-mode -1)
+
+      ;; Performance optimizations
       (setq gc-cons-threshold (* 100 1024 1024))  ; 100MB - reduce GC pauses
       (setq read-process-output-max (* 1024 1024))  ; 1MB - faster subprocess communication
       (setq inhibit-compacting-font-caches t)
