@@ -66,8 +66,11 @@ in
       })
     ]);
     extraConfig = ''
-      ;; Disable GUI scroll bar, enable smooth scrolling with momentum
+      ;; GUI cleanup and dark theme
+      (tool-bar-mode -1)
+      (menu-bar-mode -1)
       (scroll-bar-mode -1)
+      (load-theme 'modus-vivendi t)
       (require 'ultra-scroll)
       (ultra-scroll-mode 1)
 
