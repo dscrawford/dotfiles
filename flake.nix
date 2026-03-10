@@ -14,9 +14,13 @@
       url = "github:LnL7/nix-darwin";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    darwin-emacs = {
+      url = "github:nix-giant/nix-darwin-emacs";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, sops-nix, nix-darwin }:
+  outputs = { self, nixpkgs, home-manager, sops-nix, nix-darwin, darwin-emacs }:
   let
     lib = nixpkgs.lib;
     mkServer = { hostname, ip, extraModules ? [] }: nixpkgs.lib.nixosSystem rec {
@@ -71,6 +75,7 @@
         inherit hostname username;
       };
       modules = [
+        { nixpkgs.overlays = [ darwin-emacs.overlays.emacs ]; }
         ./shared/darwin-common.nix
 
         # Home Manager integration
