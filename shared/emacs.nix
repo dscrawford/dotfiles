@@ -34,6 +34,17 @@ in
       ace-window
       # Window resizing
       windresize
+      # Smooth scrolling
+      (trivialBuild {
+        pname = "ultra-scroll";
+        version = "0-unstable-2025";
+        src = pkgs.fetchFromGitHub {
+          owner = "jdtsmith";
+          repo = "ultra-scroll";
+          rev = "08758c6772c5fbce54fb74fb5cce080b6425c6ce";
+          hash = "sha256-hKgwjs4qZikbvHKjWIJFlkI/4LXR6qovCoTBM5miVr8=";
+        };
+      })
       # Claude Code IDE dependencies
       websocket
       transient
@@ -55,8 +66,10 @@ in
       })
     ]);
     extraConfig = ''
-      ;; Disable GUI scroll bar
+      ;; Disable GUI scroll bar, enable smooth scrolling with momentum
       (scroll-bar-mode -1)
+      (require 'ultra-scroll)
+      (ultra-scroll-mode 1)
 
       ;; Performance optimizations
       (setq gc-cons-threshold (* 100 1024 1024))  ; 100MB - reduce GC pauses
