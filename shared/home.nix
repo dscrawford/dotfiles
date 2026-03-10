@@ -138,7 +138,6 @@ in
       export EDITOR="emacs -nw"
       export SHELL="${pkgs.bash}/bin/bash"
     '' + lib.optionalString isDarwin ''
-      export TERM=xterm-256color
       export PATH=$PATH:/opt/homebrew/bin
     '' + ''
 

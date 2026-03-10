@@ -205,6 +205,7 @@ in
       ;; Eat terminal (pure elisp, fast, less flicker than vterm)
       ;; C-c t spawns a new eat terminal, C-c r lists existing eat sessions
       (require 'eat)
+      (eat-compile-terminfo)
       (global-set-key (kbd "C-c t") #'(lambda () (interactive) (let ((current-prefix-arg '(4))) (call-interactively 'eat))))
       (global-set-key (kbd "C-c r") #'(lambda () (interactive)
         (let ((eat-buffers (cl-remove-if-not
