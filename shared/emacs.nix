@@ -227,7 +227,7 @@ in
       ;; Use Home Manager bash for all shell operations
       (setq shell-file-name "${pkgs.bash}/bin/bash")
       (setq explicit-shell-file-name "${pkgs.bash}/bin/bash")
-      (setenv "SHELL" "${pkgs.bash}/bin/bash")
+      (add-hook 'emacs-startup-hook (lambda () (setenv "SHELL" "${pkgs.bash}/bin/bash")))
 
       ;; Eat terminal (pure elisp, fast, less flicker than vterm)
       ;; C-c t spawns a new eat terminal, C-c r lists existing eat sessions
