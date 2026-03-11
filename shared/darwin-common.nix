@@ -23,10 +23,22 @@
     echo "setting up /Applications/Nix Apps..." >&2
     rm -rf /Applications/Nix\ Apps
     mkdir -p /Applications/Nix\ Apps
-    for app in ${pkgs.emacs-macport}/Applications/*.app; do
+    for app in ${pkgs.emacs-30}/Applications/*.app; do
       cp -rL "$app" /Applications/Nix\ Apps/
     done
   '';
+
+  # Export system PATH to launchd so GUI Emacs can find Nix binaries
+  launchd.agents.set-environment-path = {
+    serviceConfig = {
+      Label = "set-environment-path";
+      ProgramArguments = [
+        "/bin/sh" "-c"
+        "launchctl setenv PATH $PATH"
+      ];
+      RunAtLoad = true;
+    };
+  };
 
   programs.zsh.enable = true;
 
