@@ -63,6 +63,8 @@ in
       transient
       web-server
       eat
+      # Inherit shell PATH in macOS GUI Emacs
+      exec-path-from-shell
       # Copilot inline completions
       copilot
       (trivialBuild {
@@ -228,17 +230,13 @@ in
       (setq shell-file-name "${pkgs.bash}/bin/bash")
       (setq explicit-shell-file-name "${pkgs.bash}/bin/bash")
       (add-to-list 'exec-path "${pkgs.bash}/bin")
-      (add-to-list 'exec-path "/nix/var/nix/profiles/default/bin")
-      (add-to-list 'exec-path "/run/current-system/sw/bin")
-      (add-to-list 'exec-path (expand-file-name "~/.nix-profile/bin"))
-      (add-hook 'emacs-startup-hook
-        (lambda ()
-          (setenv "SHELL" "${pkgs.bash}/bin/bash")
-          (setenv "PATH" (concat "${pkgs.bash}/bin:"
-                                 "/nix/var/nix/profiles/default/bin:"
-                                 "/run/current-system/sw/bin:"
-                                 (expand-file-name "~/.nix-profile/bin") ":"
-                                 (getenv "PATH")))))
+      (setenv "SHELL" "${pkgs.bash}/bin/bash")
+
+      ;; On macOS GUI, inherit PATH from login shell (GUI apps don't get shell PATH)
+      (when (and (eq system-type 'darwin) (display-graphic-p))
+        (require 'exec-path-from-shell)
+        (setq exec-path-from-shell-shell-name "${pkgs.bash}/bin/bash")
+        (exec-path-from-shell-initialize))
 
       ;; Eat terminal (pure elisp, fast, less flicker than vterm)
       ;; C-c t spawns a new eat terminal, C-c r lists existing eat sessions
