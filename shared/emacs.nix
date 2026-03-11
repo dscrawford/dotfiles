@@ -56,6 +56,8 @@ in
       nerd-icons
       # Show available keybindings
       which-key
+      # Direnv integration
+      envrc
       # Claude Code IDE dependencies
       websocket
       transient
@@ -118,6 +120,10 @@ in
       (require 'which-key)
       (which-key-mode 1)
       (setq which-key-idle-delay 0.5)
+
+      ;; Direnv integration — automatically load .envrc environments in buffers
+      (require 'envrc)
+      (envrc-global-mode 1)
 
       ;; Performance optimizations
       (setq gc-cons-threshold (* 100 1024 1024))  ; 100MB - reduce GC pauses
