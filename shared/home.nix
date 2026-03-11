@@ -93,7 +93,7 @@ in
     alacritty
     vesktop
     discord
-    neofetch
+    fastfetch
     jetbrains.pycharm-oss
   ];
 
