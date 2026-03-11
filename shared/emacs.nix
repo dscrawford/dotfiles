@@ -224,9 +224,14 @@ in
       (global-set-key (kbd "M-o") 'ace-window) ; M-o to jump to a window by number
       (global-set-key (kbd "C-c w") 'windresize) ; C-c w to enter resize mode, arrows to resize, q to quit
 
+      ;; Use Home Manager bash for all shell operations
+      (setq shell-file-name "${pkgs.bash}/bin/bash")
+      (setq explicit-shell-file-name "${pkgs.bash}/bin/bash")
+
       ;; Eat terminal (pure elisp, fast, less flicker than vterm)
       ;; C-c t spawns a new eat terminal, C-c r lists existing eat sessions
       (require 'eat)
+      (setq eat-shell "${pkgs.bash}/bin/bash")
       (eat-compile-terminfo)
       (advice-add 'eat-emacs-mode :after (lambda (&rest _) (setq-local cursor-type 'box)))
       (global-set-key (kbd "C-c t") #'(lambda () (interactive) (let ((current-prefix-arg '(4))) (call-interactively 'eat))))
