@@ -19,8 +19,10 @@ in
       use-package
       emacsql
       dockerfile-mode
-      groovy-mode        # Jenkinsfile syntax
-      json-mode          # Enhanced JSON (highlighting, formatting, paths)
+      # Jenkinsfile syntax
+      groovy-mode
+      # Enhanced JSON
+      json-mode
       terraform-mode
       # Org presentations
       org-present
