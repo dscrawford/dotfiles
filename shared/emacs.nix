@@ -1,4 +1,4 @@
-# hosts/local/emacs.nix
+# shared/emacs.nix
 # Emacs configuration for Home Manager
 { config, pkgs, ... }:
 
@@ -22,11 +22,13 @@ in
       groovy-mode        # Jenkinsfile syntax
       json-mode          # Enhanced JSON (highlighting, formatting, paths)
       terraform-mode
+      # Org presentations
+      org-present
       # Inline error checking
       flycheck
       # Autocomplete
       corfu
-      # Clipboard integration for emacs-nox
+      # Clipboard integration
       xclip
       # Godot development support
       gdscript-mode
@@ -57,7 +59,6 @@ in
       transient
       web-server
       eat
-      vterm
       # Copilot inline completions
       copilot
       (trivialBuild {
@@ -79,6 +80,19 @@ in
       (scroll-bar-mode -1)
       (load-theme 'modus-vivendi t)
 
+      ;; Org-mode: inline images and presentations
+      (setq org-startup-with-inline-images t)
+      (add-hook 'org-present-mode-hook
+        (lambda ()
+          (org-display-inline-images)
+          (setq-local face-remapping-alist '((default (:height 1.5) variable-pitch)
+                                             (header-line (:height 4.0) variable-pitch)
+                                             (org-document-title (:height 2.0) org-document-title)))))
+      (add-hook 'org-present-mode-quit-hook
+        (lambda ()
+          (org-remove-inline-images)
+          (setq-local face-remapping-alist nil)))
+
       ;; Tab bar — named by project/directory
       (tab-bar-mode 1)
       (defun my/tab-bar-name ()
@@ -90,8 +104,8 @@ in
       (require 'ultra-scroll)
       (ultra-scroll-mode 1)
 
-      ;; PDF support
-      (pdf-tools-install :no-query)
+      ;; PDF support (deferred until a PDF is opened)
+      (add-hook 'pdf-view-mode-hook (lambda () (require 'pdf-tools) (pdf-tools-install :no-query)))
 
       ;; Modern modeline
       (require 'doom-modeline)
@@ -135,7 +149,7 @@ in
       (savehist-mode 1)
       (setq find-file-visit-truename t)
 
-      ;; macOS modifier keys (for emacs-macport)
+      ;; macOS modifier keys
       (when (eq system-type 'darwin)
         (setq mac-option-modifier 'meta)
         (setq mac-command-modifier 'super)
@@ -224,18 +238,11 @@ in
       (global-set-key (kbd "C-c g") 'magit-status)
 
       ;; Clipboard integration (platform-specific)
-      (if (eq system-type 'darwin)
-          ;; macOS: use pbcopy/pbpaste
-          (progn
-            (setq xclip-method 'pbpaste)
-            (xclip-mode 1)
-            (setq select-enable-clipboard t))
-        ;; Linux: use wl-copy for Wayland
-        (progn
-          (setq xclip-method 'wl-copy)
-          (xclip-mode 1)
-          (setq select-enable-clipboard t)
-          (setq select-enable-primary t)))
+      (setq xclip-method (if (eq system-type 'darwin) 'pbpaste 'wl-copy))
+      (xclip-mode 1)
+      (setq select-enable-clipboard t)
+      (when (not (eq system-type 'darwin))
+        (setq select-enable-primary t))
 
       ;; LSP (eglot is built-in to Emacs 29+)
       ;; Automatically start eglot for supported modes
@@ -258,8 +265,7 @@ in
       (setq corfu-auto-prefix 2)   ;; after typing 2 chars
       (global-corfu-mode)
 
-      ;; Inline error checking (for modes without LSP)
-      (global-flycheck-mode)
+      ;; Flycheck for modes without LSP/Flymake
       (with-eval-after-load 'flycheck
         (setq flycheck-checker-error-threshold 400))
 
@@ -267,26 +273,13 @@ in
       (add-to-list 'auto-mode-alist '("Jenkinsfile\\'" . groovy-mode))
 
       ;; Godot file type associations
+      (add-to-list 'auto-mode-alist '("\\.gd\\'" . gdscript-mode))
+      (dolist (ext '("\\.tscn\\'" "\\.tres\\'" "\\.godot\\'" "\\.import\\'"))
+        (add-to-list 'auto-mode-alist (cons ext 'conf-mode)))
       (with-eval-after-load 'gdscript-mode
-        ;; GDScript files (.gd)
-        (add-to-list 'auto-mode-alist '("\\.gd\\'" . gdscript-mode))
-
-        ;; Godot scene files (.tscn) - treat as conf/text mode with syntax
-        (add-to-list 'auto-mode-alist '("\\.tscn\\'" . conf-mode))
-
-        ;; Godot resource files (.tres) - treat as conf/text mode
-        (add-to-list 'auto-mode-alist '("\\.tres\\'" . conf-mode))
-
-        ;; Godot project files (.godot)
-        (add-to-list 'auto-mode-alist '("\\.godot\\'" . conf-mode))
-
-        ;; Godot import files (.import)
-        (add-to-list 'auto-mode-alist '("\\.import\\'" . conf-mode))
-
-        ;; GDScript mode configuration
-        (setq gdscript-use-tab-indents nil)  ; Use spaces instead of tabs
-        (setq gdscript-indent-offset 4)      ; 4 spaces per indent level
-        (setq gdscript-gdformat-save-enabled nil)) ; Disable auto-format on save (optional)
+        (setq gdscript-use-tab-indents nil)
+        (setq gdscript-indent-offset 4)
+        (setq gdscript-gdformat-save-enabled nil))
     '';
   };
 }
