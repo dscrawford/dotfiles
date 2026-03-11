@@ -227,7 +227,18 @@ in
       ;; Use Home Manager bash for all shell operations
       (setq shell-file-name "${pkgs.bash}/bin/bash")
       (setq explicit-shell-file-name "${pkgs.bash}/bin/bash")
-      (add-hook 'emacs-startup-hook (lambda () (setenv "SHELL" "${pkgs.bash}/bin/bash")))
+      (add-to-list 'exec-path "${pkgs.bash}/bin")
+      (add-to-list 'exec-path "/nix/var/nix/profiles/default/bin")
+      (add-to-list 'exec-path "/run/current-system/sw/bin")
+      (add-to-list 'exec-path (expand-file-name "~/.nix-profile/bin"))
+      (add-hook 'emacs-startup-hook
+        (lambda ()
+          (setenv "SHELL" "${pkgs.bash}/bin/bash")
+          (setenv "PATH" (concat "${pkgs.bash}/bin:"
+                                 "/nix/var/nix/profiles/default/bin:"
+                                 "/run/current-system/sw/bin:"
+                                 (expand-file-name "~/.nix-profile/bin") ":"
+                                 (getenv "PATH")))))
 
       ;; Eat terminal (pure elisp, fast, less flicker than vterm)
       ;; C-c t spawns a new eat terminal, C-c r lists existing eat sessions
