@@ -40,7 +40,10 @@
     };
   };
 
+  # Shell setup — keep zsh enabled (macOS requires it) but add bash to allowed shells
   programs.zsh.enable = true;
+  programs.bash.enable = true;
+  environment.shells = [ pkgs.bash ];
 
   system = {
     stateVersion = 5;

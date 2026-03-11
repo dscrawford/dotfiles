@@ -113,6 +113,7 @@ in
   # Environment variables
   home.sessionVariables = {
     EDITOR = "emacsclient";
+    SHELL = "${pkgs.bash}/bin/bash";
   };
 
   # Enable home-manager
