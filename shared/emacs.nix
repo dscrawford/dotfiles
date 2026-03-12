@@ -24,6 +24,9 @@ in
       # Enhanced JSON
       json-mode
       terraform-mode
+      # JavaScript/TypeScript
+      typescript-mode
+      web-mode
       # Org presentations
       org-present
       # Inline error checking
@@ -268,19 +271,20 @@ in
         (setq select-enable-primary t))
 
       ;; LSP (eglot is built-in to Emacs 29+)
-      ;; Automatically start eglot for supported modes
-      (add-hook 'nix-mode-hook 'eglot-ensure)
-      (add-hook 'python-mode-hook 'eglot-ensure)
-      (add-hook 'gdscript-mode-hook 'eglot-ensure)
-      ;; Use nil for Nix, pyright for Python, Godot built-in LSP for GDScript
+      ;; Automatically start eglot and flymake for supported modes
+      ;; gdscript-mode omitted from flymake — diagnostics via Godot LSP connection
+      (dolist (hook '(nix-mode-hook python-mode-hook gdscript-mode-hook
+                      js-mode-hook typescript-mode-hook web-mode-hook))
+        (add-hook hook 'eglot-ensure))
+      (dolist (hook '(nix-mode-hook python-mode-hook
+                      js-mode-hook typescript-mode-hook web-mode-hook))
+        (add-hook hook 'flymake-mode))
+      ;; Language servers: nil (Nix), pyright (Python), typescript-language-server (JS/TS)
       (with-eval-after-load 'eglot
         (add-to-list 'eglot-server-programs '(nix-mode . ("nil")))
         (add-to-list 'eglot-server-programs '(python-mode . ("pyright-langserver" "--stdio")))
-        (add-to-list 'eglot-server-programs '(gdscript-mode . ("localhost" 6005))))
-
-      ;; Flymake for linting (works with eglot)
-      (add-hook 'python-mode-hook 'flymake-mode)
-      (add-hook 'nix-mode-hook 'flymake-mode)
+        (add-to-list 'eglot-server-programs '(gdscript-mode . ("localhost" 6005)))
+        (add-to-list 'eglot-server-programs '((js-mode typescript-mode web-mode) . ("typescript-language-server" "--stdio"))))
 
       ;; Autocomplete
       (setq corfu-auto t)          ;; popup automatically
@@ -294,6 +298,18 @@ in
 
       ;; Jenkinsfile syntax
       (add-to-list 'auto-mode-alist '("Jenkinsfile\\'" . groovy-mode))
+
+      ;; JavaScript/TypeScript file associations (.js uses built-in js-mode)
+      (add-to-list 'auto-mode-alist '("\\.tsx\\'" . web-mode))
+      (add-to-list 'auto-mode-alist '("\\.jsx\\'" . web-mode))
+      (add-to-list 'auto-mode-alist '("\\.ts\\'" . typescript-mode))
+      (with-eval-after-load 'web-mode
+        ;; JSX content type for proper React syntax in .tsx/.jsx
+        (add-to-list 'web-mode-content-types-alist '("jsx" . "\\.tsx\\'"))
+        (add-to-list 'web-mode-content-types-alist '("jsx" . "\\.jsx\\'"))
+        (setq web-mode-markup-indent-offset 2)
+        (setq web-mode-code-indent-offset 2)
+        (setq web-mode-css-indent-offset 2))
 
       ;; Godot file type associations
       (add-to-list 'auto-mode-alist '("\\.gd\\'" . gdscript-mode))

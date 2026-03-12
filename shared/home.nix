@@ -44,6 +44,10 @@ in
     nil            # Nix language server
     nixfmt         # Nix formatter
 
+    # JavaScript/TypeScript
+    nodePackages.typescript
+    nodePackages.typescript-language-server
+
     # Development tools
     openssl
     curl
