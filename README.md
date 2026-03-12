@@ -73,6 +73,10 @@ The key in `darwinConfigurations` must match your machine's hostname so that `--
       hostname = "My-MacBook-Pro";  # <-- CHANGE to match above
       username = "myuser";          # <-- CHANGE to your macOS username (whoami)
       system = "aarch64-darwin";    # <-- CHANGE to "x86_64-darwin" for Intel Macs
+      gitUser = {                   # <-- CHANGE to your git identity
+        name = "My Name";
+        email = "my@email.com";
+      };
     };
   };
 }
