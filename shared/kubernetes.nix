@@ -15,6 +15,10 @@ in
     masterAddress = if isMaster then "127.0.0.1" else kubeMasterIP;
     apiserverAddress = "https://${kubeMasterHostname}:${toString kubeMasterAPIServerPort}";
     easyCerts = true;
+    pki.certs.cfsslAPITokenBaseName = lib.mkDefault "default";
+
+    # Ensure CFSSL cert includes 127.0.0.1 IP SAN for certmgr connectivity
+    pki.cfsslAPIExtraSANs = [ "127.0.0.1" ];
 
     apiserver = lib.mkIf isMaster {
       securePort = kubeMasterAPIServerPort;
