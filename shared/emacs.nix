@@ -235,6 +235,11 @@ in
       (add-to-list 'exec-path "${pkgs.bash}/bin")
       (setenv "SHELL" "${pkgs.bash}/bin/bash")
 
+      ;; Ensure /run/wrappers/bin (setuid wrappers: sudo, ping, etc.) is first in PATH
+      (when (eq system-type 'gnu/linux)
+        (add-to-list 'exec-path "/run/wrappers/bin")
+        (setenv "PATH" (concat "/run/wrappers/bin:" (getenv "PATH"))))
+
       ;; On macOS GUI, inherit PATH from login shell (GUI apps don't get shell PATH)
       (when (and (eq system-type 'darwin) (display-graphic-p))
         (require 'exec-path-from-shell)
