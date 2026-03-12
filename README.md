@@ -5,7 +5,8 @@ Daniel's NixOS configuration using flakes for multiple systems. Yes I used Claud
 ## Systems
 
 - **local** — NixOS desktop (Sway + Emacs GUI + gaming)
-- **terminal** — NixOS terminal-only
+- **terminal** — NixOS terminal-only (x86)
+- **terminal-arm** — NixOS terminal-only (aarch64)
 - **terminal-darwin-arm** — macOS Apple Silicon
 - **terminal-darwin-x86** — macOS Intel
 - **node1**, **node2** — Kubernetes cluster nodes with iSCSI
@@ -20,8 +21,7 @@ Daniel's NixOS configuration using flakes for multiple systems. Yes I used Claud
 ### Secrets Management (sops-nix)
 - Encrypted secrets using age encryption
 - Configuration in `.sops.yaml`
-- See `secrets/README.md` for usage instructions
-- **Note:** The `secrets/` directory is gitignored and not committed
+- Encrypted secrets stored in `secrets/secrets.yaml` (safe to commit — decryption requires age key)
 
 ## Usage
 
@@ -86,7 +86,7 @@ The key in `darwinConfigurations` must match your machine's hostname so that `--
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `gitUser` | `null` | Git display name (uses system default if null) |
+| `gitUser` | `null` | Git identity attrset `{ name, email }` (uses repo default if null) |
 | `enableSecrets` | `false` | Enable sops-nix secret management |
 | `homeModules` | `[ ./shared/home.nix ]` | Home Manager modules to import |
 | `extraModules` | `[]` | Additional nix-darwin modules (certificates, custom services, etc.) |
@@ -144,7 +144,9 @@ nix flake update nixpkgs
 │   ├── local-common.nix     # NixOS desktop/terminal shared config
 │   ├── server-common.nix    # NixOS server shared config
 │   ├── boot-common.nix      # Boot and garbage collection
-│   └── kubernetes.nix       # Kubernetes node config
+│   ├── kubernetes.nix       # Kubernetes node config
+│   ├── users.nix            # User account definitions
+│   └── iscsi.nix            # iSCSI storage config
 ├── hosts/
 │   ├── local/               # NixOS desktop (NVIDIA, Sway, PipeWire)
 │   ├── node1/               # Kubernetes node 1
