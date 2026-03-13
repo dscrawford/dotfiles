@@ -263,14 +263,12 @@ in
               (switch-to-buffer (completing-read "Select eat session: "
                                                  (mapcar #'buffer-name eat-buffers) nil t))
             (message "No eat sessions open")))))
-      ;; Send modifier+arrow keys to the terminal in eat semi-char mode
-      ;; Default list includes [M-left] etc. which conflict — Emacs runs
-      ;; left-word/right-word but eat resets cursor, causing visual glitch.
-      (setq eat-semi-char-non-bound-keys
-            (seq-remove (lambda (k) (member k '([C-up] [C-down] [C-right] [C-left]
-                                                [M-up] [M-down] [M-right] [M-left]
-                                                [S-up] [S-down] [S-right] [S-left])))
-                        eat-semi-char-non-bound-keys))
+      ;; Send modifier+arrow keys to the terminal in eat semi-char mode.
+      ;; By default these fall through to global-map (left-word etc.),
+      ;; but eat resets cursor to match terminal state, causing visual glitch.
+      (dolist (key '("M-<left>" "M-<right>" "M-<up>" "M-<down>"
+                     "C-<left>" "C-<right>" "C-<up>" "C-<down>"))
+        (define-key eat-semi-char-mode-map (kbd key) #'eat-self-input))
       (add-hook 'eshell-load-hook #'eat-eshell-mode)
       (add-hook 'eshell-load-hook #'eat-eshell-visual-command-mode)
 
