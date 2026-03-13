@@ -68,6 +68,8 @@ in
       eat
       # Inherit shell PATH in macOS GUI Emacs
       exec-path-from-shell
+      # Python debugging (Debug Adapter Protocol)
+      dap-mode
       # Copilot inline completions
       copilot
       (trivialBuild {
@@ -290,6 +292,33 @@ in
         (add-to-list 'eglot-server-programs '(python-mode . ("pyright-langserver" "--stdio")))
         (add-to-list 'eglot-server-programs '(gdscript-mode . ("localhost" 6005)))
         (add-to-list 'eglot-server-programs '((js-mode typescript-mode web-mode) . ("typescript-language-server" "--stdio"))))
+
+      ;; Python debugging (DAP — Debug Adapter Protocol via debugpy)
+      (require 'dap-mode)
+      (require 'dap-python)
+      (setq dap-python-debugger 'debugpy)
+      (setq dap-python-executable "python3")
+      (dap-auto-configure-mode 1)
+
+      ;; Debug keybindings — C-c d prefix
+      (global-set-key (kbd "C-c d d") 'dap-debug)
+      (global-set-key (kbd "C-c d b") 'dap-breakpoint-toggle)
+      (global-set-key (kbd "C-c d n") 'dap-next)
+      (global-set-key (kbd "C-c d i") 'dap-step-in)
+      (global-set-key (kbd "C-c d o") 'dap-step-out)
+      (global-set-key (kbd "C-c d c") 'dap-continue)
+      (global-set-key (kbd "C-c d r") 'dap-ui-repl)
+      (global-set-key (kbd "C-c d q") 'dap-disconnect)
+      (global-set-key (kbd "C-c d e") 'dap-eval-thing-at-point)
+
+      ;; Default debug template for Python files
+      (dap-register-debug-template "Python :: Run Current File"
+        (list :type "python"
+              :args ""
+              :cwd nil
+              :program nil
+              :request "launch"
+              :name "Python :: Run Current File"))
 
       ;; Autocomplete
       (setq corfu-auto t)          ;; popup automatically
