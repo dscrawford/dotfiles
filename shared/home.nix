@@ -6,6 +6,19 @@ let
   isDarwin = pkgs.stdenv.isDarwin;
   isLinux = pkgs.stdenv.isLinux;
   homeDir = if isDarwin then "/Users/${username}" else "/home/${username}";
+
+  # Scan claude/skills/ and build home.file entries for each skill directory
+  skillsDir = ../claude/skills;
+  skillNames = builtins.attrNames (lib.filterAttrs (_: type: type == "directory") (builtins.readDir skillsDir));
+  skillFiles = lib.listToAttrs (builtins.concatMap (skill:
+    let
+      dir = skillsDir + "/${skill}";
+      files = builtins.attrNames (builtins.readDir dir);
+    in map (file: lib.nameValuePair
+      ".claude/skills/${skill}/${file}"
+      { source = dir + "/${file}"; }
+    ) files
+  ) skillNames);
 in
 {
   # Basic user info
@@ -33,7 +46,7 @@ in
     lynx
 
     # Python
-    (python3.withPackages (ps: with ps; [ numpy pandas fastparquet fsspec s3fs pip black ]))
+    (python3.withPackages (ps: with ps; [ numpy pandas fastparquet fsspec s3fs pip black debugpy ]))
     uv
     poetry
 
@@ -112,7 +125,7 @@ in
         };
       };
     };
-  };
+  } // skillFiles;
 
   # Environment variables
   home.sessionVariables = {
