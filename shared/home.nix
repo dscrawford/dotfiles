@@ -131,6 +131,15 @@ in
     enable = true;
     enableBashIntegration = true;
     nix-direnv.enable = true;
+    config = {
+      global = {
+        warn_timeout = "0";
+        hide_env_diff = true;
+      };
+    };
+    stdlib = ''
+      : "''${direnv_layout_dir:=$PWD/.direnv}"
+    '';
   };
 
   # Bash configuration
@@ -160,8 +169,6 @@ in
       else
         alias emacs="emacs -nw"
       fi
-
-      eval "$(direnv hook bash)"
 
       # Eat shell integration (directory tracking, etc.)
       [ -n "$EAT_SHELL_INTEGRATION_DIR" ] && source "$EAT_SHELL_INTEGRATION_DIR/bash"
@@ -223,6 +230,14 @@ in
   # Nix settings (flakes support) - only on Linux, Darwin uses Determinate Nix
   nix = lib.mkIf isLinux {
     settings.experimental-features = [ "nix-command" "flakes" ];
+  };
+
+  # Darwin: user-level nix.conf (Determinate Nix manages the daemon, so nix.settings unavailable)
+  home.file.".config/nix/nix.conf" = lib.mkIf isDarwin {
+    text = ''
+      keep-outputs = true
+      keep-derivations = true
+    '';
   };
 } // lib.optionalAttrs enableSecrets {
   # SOPS configuration for secrets management (only when enableSecrets is true)

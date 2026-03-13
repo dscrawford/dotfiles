@@ -37,7 +37,11 @@
 
   boot.kernelModules = [ "coretemp" ];
 
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nix.settings = {
+    experimental-features = [ "nix-command" "flakes" ];
+    keep-outputs = true;
+    keep-derivations = true;
+  };
 
   system.stateVersion = "25.11";
 }
