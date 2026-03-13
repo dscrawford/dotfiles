@@ -125,6 +125,13 @@ in
         };
       };
     };
+    # Darwin: user-level nix.conf (Determinate Nix manages the daemon, so nix.settings unavailable)
+    ".config/nix/nix.conf" = lib.mkIf isDarwin {
+      text = ''
+        keep-outputs = true
+        keep-derivations = true
+      '';
+    };
   } // skillFiles;
 
   # Environment variables
@@ -248,13 +255,6 @@ in
     settings.experimental-features = [ "nix-command" "flakes" ];
   };
 
-  # Darwin: user-level nix.conf (Determinate Nix manages the daemon, so nix.settings unavailable)
-  home.file.".config/nix/nix.conf" = lib.mkIf isDarwin {
-    text = ''
-      keep-outputs = true
-      keep-derivations = true
-    '';
-  };
 } // lib.optionalAttrs enableSecrets {
   # SOPS configuration for secrets management (only when enableSecrets is true)
   sops = {
