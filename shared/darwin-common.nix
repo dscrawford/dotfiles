@@ -54,9 +54,11 @@
 
   # Ensure user is a trusted Nix user (macOS doesn't resolve group membership correctly)
   # See: https://github.com/NixOS/nix/issues/5885
+  # See: https://gerrit.lix.systems/c/lix/+/2566 (proper daemon fix, not yet shipped)
+  # Determinate Nix overwrites /etc/nix/nix.conf — use nix.custom.conf instead
   system.activationScripts.postActivation.text = ''
-    if ! grep -q "trusted-users.*${username}" /etc/nix/nix.conf 2>/dev/null; then
-      echo "trusted-users = root ${username}" >> /etc/nix/nix.conf
+    if ! grep -q "trusted-users.*${username}" /etc/nix/nix.custom.conf 2>/dev/null; then
+      echo "trusted-users = root ${username}" >> /etc/nix/nix.custom.conf
       echo "Restarting nix-daemon to apply trusted-users..."
       launchctl kickstart -k system/org.nixos.nix-daemon 2>/dev/null || true
     fi
