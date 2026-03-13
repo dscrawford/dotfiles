@@ -129,7 +129,7 @@ in
   # Direnv for development environments
   programs.direnv = {
     enable = true;
-    enableBashIntegration = true;
+    enableBashIntegration = false;
     nix-direnv.enable = true;
     config = {
       global = {
@@ -177,6 +177,9 @@ in
       if command -v tmux &> /dev/null && [ -t 0 ] && [[ ! "$TERM" =~ screen ]] && [[ ! "$TERM" =~ tmux ]] && [ -z "$TMUX" ] && [ -z "$INSIDE_EMACS" ]; then
          exec tmux -f ${homeDir}/.config/tmux/tmux.conf
       fi
+
+      # Hook direnv into interactive bash (disabled auto-integration to keep it after the interactive guard)
+      eval "$(direnv hook bash)"
     '' + lib.optionalString enableSecrets ''
       if [ -f ${config.sops.secrets.anthropic_api_key.path} ]; then
         export ANTHROPIC_API_KEY=$(cat ${config.sops.secrets.anthropic_api_key.path})
