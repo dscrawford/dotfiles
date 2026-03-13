@@ -188,6 +188,21 @@ sudo nix-env --list-generations --profile /nix/var/nix/profiles/system
 nix path-info --recursive --size /run/current-system | sort -nk2
 ```
 
+## Troubleshooting
+
+### macOS: "not a trusted user" Nix warning
+
+On macOS, you may see `warning: you are not a trusted user of the Nix store` when running `nix build` or similar commands. This is caused by a [macOS bug](https://github.com/NixOS/nix/issues/5885) where peer credentials don't include group membership, so `trusted-users = root @staff` doesn't work.
+
+The `darwin-common.nix` activation script fixes this automatically on `darwin-rebuild switch` by adding your username to `trusted-users` in `/etc/nix/nix.conf`.
+
+If you need to fix it manually:
+
+```bash
+echo "trusted-users = root $(whoami)" | sudo tee -a /etc/nix/nix.conf
+sudo launchctl kickstart -k system/org.nixos.nix-daemon
+```
+
 ## References
 
 - [NixOS Manual](https://nixos.org/manual/nixos/stable/)

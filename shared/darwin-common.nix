@@ -52,6 +52,16 @@
 
   security.pam.services.sudo_local.touchIdAuth = true;
 
+  # Ensure user is a trusted Nix user (macOS doesn't resolve group membership correctly)
+  # See: https://github.com/NixOS/nix/issues/5885
+  system.activationScripts.postActivation.text = ''
+    if ! grep -q "trusted-users.*${username}" /etc/nix/nix.conf 2>/dev/null; then
+      echo "trusted-users = root ${username}" >> /etc/nix/nix.conf
+      echo "Restarting nix-daemon to apply trusted-users..."
+      launchctl kickstart -k system/org.nixos.nix-daemon 2>/dev/null || true
+    fi
+  '';
+
   # Disable nix-daemon management (using Determinate Nix)
   nix.enable = false;
 
