@@ -269,6 +269,17 @@ in
       (dolist (key '("M-<left>" "M-<right>" "M-<up>" "M-<down>"
                      "C-<left>" "C-<right>" "C-<up>" "C-<down>"))
         (define-key eat-semi-char-mode-map (kbd key) #'eat-self-input))
+      ;; Bracketed paste for eat — wrap yanked text so shell treats it as one input
+      (defun my/eat-yank-with-bracketed-paste ()
+        "Yank into eat using bracketed paste so multiline text isn't executed line-by-line."
+        (interactive)
+        (let ((text (or (current-kill 0 t) "")))
+          (eat-term-send-string eat-terminal "\e[200~")
+          (eat-term-send-string eat-terminal text)
+          (eat-term-send-string eat-terminal "\e[201~")))
+      (with-eval-after-load 'eat
+        (define-key eat-semi-char-mode-map (kbd "C-c C-y") #'my/eat-yank-with-bracketed-paste))
+
       (add-hook 'eshell-load-hook #'eat-eshell-mode)
       (add-hook 'eshell-load-hook #'eat-eshell-visual-command-mode)
 
