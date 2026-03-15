@@ -1,6 +1,7 @@
 # NVIDIA GTX 1080 Ti — for GPU compute workloads in Kubernetes
-{ config, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 {
+  nixpkgs.config.allowUnfree = true;
   hardware.graphics.enable = true;
   hardware.graphics.enable32Bit = true;
 
