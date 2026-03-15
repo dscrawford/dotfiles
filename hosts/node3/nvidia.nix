@@ -1,7 +1,10 @@
 # NVIDIA GTX 1080 Ti — for GPU compute workloads in Kubernetes
 { config, lib, pkgs, ... }:
 {
-  nixpkgs.config.allowUnfree = true;
+  nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
+    "nvidia-x11"
+    "nvidia-settings"
+  ];
   hardware.graphics.enable = true;
   hardware.graphics.enable32Bit = true;
 
@@ -15,8 +18,5 @@
 
   # Expose GPU to containers (required for Kubernetes GPU scheduling)
   hardware.nvidia-container-toolkit.enable = true;
-  virtualisation.docker = {
-    enable = true;
-    enableNvidia = true;
-  };
+  virtualisation.docker.enable = true;
 }
