@@ -72,6 +72,7 @@ in
     awscli2
     kubernetes-helm
     argo-rollouts
+    argocd
 
     # Database
     postgresql
