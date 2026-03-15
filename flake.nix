@@ -122,7 +122,7 @@
       node3 = mkServer {
         hostname = "node3";
         ip = "192.168.0.6";
-        netInterface = "enp4s0";  # X399 Threadripper — verify with `ip link` after install
+        netInterface = "enp5s0";
         extraModules = [
           ./hosts/node3/hardware-configuration.nix
           ./hosts/node3/boot.nix
