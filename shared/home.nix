@@ -66,6 +66,10 @@ in
     curl
     gcc
     redis
+    ripgrep    # rg — fast search (used by Claude Code)
+    fd         # fd — fast find (used by Claude Code)
+    dnsutils   # dig, nslookup, nsupdate
+    jq         # JSON processing
 
     # Cloud & Kubernetes
     kubectl
