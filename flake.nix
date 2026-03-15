@@ -23,10 +23,10 @@
   outputs = { self, nixpkgs, home-manager, sops-nix, nix-darwin, darwin-emacs }:
   let
     lib = nixpkgs.lib;
-    mkServer = { hostname, ip, extraModules ? [] }: nixpkgs.lib.nixosSystem rec {
+    mkServer = { hostname, ip, netInterface ? "eno1", extraModules ? [] }: nixpkgs.lib.nixosSystem rec {
       system = "x86_64-linux";
       specialArgs = {
-        inherit hostname ip;
+        inherit hostname ip netInterface;
         kubeMasterIP = "192.168.0.2";
         kubeMasterHostname = "api.kube";
         kubeMasterAPIServerPort = 6443;
@@ -115,6 +115,18 @@
         extraModules = [
           ./hosts/node2/hardware-configuration.nix
           ./hosts/node2/boot.nix
+          ./shared/kubernetes.nix
+          ./shared/iscsi.nix
+        ];
+      };
+      node3 = mkServer {
+        hostname = "node3";
+        ip = "192.168.0.6";
+        netInterface = "enp4s0";  # X399 Threadripper — verify with `ip link` after install
+        extraModules = [
+          ./hosts/node3/hardware-configuration.nix
+          ./hosts/node3/boot.nix
+          ./hosts/node3/nvidia.nix
           ./shared/kubernetes.nix
           ./shared/iscsi.nix
         ];

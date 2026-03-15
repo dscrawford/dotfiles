@@ -1,5 +1,5 @@
 # Configuration specific to server systems (not desktops)
-{ config, lib, pkgs, hostname, ip, isMaster, kubeMasterIP, kubeMasterHostname, ... }:
+{ config, lib, pkgs, hostname, ip, netInterface ? "eno1", isMaster, kubeMasterIP, kubeMasterHostname, ... }:
 
 {
   # === Services ===
@@ -45,7 +45,7 @@
     useDHCP = false;
     
     # Static IP configuration
-    interfaces.eno1 = {
+    interfaces.${netInterface} = {
       useDHCP = false;
       ipv4.addresses = [{
         address = ip;
@@ -61,6 +61,7 @@
       ${kubeMasterIP} ${kubeMasterHostname}
       192.168.0.2 node1
       192.168.0.4 node2
+      192.168.0.6 node3
     '';
 
     # Kubernetes firewall rules
