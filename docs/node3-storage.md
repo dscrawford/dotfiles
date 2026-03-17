@@ -1,196 +1,129 @@
-# Node3 Storage: mergerfs + SnapRAID
+# Node3 Storage: mdadm RAID6
 
 ## Current Layout
 
-| Role | Serial | Mount | Size |
-|------|--------|-------|------|
-| Parity 1 | 1EG20UXZ | /mnt/parity1 | 10TB |
-| Parity 2 | JEKY7J2Z | /mnt/parity2 | 10TB |
-| Data 1 | JEKY6SMZ | /mnt/disk1 | 10TB |
-| Data 2 | 1EG1MM9Z | /mnt/disk2 | 10TB |
-| Data 3 | 1EG11K9Z | /mnt/disk3 | 10TB |
-| Data 4 | 1EG191TZ | /mnt/disk4 | 10TB |
+6x WDC WD100EMAZ 10TB drives in RAID6 on `/dev/md0`, mounted at `/mnt/storage`.
 
-- **Pool mount:** `/mnt/storage` (mergerfs union of all data drives)
-- **Usable capacity:** ~40TB (4 data drives)
-- **Fault tolerance:** 2 drives (any 2 can fail)
-- **Parity sync:** daily at 3:00 AM
-- **Scrub:** weekly on Mondays at 4:00 AM
+| Serial | Device |
+|--------|--------|
+| 1EG20UXZ | sda |
+| JEKY7J2Z | sdb |
+| JEKY6SMZ | sdc |
+| 1EG1MM9Z | sdd |
+| 1EG11K9Z | sde |
+| 1EG191TZ | sdf |
 
-## Key Rule
+- **Usable capacity:** ~40TB (4 drives worth)
+- **Fault tolerance:** any 2 drives can fail
+- **Filesystem:** ext4
 
-Each parity drive must be **>=** the largest data drive. If you add a 14TB data drive, upgrade parity drives to 14TB+ first.
+## Initial Setup
 
-## Adding a Data Drive
+Run once on node3 after partitioning/formatting the individual drives:
 
-1. **Physically install** the drive and get its ID:
+```bash
+# Create the RAID6 array
+mdadm --create /dev/md0 --level=6 --raid-devices=6 \
+  /dev/disk/by-id/ata-WDC_WD100EMAZ-00WJTA0_1EG20UXZ-part1 \
+  /dev/disk/by-id/ata-WDC_WD100EMAZ-00WJTA0_JEKY7J2Z-part1 \
+  /dev/disk/by-id/ata-WDC_WD100EMAZ-00WJTA0_JEKY6SMZ-part1 \
+  /dev/disk/by-id/ata-WDC_WD100EMAZ-00WJTA0_1EG1MM9Z-part1 \
+  /dev/disk/by-id/ata-WDC_WD100EMAZ-00WJTA0_1EG11K9Z-part1 \
+  /dev/disk/by-id/ata-WDC_WD100EMAZ-00WJTA0_1EG191TZ-part1
 
-   ```bash
-   ls -la /dev/disk/by-id/ | grep -E 'ata-' | grep -v wwn | grep part
-   ```
+# Format the array
+mkfs.ext4 -m 0 /dev/md0
 
-2. **Partition and format:**
+# Get the UUID and update storage.nix
+blkid /dev/md0
 
-   ```bash
-   DEV="/dev/disk/by-id/ata-YOUR_DRIVE_ID"
-   wipefs -a "$DEV"
-   echo -e "g\nn\n\n\n\nw" | fdisk "$DEV"
-   mkfs.ext4 -m 0 -T largefile4 "${DEV}-part1"
-   ```
+# Save mdadm config (NixOS reads this on boot)
+mdadm --detail --scan >> /etc/mdadm.conf
+```
 
-3. **Edit `hosts/node3/storage.nix`** — add three things:
+Initial sync takes several hours for 10TB drives. Monitor with `cat /proc/mdstat`.
 
-   ```nix
-   # New filesystem mount
-   fileSystems."/mnt/disk5" = {
-     device = "/dev/disk/by-id/ata-YOUR_DRIVE_ID-part1";
-     fsType = "ext4";
-     options = [ "defaults" "noatime" "nofail" ];
-   };
-   ```
+## Adding Drives to Expand the Array
 
-   Add `/mnt/disk5` to the mergerfs device string:
-   ```nix
-   fileSystems."/mnt/storage" = {
-     device = "/mnt/disk1:/mnt/disk2:/mnt/disk3:/mnt/disk4:/mnt/disk5";
-     # ...
-     depends = [ "/mnt/disk1" "/mnt/disk2" "/mnt/disk3" "/mnt/disk4" "/mnt/disk5" ];
-   };
-   ```
+mdadm RAID6 can grow by adding drives:
 
-   Add to snapraid dataDisks:
-   ```nix
-   services.snapraid.dataDisks = {
-     # ... existing entries ...
-     d5 = "/mnt/disk5/";
-   };
-   ```
+```bash
+# Add new drive(s) to the array
+mdadm --add /dev/md0 /dev/disk/by-id/ata-NEW_DRIVE-part1
 
-   Optionally add a content file on the new disk:
-   ```nix
-   contentFiles = [
-     "/var/lib/snapraid/snapraid.content"
-     "/mnt/disk1/snapraid.content"
-     "/mnt/disk2/snapraid.content"
-     "/mnt/disk5/snapraid.content"  # new
-   ];
-   ```
+# Grow the array to use the new drive
+mdadm --grow /dev/md0 --raid-devices=7
 
-4. **Deploy and sync:**
+# Reshape takes a long time — monitor with:
+cat /proc/mdstat
 
-   ```bash
-   git add -A && sudo nixos-rebuild switch --flake .#node3
-   snapraid sync
-   ```
+# After reshape completes, grow the filesystem
+resize2fs /dev/md0
+```
 
-## Adding a Parity Drive (3-disk fault tolerance)
+Update `storage.nix` comments to reflect the new drive count.
 
-1. Partition and format (same as above).
+### Mixed Drive Sizes
 
-2. **Edit `hosts/node3/storage.nix`:**
+All drives in a RAID6 array use only as much space as the smallest drive. To use a 14TB drive with 10TB drives, partition the 14TB drive with a 10TB partition for the array (the remaining space is unused or can be used separately).
 
-   ```nix
-   fileSystems."/mnt/parity3" = {
-     device = "/dev/disk/by-id/ata-YOUR_DRIVE_ID-part1";
-     fsType = "ext4";
-     options = [ "defaults" "noatime" "nofail" ];
-   };
-   ```
+```bash
+# Create a 10TB partition on a larger drive
+fdisk /dev/disk/by-id/ata-LARGE_DRIVE
+# Use +10T for the partition size instead of accepting the default
+```
 
-   Add to parityFiles:
-   ```nix
-   parityFiles = [
-     "/mnt/parity1/snapraid.parity"
-     "/mnt/parity2/snapraid.2-parity"
-     "/mnt/parity3/snapraid.3-parity"  # new
-   ];
-   ```
+## Replacing a Failed Drive
 
-3. **Deploy and sync:**
+1. **Identify the failed drive:**
 
    ```bash
-   git add -A && sudo nixos-rebuild switch --flake .#node3
-   snapraid sync
+   cat /proc/mdstat
+   mdadm --detail /dev/md0
    ```
 
-## Replacing a Failed Data Drive
-
-1. **Ensure parity is current** (skip if drive is dead):
+2. **Mark it as failed (if not already):**
 
    ```bash
-   snapraid sync
+   mdadm /dev/md0 --fail /dev/disk/by-id/ata-FAILED_DRIVE-part1
+   mdadm /dev/md0 --remove /dev/disk/by-id/ata-FAILED_DRIVE-part1
    ```
-
-2. **Identify the failed drive** and its mount (e.g., `/mnt/disk2` = serial `1EG1MM9Z`).
 
 3. **Physically swap** the drive.
 
-4. **Partition and format** the new drive (see "Adding a Data Drive" step 2).
-
-5. **Update `storage.nix`** with the new drive's `by-id`.
-
-6. **Deploy and recover:**
+4. **Partition the new drive:**
 
    ```bash
-   git add -A && sudo nixos-rebuild switch --flake .#node3
-   snapraid fix -d d2          # recovers data for disk d2
-   snapraid sync               # updates parity with recovered data
+   echo -e "g\nn\n\n\n\nw" | fdisk /dev/disk/by-id/ata-NEW_DRIVE
    ```
 
-## Replacing a Parity Drive
-
-1. **Swap** the physical drive.
-2. **Partition and format** the new drive.
-3. **Update `storage.nix`** with the new `by-id`.
-4. **Deploy and rebuild parity:**
+5. **Add it to the array:**
 
    ```bash
-   git add -A && sudo nixos-rebuild switch --flake .#node3
-   snapraid sync
+   mdadm /dev/md0 --add /dev/disk/by-id/ata-NEW_DRIVE-part1
    ```
 
-## Upgrading a Parity Drive to a Larger Size
+   Rebuild starts automatically. Monitor with `cat /proc/mdstat`.
 
-Required before adding data drives larger than current parity.
-
-1. `snapraid sync` (ensure current).
-2. Swap, partition, format the larger drive.
-3. Update `by-id` in `storage.nix`, rebuild.
-4. `snapraid sync` (rebuilds parity on larger drive).
-
-Repeat for each parity drive.
-
-## Upgrading a Data Drive to a Larger Size
-
-1. `snapraid sync`
-2. Mount the new drive temporarily and copy data from the old drive:
-
-   ```bash
-   mkdir /mnt/tmp && mount /dev/disk/by-id/ata-NEW_DRIVE-part1 /mnt/tmp
-   rsync -avP /mnt/disk2/ /mnt/tmp/
-   ```
-
-3. Swap the old drive out, update `by-id` in `storage.nix`, rebuild.
-4. `snapraid sync`
+6. **Update `storage.nix`** with the new drive's `by-id` in comments.
 
 ## Useful Commands
 
 ```bash
-# Check array status
-snapraid status
+# Array status and rebuild progress
+cat /proc/mdstat
 
-# Manually sync parity (runs automatically daily)
-snapraid sync
+# Detailed array info
+mdadm --detail /dev/md0
 
-# Scrub for silent data corruption
-snapraid scrub
+# Check filesystem
+df -h /mnt/storage
 
-# Check differences since last sync
-snapraid diff
+# Run filesystem check (unmount first)
+umount /mnt/storage
+e2fsck -f /dev/md0
+mount /mnt/storage
 
-# List all drives and usage
-df -h /mnt/disk* /mnt/parity* /mnt/storage
-
-# Check mergerfs pool
-cat /etc/mtab | grep mergerfs
+# SMART check on individual drives
+smartctl -a /dev/sda
 ```
