@@ -6,6 +6,7 @@
 {
   home.packages = with pkgs; [
     thunar
+    tumbler      # Thumbnail service for Thunar (images, videos, PDFs)
     xdg-desktop-portal-gtk
   ];
   home.file.".local/bin/workspace.sh" = {

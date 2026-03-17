@@ -145,6 +145,14 @@ in
     SHELL = "${pkgs.bash}/bin/bash";
   };
 
+  # SSH — force xterm-256color since eat-truecolor is rarely available on remote hosts
+  programs.ssh = {
+    enable = true;
+    extraConfig = ''
+      SetEnv TERM=xterm-256color
+    '';
+  };
+
   # Enable home-manager
   programs.home-manager.enable = true;
 
@@ -194,6 +202,9 @@ in
       else
         alias emacs="emacs -nw"
       fi
+
+      # Force xterm-256color for SSH (eat-truecolor rarely available on remote hosts)
+      alias ssh='TERM=xterm-256color command ssh'
 
       # Eat shell integration (directory tracking, etc.)
       [ -n "$EAT_SHELL_INTEGRATION_DIR" ] && source "$EAT_SHELL_INTEGRATION_DIR/bash"
