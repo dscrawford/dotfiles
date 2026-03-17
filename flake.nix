@@ -127,6 +127,7 @@
           ./hosts/node3/hardware-configuration.nix
           ./hosts/node3/boot.nix
           ./hosts/node3/nvidia.nix
+          ./hosts/node3/storage.nix
           ./shared/kubernetes.nix
           ./shared/iscsi.nix
         ];
