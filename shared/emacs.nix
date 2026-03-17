@@ -83,6 +83,29 @@ in
         };
         packageRequires = with epkgs; [ websocket transient web-server ];
       })
+      # Agent Shell — LLM-powered shell in Emacs
+      acp
+      (trivialBuild {
+        pname = "shell-maker";
+        version = "0-unstable-2025";
+        src = pkgs.fetchFromGitHub {
+          owner = "xenodium";
+          repo = "shell-maker";
+          rev = "79181104659ce70900a1ccadaed9ffa67be49924";
+          hash = "sha256-gt7a2yQZ6Hdf4cM/drg5EQ4MeEyjFyy+BJiJ7Cb+qGk=";
+        };
+      })
+      (trivialBuild {
+        pname = "agent-shell";
+        version = "0-unstable-2025";
+        src = pkgs.fetchFromGitHub {
+          owner = "xenodium";
+          repo = "agent-shell";
+          rev = "4594c16ab9665bf68052a06fd08581168b69d8d5";
+          hash = "sha256-BG+NQpNIzkiOwkfU0TSSp4AMwhNiaQoXmgmlnc4Vi1g=";
+        };
+        packageRequires = with epkgs; [ shell-maker acp ];
+      })
     ]);
     extraConfig = ''
       ;; GUI cleanup and dark theme
@@ -191,6 +214,13 @@ in
         (claude-code-ide-terminal-backend 'eat)
         :config
         (claude-code-ide-emacs-tools-setup))
+      ;; Agent Shell — LLM-powered shell
+      (require 'agent-shell)
+      (global-set-key (kbd "C-c s") 'agent-shell)
+      ;; Point agent-shell to the nix-built claude-agent-acp binary
+      (setq agent-shell-anthropic-claude-acp-command
+            '("${pkgs.callPackage ../pkgs/claude-agent-acp {}}/bin/claude-agent-acp"))
+
       ;; Auto-revert buffers when files change on disk
       (global-auto-revert-mode 1)
 

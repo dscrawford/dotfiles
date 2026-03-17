@@ -7,6 +7,8 @@ let
   isLinux = pkgs.stdenv.isLinux;
   homeDir = if isDarwin then "/Users/${username}" else "/home/${username}";
 
+  claude-agent-acp = pkgs.callPackage ../pkgs/claude-agent-acp {};
+
   # Scan claude/skills/ and build home.file entries for each skill directory
   skillsDir = ../claude/skills;
   skillNames = builtins.attrNames (lib.filterAttrs (_: type: type == "directory") (builtins.readDir skillsDir));
@@ -83,6 +85,7 @@ in
 
     # IDE
     claude-code
+    claude-agent-acp
     github-copilot-cli
     nodejs  # Provides npx for keegancsmith/emacs-mcp-server and copilot.el
 
