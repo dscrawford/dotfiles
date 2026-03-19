@@ -23,7 +23,7 @@
 
   # Stable symlink for nvidia-container-runtime — survives Nix store hash changes
   systemd.tmpfiles.rules = [
-    "L+ /run/nvidia-container-runtime - - - - ${pkgs.nvidia-container-toolkit}/bin/nvidia-container-runtime"
+    "L+ /run/nvidia-container-runtime - - - - ${pkgs.nvidia-container-toolkit.tools}/bin/nvidia-container-runtime"
   ];
 
   # Register nvidia as an opt-in containerd runtime (runc stays default)
@@ -43,5 +43,5 @@
   };
 
   # Ensure containerd can find nvidia-container-runtime on PATH
-  systemd.services.containerd.path = [ pkgs.nvidia-container-toolkit ];
+  systemd.services.containerd.path = [ pkgs.nvidia-container-toolkit.tools ];
 }
