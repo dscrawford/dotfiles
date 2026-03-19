@@ -21,6 +21,11 @@
   hardware.nvidia-container-toolkit.enable = true;
   virtualisation.docker.enable = true;
 
+  # Stable symlink for nvidia-container-runtime — survives Nix store hash changes
+  systemd.tmpfiles.rules = [
+    "L+ /run/nvidia-container-runtime - - - - ${pkgs.nvidia-container-toolkit}/bin/nvidia-container-runtime"
+  ];
+
   # Register nvidia as an opt-in containerd runtime (runc stays default)
   virtualisation.containerd = {
     enable = true;
@@ -31,7 +36,7 @@
         containerd.runtimes.nvidia = {
           privileged_without_host_devices = false;
           runtime_type = "io.containerd.runc.v2";
-          options.BinaryName = "${pkgs.nvidia-container-toolkit}/bin/nvidia-container-runtime";
+          options.BinaryName = "/run/nvidia-container-runtime";
         };
       };
     };
