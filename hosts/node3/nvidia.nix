@@ -25,10 +25,18 @@
   virtualisation.containerd = {
     enable = true;
     settings = {
-      plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia = {
-        runtime_type = "io.containerd.runc.v2";
-        options.BinaryName = "${pkgs.nvidia-container-toolkit}/bin/nvidia-container-runtime";
+      plugins."io.containerd.grpc.v1.cri" = {
+        enable_cdi = true;
+        cdi_spec_dirs = [ "/etc/cdi" "/var/run/cdi" ];
+        containerd.runtimes.nvidia = {
+          privileged_without_host_devices = false;
+          runtime_type = "io.containerd.runc.v2";
+          options.BinaryName = "${pkgs.nvidia-container-toolkit}/bin/nvidia-container-runtime";
+        };
       };
     };
   };
+
+  # Ensure containerd can find nvidia-container-runtime on PATH
+  systemd.services.containerd.path = [ pkgs.nvidia-container-toolkit ];
 }
