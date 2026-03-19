@@ -21,12 +21,7 @@
   # The nvidia-container-toolkit module generates CDI specs at /var/run/cdi/
   # and containerd injects GPU devices into pods that request them.
   # No legacy nvidia-container-runtime wrapper needed.
-  hardware.nvidia-container-toolkit = {
-    enable = true;
-    # Disable CUDA compat injection — driver 580.x natively supports CUDA 13.0,
-    # and the compat libs conflict with containers using older CUDA runtimes (e.g. 12.4)
-    extraArgs = [ "--no-enable-cuda-compat" ];
-  };
+  hardware.nvidia-container-toolkit.enable = true;
   virtualisation.docker.enable = true;
 
   # Enable CDI in containerd so kubelet can schedule GPU pods
