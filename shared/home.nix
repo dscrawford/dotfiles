@@ -145,7 +145,8 @@ in
   # Environment variables
   home.sessionVariables = {
     EDITOR = "emacsclient";
-    SHELL = "${pkgs.bash}/bin/bash";
+  } // lib.optionalAttrs isDarwin {
+    SHELL = "/run/current-system/sw/bin/bash";
   };
 
   # SSH — force xterm-256color since eat-truecolor is rarely available on remote hosts
@@ -186,9 +187,9 @@ in
       PS1='\u:\W\$ '
       export PATH=${homeDir}/.local/bin/:$PATH
       export EDITOR="emacs -nw"
-      export SHELL="${pkgs.bash}/bin/bash"
     '' + lib.optionalString isDarwin ''
       export PATH=$PATH:/opt/homebrew/bin
+      export SHELL="/run/current-system/sw/bin/bash"
     '' + ''
 
       # Set emacsclient socket name to match the current tmux pane's server
