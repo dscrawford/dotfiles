@@ -18,20 +18,15 @@
   };
 
   # Expose GPU to containers via CDI (Container Device Interface)
-  # The nvidia-container-toolkit module generates CDI specs at /var/run/cdi/
-  # and containerd injects GPU devices into pods that request them.
-  # No legacy nvidia-container-runtime wrapper needed.
+  # NixOS generates CDI specs at /var/run/cdi/ via nvidia-container-toolkit.
+  # Use generic-cdi-plugin (not NVIDIA's k8s-device-plugin) since it reads
+  # CDI specs directly without needing FHS paths or /etc/ld.so.cache.
   hardware.nvidia-container-toolkit.enable = true;
   virtualisation.docker.enable = true;
 
   # Enable CDI in containerd so kubelet can schedule GPU pods
-  virtualisation.containerd = {
-    enable = true;
-    settings = {
-      plugins."io.containerd.grpc.v1.cri" = {
-        enable_cdi = lib.mkForce true;
-        cdi_spec_dirs = lib.mkForce [ "/etc/cdi" "/var/run/cdi" ];
-      };
-    };
+  virtualisation.containerd.settings.plugins."io.containerd.grpc.v1.cri" = {
+    enable_cdi = lib.mkForce true;
+    cdi_spec_dirs = lib.mkForce [ "/var/run/cdi" "/etc/cdi" ];
   };
 }
