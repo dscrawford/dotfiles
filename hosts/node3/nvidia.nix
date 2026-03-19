@@ -34,8 +34,8 @@
     enable = true;
     settings = {
       plugins."io.containerd.grpc.v1.cri" = {
-        enable_cdi = true;
-        cdi_spec_dirs = [ "/etc/cdi" "/var/run/cdi" ];
+        enable_cdi = lib.mkForce true;
+        cdi_spec_dirs = lib.mkForce [ "/etc/cdi" "/var/run/cdi" ];
       };
     };
   };
