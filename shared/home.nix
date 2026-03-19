@@ -18,7 +18,7 @@ let
       files = builtins.attrNames (builtins.readDir dir);
     in map (file: lib.nameValuePair
       ".claude/skills/${skill}/${file}"
-      { source = dir + "/${file}"; }
+      { source = dir + "/${file}"; force = true; }
     ) files
   ) skillNames);
 in
