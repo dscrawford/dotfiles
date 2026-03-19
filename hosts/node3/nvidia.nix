@@ -21,7 +21,7 @@
   hardware.nvidia-container-toolkit.enable = true;
   virtualisation.docker.enable = true;
 
-  # Register nvidia runtime with containerd so kubelet can schedule GPU pods
+  # Register nvidia as an opt-in containerd runtime (runc stays default)
   virtualisation.containerd = {
     enable = true;
     settings = {
@@ -29,7 +29,6 @@
         runtime_type = "io.containerd.runc.v2";
         options.BinaryName = "${pkgs.nvidia-container-toolkit}/bin/nvidia-container-runtime";
       };
-      plugins."io.containerd.grpc.v1.cri".containerd.default_runtime_name = "nvidia";
     };
   };
 }
