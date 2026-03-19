@@ -70,6 +70,8 @@ in
       exec-path-from-shell
       # Python debugging (Debug Adapter Protocol)
       dap-mode
+      # Jupyter notebook support
+      ein
       # Copilot inline completions
       copilot
       (trivialBuild {
@@ -214,6 +216,10 @@ in
         (claude-code-ide-terminal-backend 'eat)
         :config
         (claude-code-ide-emacs-tools-setup))
+      ;; EIN — Jupyter notebook support
+      (require 'ein)
+      (require 'ein-notebook)
+
       ;; Agent Shell — LLM-powered shell
       (require 'agent-shell)
       (global-set-key (kbd "C-c s") 'agent-shell)
