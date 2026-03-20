@@ -27,8 +27,6 @@ in
   home.username = username;
   home.homeDirectory = homeDir;
   home.stateVersion = "23.05";
-  # Back up conflicting dotfiles instead of failing (Darwin has unmanaged defaults like ~/.ssh/config)
-  home.backupFileExtension = if isDarwin then "hm-backup" else null;
 
   # User packages
   home.packages = with pkgs; [
