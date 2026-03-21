@@ -63,7 +63,7 @@ let
       ) cliAnythingSkills);
     in agentsEntries // cliAnythingEntries;
 
-  externalSkillFiles = lib.concatMapAttrs scanExternalSkills claudeSkills;
+  externalSkillFiles = lib.concatMapAttrs (prefix: entry: scanExternalSkills prefix entry.src) claudeSkills;
 
   skillFiles = localSkillFiles // externalSkillFiles;
 in
@@ -197,6 +197,7 @@ in
   # SSH — force xterm-256color since eat-truecolor is rarely available on remote hosts
   programs.ssh = {
     enable = true;
+    enableDefaultConfig = false;
     extraConfig = ''
       SetEnv TERM=xterm-256color
     '';
