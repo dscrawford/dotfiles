@@ -124,6 +124,31 @@
     '';
   };
 
+  home.file.".local/bin/record.sh" = {
+    executable = true;
+    text = ''
+      #!/bin/bash
+      SWAYMSG=/run/current-system/sw/bin/swaymsg
+      JQ=/run/current-system/sw/bin/jq
+      NOTIFY=/run/current-system/sw/bin/notify-send
+      WF_RECORDER=/run/current-system/sw/bin/wf-recorder
+      RECORDINGS_DIR="$HOME/Videos/recordings"
+
+      if pgrep -x wf-recorder > /dev/null; then
+        pkill -INT -x wf-recorder
+        $NOTIFY -t 3000 "Recording stopped" "Saved to $RECORDINGS_DIR"
+        exit 0
+      fi
+
+      OUTPUT=$($SWAYMSG -t get_outputs | $JQ -r '.[] | select(.focused) | .name')
+      mkdir -p "$RECORDINGS_DIR"
+      FILENAME="$RECORDINGS_DIR/recording-$(date +%Y-%m-%d_%H-%M-%S).mp4"
+      $WF_RECORDER -o "$OUTPUT" --audio -f "$FILENAME" &
+      disown
+      $NOTIFY -t 3000 "Recording started" "Press Ctrl+Alt+Shift+R to stop"
+    '';
+  };
+
   home.file.".config/waybar/config".text = builtins.toJSON {
     layer = "top";
     position = "top";
@@ -400,6 +425,9 @@
 
     # Screenshots
     bindsym Control+Shift+Mod1+s exec grim -g "$(slurp)" - | wl-copy
+
+    # Screen recording toggle
+    bindsym Control+Shift+Mod1+r exec ~/.local/bin/record.sh
 
     # Applications
     bindsym Control+Shift+Mod1+f exec firefox
