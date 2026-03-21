@@ -1,5 +1,21 @@
 {
   "nodes": {
+    "cli-anything": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1774105873,
+        "narHash": "sha256-lceY93UFzv0i9q11fTD15AFEASriCUjaVds9kUIbnLU=",
+        "owner": "HKUDS",
+        "repo": "CLI-Anything",
+        "rev": "776b5126a34b9a529074507c3b6f9147967a1f9a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "HKUDS",
+        "repo": "CLI-Anything",
+        "type": "github"
+      }
+    },
     "darwin-emacs": {
       "inputs": {
         "flake-utils": "flake-utils",
@@ -18,6 +34,22 @@
       "original": {
         "owner": "nix-giant",
         "repo": "nix-darwin-emacs",
+        "type": "github"
+      }
+    },
+    "everything-claude-code": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1774087334,
+        "narHash": "sha256-PraC3ZD7ig6QDIypjjzh/70yXr3rJ5uMkxgIpyoS2XU=",
+        "owner": "affaan-m",
+        "repo": "everything-claude-code",
+        "rev": "0d2828cc00c63a9be12b6a01ce0df23e37ee226b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "affaan-m",
+        "repo": "everything-claude-code",
         "type": "github"
       }
     },
@@ -97,7 +129,9 @@
     },
     "root": {
       "inputs": {
+        "cli-anything": "cli-anything",
         "darwin-emacs": "darwin-emacs",
+        "everything-claude-code": "everything-claude-code",
         "home-manager": "home-manager",
         "nix-darwin": "nix-darwin",
         "nixpkgs": "nixpkgs",

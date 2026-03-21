@@ -1,6 +1,6 @@
 # shared/home.nix
 # Home Manager configuration (cross-platform: Linux and macOS)
-{ config, lib, pkgs, username, gitUser ? null, enableSecrets ? false, ... }:
+{ config, lib, pkgs, username, gitUser ? null, enableSecrets ? false, claudeSkills ? {}, ... }:
 
 let
   isDarwin = pkgs.stdenv.isDarwin;
@@ -9,10 +9,10 @@ let
 
   claude-agent-acp = pkgs.callPackage ../pkgs/claude-agent-acp {};
 
-  # Scan claude/skills/ and build home.file entries for each skill directory
+  # Scan claude/skills/ (local) and build home.file entries for each skill directory
   skillsDir = ../claude/skills;
   skillNames = builtins.attrNames (lib.filterAttrs (_: type: type == "directory") (builtins.readDir skillsDir));
-  skillFiles = lib.listToAttrs (builtins.concatMap (skill:
+  localSkillFiles = lib.listToAttrs (builtins.concatMap (skill:
     let
       dir = skillsDir + "/${skill}";
       files = builtins.attrNames (builtins.readDir dir);
@@ -21,6 +21,51 @@ let
       { source = dir + "/${file}"; force = true; }
     ) files
   ) skillNames);
+
+  # Scan external Claude skill sources (from flake inputs)
+  # Supports two layouts:
+  #   1. .agents/skills/<name>/SKILL.md  (everything-claude-code)
+  #   2. <app>/agent-harness/cli_anything/<app>/skills/SKILL.md  (cli-anything)
+  mkSkillEntries = prefix: dir: skillDirs:
+    lib.listToAttrs (builtins.concatMap (skill:
+      let
+        skillDir = dir + "/${skill}";
+        files = builtins.attrNames (lib.filterAttrs (_: type: type == "regular") (builtins.readDir skillDir));
+      in map (file: lib.nameValuePair
+        ".claude/skills/${prefix}:${skill}/${file}"
+        { source = skillDir + "/${file}"; force = true; }
+      ) files
+    ) skillDirs);
+
+  scanExternalSkills = prefix: src:
+    let
+      # Layout 1: .agents/skills/<name>/SKILL.md
+      agentsDir = src + "/.agents/skills";
+      hasAgentsDir = builtins.pathExists agentsDir;
+      agentsSkills = if hasAgentsDir
+        then builtins.attrNames (lib.filterAttrs (_: type: type == "directory") (builtins.readDir agentsDir))
+        else [];
+      agentsEntries = mkSkillEntries prefix agentsDir agentsSkills;
+
+      # Layout 2: <app>/agent-harness/cli_anything/<app>/skills/SKILL.md
+      topDirs = builtins.attrNames (lib.filterAttrs (_: type: type == "directory") (builtins.readDir src));
+      cliAnythingSkills = builtins.filter (app:
+        builtins.pathExists (src + "/${app}/agent-harness/cli_anything/${app}/skills")
+      ) topDirs;
+      cliAnythingEntries = lib.listToAttrs (builtins.concatMap (app:
+        let
+          skillDir = src + "/${app}/agent-harness/cli_anything/${app}/skills";
+          files = builtins.attrNames (lib.filterAttrs (_: type: type == "regular") (builtins.readDir skillDir));
+        in map (file: lib.nameValuePair
+          ".claude/skills/${prefix}:${app}/${file}"
+          { source = skillDir + "/${file}"; force = true; }
+        ) files
+      ) cliAnythingSkills);
+    in agentsEntries // cliAnythingEntries;
+
+  externalSkillFiles = lib.concatMapAttrs scanExternalSkills claudeSkills;
+
+  skillFiles = localSkillFiles // externalSkillFiles;
 in
 {
   # Basic user info

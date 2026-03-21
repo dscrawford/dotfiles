@@ -21,3 +21,4 @@ result-*
 # OS files
 .DS_Store
 Thumbs.db
+/.agent-shell/

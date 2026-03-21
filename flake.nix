@@ -18,11 +18,35 @@
       url = "github:nix-giant/nix-darwin-emacs";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    everything-claude-code = {
+      url = "github:affaan-m/everything-claude-code";
+      flake = false;
+    };
+    cli-anything = {
+      url = "github:HKUDS/CLI-Anything";
+      flake = false;
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, sops-nix, nix-darwin, darwin-emacs }:
+  outputs = { self, nixpkgs, home-manager, sops-nix, nix-darwin, darwin-emacs, everything-claude-code, cli-anything }:
   let
     lib = nixpkgs.lib;
+
+    # Claude Code skill sources — add new repos here
+    # Each entry: { src, skillsDir } where skillsDir is a function from src to the skills directory
+    claudeSkills = {
+      everything-claude-code = {
+        src = everything-claude-code;
+        # .agents/skills/<name>/SKILL.md
+        findSkills = src: src + "/.agents/skills";
+      };
+      cli-anything = {
+        src = cli-anything;
+        # <app>/agent-harness/cli_anything/<app>/skills/SKILL.md
+        # Flattened: scan each top-level app dir for the nested skills path
+        findSkills = null;  # uses custom scanner in home.nix
+      };
+    };
     mkServer = { hostname, ip, netInterface ? "eno1", extraModules ? [] }: nixpkgs.lib.nixosSystem rec {
       system = "x86_64-linux";
       specialArgs = {
@@ -59,7 +83,7 @@
           home-manager.users.${username} = {
             imports = homeModules;
           };
-          home-manager.extraSpecialArgs = { inherit hostname username gitUser enableSecrets; };
+          home-manager.extraSpecialArgs = { inherit hostname username gitUser enableSecrets claudeSkills; };
           home-manager.sharedModules = lib.optionals enableSecrets [
             sops-nix.homeManagerModules.sops
           ];
@@ -87,7 +111,7 @@
           home-manager.users.${username} = {
             imports = homeModules;
           };
-          home-manager.extraSpecialArgs = { inherit hostname username gitUser enableSecrets; };
+          home-manager.extraSpecialArgs = { inherit hostname username gitUser enableSecrets claudeSkills; };
           home-manager.sharedModules = lib.optionals enableSecrets [
             sops-nix.homeManagerModules.sops
           ];
