@@ -4,6 +4,7 @@
 
 let
   isDarwin = pkgs.stdenv.isDarwin;
+  bashPath = "${pkgs.bash}/bin/bash";
 in
 {
   programs.emacs = {
@@ -21,27 +22,17 @@ in
       dockerfile-mode
       # Jenkinsfile syntax
       groovy-mode
-      # Enhanced JSON
       json-mode
       terraform-mode
-      # JavaScript/TypeScript
       typescript-mode
       web-mode
-      # Org presentations
       org-present
-      # Inline error checking
       flycheck
-      # Autocomplete
       corfu
-      # Clipboard integration
       xclip
-      # Godot development support
       gdscript-mode
-      # Quick window switching
       ace-window
-      # Window resizing
       windresize
-      # Smooth scrolling
       (trivialBuild {
         pname = "ultra-scroll";
         version = "0-unstable-2025";
@@ -52,27 +43,18 @@ in
           hash = "sha256-hKgwjs4qZikbvHKjWIJFlkI/4LXR6qovCoTBM5miVr8=";
         };
       })
-      # PDF viewing
       pdf-tools
-      # Modern modeline
       doom-modeline
       nerd-icons
-      # Show available keybindings
       which-key
-      # Direnv integration
       envrc
-      # Claude Code IDE dependencies
       websocket
       transient
       web-server
       eat
-      # Inherit shell PATH in macOS GUI Emacs
       exec-path-from-shell
-      # Python debugging (Debug Adapter Protocol)
       dap-mode
-      # Jupyter notebook support
       ein
-      # Copilot inline completions
       copilot
       (trivialBuild {
         pname = "claude-code-ide";
@@ -85,7 +67,6 @@ in
         };
         packageRequires = with epkgs; [ websocket transient web-server ];
       })
-      # Agent Shell — LLM-powered shell in Emacs
       acp
       (trivialBuild {
         pname = "shell-maker";
@@ -110,7 +91,6 @@ in
       })
     ]);
     extraConfig = ''
-      ;; GUI cleanup and dark theme
       (tool-bar-mode -1)
       (menu-bar-mode -1)
       (scroll-bar-mode -1)
@@ -143,26 +123,23 @@ in
       ;; PDF support (deferred until a PDF is opened)
       (add-hook 'pdf-view-mode-hook (lambda () (require 'pdf-tools) (pdf-tools-install :no-query)))
 
-      ;; Modern modeline
       (require 'doom-modeline)
       (doom-modeline-mode 1)
       (setq doom-modeline-icon t)
 
-      ;; Show available keybindings after prefix key press
       (require 'which-key)
       (which-key-mode 1)
       (setq which-key-idle-delay 0.5)
 
-      ;; Direnv integration — automatically load .envrc environments in buffers
       (require 'envrc)
       (envrc-global-mode 1)
 
       ;; Performance optimizations
-      (setq gc-cons-threshold (* 100 1024 1024))  ; 100MB - reduce GC pauses
-      (setq read-process-output-max (* 1024 1024))  ; 1MB - faster subprocess communication
-      (setq inhibit-compacting-font-caches t)
-      (setq-default bidi-display-reordering nil)  ; Disable bidirectional text
-      (setq-default bidi-paragraph-direction 'left-to-right)
+      (setq gc-cons-threshold (* 100 1024 1024)   ; 100MB - reduce GC pauses
+            read-process-output-max (* 1024 1024)  ; 1MB - faster subprocess communication
+            inhibit-compacting-font-caches t)
+      (setq-default bidi-display-reordering nil    ; Disable bidirectional text
+                    bidi-paragraph-direction 'left-to-right)
 
       ;; Reset GC after startup
       (add-hook 'emacs-startup-hook
@@ -171,29 +148,29 @@ in
       ;; Run GC when idle
       (run-with-idle-timer 5 t #'garbage-collect)
 
-      (setq backup-directory-alist `(("." . "~/.emacs.d/backups/")))
-      (setq make-backup-files t)
-      (setq auto-save-file-name-transforms `((".*" "~/.emacs.d/auto-saves/" t)))
-      (setq auto-save-default t)
-      (setq auto-save-timeout 20)
-      (setq auto-save-interval 200)
-      (setq lock-file-name-transforms `((".*" "~/.emacs.d/lockfiles/" t)))
+      (setq backup-directory-alist `(("." . "~/.emacs.d/backups/"))
+            make-backup-files t
+            auto-save-file-name-transforms `((".*" "~/.emacs.d/auto-saves/" t))
+            auto-save-default t
+            auto-save-timeout 20
+            auto-save-interval 200
+            lock-file-name-transforms `((".*" "~/.emacs.d/lockfiles/" t)))
       (make-directory "~/.emacs.d/backups/" t)
       (make-directory "~/.emacs.d/auto-saves/" t)
       (make-directory "~/.emacs.d/compile-history/" t)
       (make-directory "~/.emacs.d/lockfiles/" t)
 
       ;; Persist minibuffer history (shell commands, M-x, etc.) across sessions
-      (setq savehist-file "~/.emacs.d/savehist")
-      (setq savehist-additional-variables '(shell-command-history search-ring regexp-search-ring))
+      (setq savehist-file "~/.emacs.d/savehist"
+            savehist-additional-variables '(shell-command-history search-ring regexp-search-ring))
       (savehist-mode 1)
       (setq find-file-visit-truename t)
 
       ;; macOS modifier keys
       (when (eq system-type 'darwin)
-        (setq mac-option-modifier 'meta)
-        (setq mac-command-modifier 'super)
-        (setq mac-right-option-modifier 'none))  ; Allow special characters with right Option
+        (setq mac-option-modifier 'meta
+              mac-command-modifier 'super
+              mac-right-option-modifier 'none))  ; Allow special characters with right Option
 
       ;; Start Emacs server with unique name per tmux pane
       (require 'server)
@@ -201,7 +178,6 @@ in
         (when pane (setq server-name (format "emacs-%s" (replace-regexp-in-string "%" "" pane)))))
       (unless (server-running-p) (server-force-delete) (server-start))
 
-      ;; Copilot inline completions
       (setq copilot-node-executable "${pkgs.nodejs}/bin/node")
       (require 'copilot)
       (global-set-key (kbd "C-c p") 'copilot-mode)
@@ -209,28 +185,23 @@ in
         (define-key copilot-completion-map (kbd "TAB") 'copilot-accept-completion)
         (define-key copilot-completion-map (kbd "<tab>") 'copilot-accept-completion))
 
-      ;; Claude Code IDE
       (use-package claude-code-ide
         :bind ("C-c a" . claude-code-ide-menu)
         :custom
         (claude-code-ide-terminal-backend 'eat)
         :config
         (claude-code-ide-emacs-tools-setup))
-      ;; EIN — Jupyter notebook support
       (require 'ein)
       (require 'ein-notebook)
 
-      ;; Agent Shell — LLM-powered shell
       (require 'agent-shell)
       (global-set-key (kbd "C-c s") 'agent-shell)
       ;; Point agent-shell to the nix-built claude-agent-acp binary
       (setq agent-shell-anthropic-claude-acp-command
             '("${pkgs.callPackage ../pkgs/claude-agent-acp {}}/bin/claude-agent-acp"))
 
-      ;; Auto-revert buffers when files change on disk
       (global-auto-revert-mode 1)
 
-      ;; Render ANSI color/style codes in compilation buffer
       (require 'ansi-color)
       (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter)
 
@@ -258,20 +229,18 @@ in
           (compile cmd)))
       (global-set-key (kbd "C-c C-k") 'my/compile)
 
-      ;; Move between paragraphs (like Ctrl-up/Ctrl-down in terminals)
       (global-set-key (kbd "M-<up>") 'backward-paragraph)
       (global-set-key (kbd "M-<down>") 'forward-paragraph)
 
-      ;; Window navigation
-      (windmove-default-keybindings) ; Shift+arrow to move between windows
-      (global-set-key (kbd "M-o") 'ace-window) ; M-o to jump to a window by number
-      (global-set-key (kbd "C-c w") 'windresize) ; C-c w to enter resize mode, arrows to resize, q to quit
+      (windmove-default-keybindings)
+      (global-set-key (kbd "M-o") 'ace-window)
+      (global-set-key (kbd "C-c w") 'windresize)
 
       ;; Use Home Manager bash for all shell operations
-      (setq shell-file-name "${pkgs.bash}/bin/bash")
-      (setq explicit-shell-file-name "${pkgs.bash}/bin/bash")
+      (setq shell-file-name "${bashPath}"
+            explicit-shell-file-name "${bashPath}")
       (add-to-list 'exec-path "${pkgs.bash}/bin")
-      (setenv "SHELL" "${pkgs.bash}/bin/bash")
+      (setenv "SHELL" "${bashPath}")
 
       ;; Ensure /run/wrappers/bin (setuid wrappers: sudo, ping, etc.) is first in PATH
       (when (eq system-type 'gnu/linux)
@@ -281,13 +250,13 @@ in
       ;; On macOS GUI, inherit PATH from login shell (GUI apps don't get shell PATH)
       (when (and (eq system-type 'darwin) (display-graphic-p))
         (require 'exec-path-from-shell)
-        (setq exec-path-from-shell-shell-name "${pkgs.bash}/bin/bash")
+        (setq exec-path-from-shell-shell-name "${bashPath}")
         (exec-path-from-shell-initialize))
 
       ;; Eat terminal (pure elisp, fast, less flicker than vterm)
       ;; C-c t spawns a new eat terminal, C-c r lists existing eat sessions
       (require 'eat)
-      (setq eat-shell "${pkgs.bash}/bin/bash")
+      (setq eat-shell "${bashPath}")
       (eat-compile-terminfo)
       (advice-add 'eat-emacs-mode :after (lambda (&rest _) (setq-local cursor-type 'box)))
       (global-set-key (kbd "C-c t") #'(lambda () (interactive) (let ((current-prefix-arg '(4))) (call-interactively 'eat))))
@@ -319,15 +288,13 @@ in
       (add-hook 'eshell-load-hook #'eat-eshell-mode)
       (add-hook 'eshell-load-hook #'eat-eshell-visual-command-mode)
 
-      ;; Magit
       (require 'magit)
       (global-set-key (kbd "C-c g") 'magit-status)
 
-      ;; Clipboard integration (platform-specific)
       (setq xclip-method (if (eq system-type 'darwin) 'pbpaste 'wl-copy))
       (xclip-mode 1)
       (setq select-enable-clipboard t)
-      (when (not (eq system-type 'darwin))
+      (unless (eq system-type 'darwin)
         (setq select-enable-primary t))
 
       ;; LSP (eglot is built-in to Emacs 29+)
@@ -346,23 +313,23 @@ in
         (add-to-list 'eglot-server-programs '(gdscript-mode . ("localhost" 6005)))
         (add-to-list 'eglot-server-programs '((js-mode typescript-mode web-mode) . ("typescript-language-server" "--stdio"))))
 
-      ;; Python debugging (DAP — Debug Adapter Protocol via debugpy)
       (require 'dap-mode)
       (require 'dap-python)
-      (setq dap-python-debugger 'debugpy)
-      (setq dap-python-executable "python3")
+      (setq dap-python-debugger 'debugpy
+            dap-python-executable "python3")
       (dap-auto-configure-mode 1)
 
       ;; Debug keybindings — C-c d prefix
-      (global-set-key (kbd "C-c d d") 'dap-debug)
-      (global-set-key (kbd "C-c d b") 'dap-breakpoint-toggle)
-      (global-set-key (kbd "C-c d n") 'dap-next)
-      (global-set-key (kbd "C-c d i") 'dap-step-in)
-      (global-set-key (kbd "C-c d o") 'dap-step-out)
-      (global-set-key (kbd "C-c d c") 'dap-continue)
-      (global-set-key (kbd "C-c d r") 'dap-ui-repl)
-      (global-set-key (kbd "C-c d q") 'dap-disconnect)
-      (global-set-key (kbd "C-c d e") 'dap-eval-thing-at-point)
+      (dolist (bind '(("d" . dap-debug)
+                     ("b" . dap-breakpoint-toggle)
+                     ("n" . dap-next)
+                     ("i" . dap-step-in)
+                     ("o" . dap-step-out)
+                     ("c" . dap-continue)
+                     ("r" . dap-ui-repl)
+                     ("q" . dap-disconnect)
+                     ("e" . dap-eval-thing-at-point)))
+        (global-set-key (kbd (format "C-c d %s" (car bind))) (cdr bind)))
 
       ;; Default debug template for Python files
       (dap-register-debug-template "Python :: Run Current File"
@@ -373,13 +340,11 @@ in
               :request "launch"
               :name "Python :: Run Current File"))
 
-      ;; Autocomplete
-      (setq corfu-auto t)          ;; popup automatically
-      (setq corfu-auto-delay 0.2)  ;; after 0.2s
-      (setq corfu-auto-prefix 2)   ;; after typing 2 chars
+      (setq corfu-auto t
+            corfu-auto-delay 0.2
+            corfu-auto-prefix 2)
       (global-corfu-mode)
 
-      ;; Flycheck for modes without LSP/Flymake
       (with-eval-after-load 'flycheck
         (setq flycheck-checker-error-threshold 400))
 
@@ -394,18 +359,18 @@ in
         ;; JSX content type for proper React syntax in .tsx/.jsx
         (add-to-list 'web-mode-content-types-alist '("jsx" . "\\.tsx\\'"))
         (add-to-list 'web-mode-content-types-alist '("jsx" . "\\.jsx\\'"))
-        (setq web-mode-markup-indent-offset 2)
-        (setq web-mode-code-indent-offset 2)
-        (setq web-mode-css-indent-offset 2))
+        (setq web-mode-markup-indent-offset 2
+              web-mode-code-indent-offset 2
+              web-mode-css-indent-offset 2))
 
       ;; Godot file type associations
       (add-to-list 'auto-mode-alist '("\\.gd\\'" . gdscript-mode))
       (dolist (ext '("\\.tscn\\'" "\\.tres\\'" "\\.godot\\'" "\\.import\\'"))
         (add-to-list 'auto-mode-alist (cons ext 'conf-mode)))
       (with-eval-after-load 'gdscript-mode
-        (setq gdscript-use-tab-indents nil)
-        (setq gdscript-indent-offset 4)
-        (setq gdscript-gdformat-save-enabled nil))
+        (setq gdscript-use-tab-indents nil
+              gdscript-indent-offset 4
+              gdscript-gdformat-save-enabled nil))
     '';
   };
 }
