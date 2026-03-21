@@ -200,14 +200,20 @@ in
       (setq agent-shell-anthropic-claude-acp-command
             '("${pkgs.callPackage ../pkgs/claude-agent-acp {}}/bin/claude-agent-acp"))
       ;; Wayland clipboard image support (wl-paste) — not included upstream
+      ;; Checks MIME types first so text clipboard falls through to yank
       (with-eval-after-load 'agent-shell
         (when (executable-find "wl-paste")
           (push (list (cons :command "wl-paste")
                       (cons :save (lambda (file-path)
-                                    (let ((exit-code (call-process "wl-paste" nil `(:file ,file-path) nil
-                                                                    "-t" "image/png")))
-                                      (unless (zerop exit-code)
-                                        (error "wl-paste failed with exit code %d" exit-code))))))
+                                    (let ((types (with-temp-buffer
+                                                   (call-process "wl-paste" nil t nil "--list-types")
+                                                   (buffer-string))))
+                                      (unless (string-match-p "image/png" types)
+                                        (error "No image in clipboard"))
+                                      (let ((exit-code (call-process "wl-paste" nil `(:file ,file-path) nil
+                                                                      "-t" "image/png")))
+                                        (unless (zerop exit-code)
+                                          (error "wl-paste failed with exit code %d" exit-code)))))))
                 agent-shell-clipboard-image-handlers)))
 
       (global-auto-revert-mode 1)
