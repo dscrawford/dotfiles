@@ -198,9 +198,11 @@ in
   programs.ssh = {
     enable = true;
     enableDefaultConfig = false;
-    extraConfig = ''
-      SetEnv TERM=xterm-256color
-    '';
+    matchBlocks."*" = {
+      extraOptions = {
+        SetEnv = "TERM=xterm-256color";
+      };
+    };
   };
 
   # Enable home-manager
