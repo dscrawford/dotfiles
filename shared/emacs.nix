@@ -203,6 +203,9 @@ in
       ;; Wayland clipboard image support (wl-paste) — not included upstream
       ;; Checks MIME types first so text clipboard falls through to yank
       (with-eval-after-load 'agent-shell
+        ;; Rebind cycle-session-mode from C-<tab> (conflicts with Emacs) to C-M-<tab>
+        (keymap-set agent-shell-mode-map "C-M-<tab>" #'agent-shell-cycle-session-mode)
+        (keymap-unset agent-shell-mode-map "C-<tab>")
         (when (executable-find "wl-paste")
           (push (list (cons :command "wl-paste")
                       (cons :save (lambda (file-path)
