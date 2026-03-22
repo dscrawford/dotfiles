@@ -120,8 +120,8 @@ in
       (require 'ultra-scroll)
       (ultra-scroll-mode 1)
 
-      ;; PDF support (deferred until a PDF is opened)
-      (add-hook 'pdf-view-mode-hook (lambda () (require 'pdf-tools) (pdf-tools-install :no-query)))
+      ;; PDF support
+      (pdf-tools-install :no-query)
 
       (require 'doom-modeline)
       (doom-modeline-mode 1)
