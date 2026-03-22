@@ -107,6 +107,9 @@ in
     # Rust
     rust-analyzer
 
+    # C/C++
+    clang-tools  # clangd language server
+
     # JavaScript/TypeScript
     nodePackages.typescript
     nodePackages.typescript-language-server

@@ -319,19 +319,21 @@ in
       ;; gdscript-mode omitted from flymake — diagnostics via Godot LSP connection
       (dolist (hook '(nix-mode-hook python-mode-hook gdscript-mode-hook
                       js-mode-hook typescript-mode-hook web-mode-hook
-                      rust-mode-hook))
+                      rust-mode-hook c-mode-hook c++-mode-hook))
         (add-hook hook 'eglot-ensure))
       (dolist (hook '(nix-mode-hook python-mode-hook
                       js-mode-hook typescript-mode-hook web-mode-hook
-                      rust-mode-hook))
+                      rust-mode-hook c-mode-hook c++-mode-hook))
         (add-hook hook 'flymake-mode))
-      ;; Language servers: nil (Nix), pyright (Python), typescript-language-server (JS/TS), rust-analyzer (Rust)
+      ;; Language servers: nil (Nix), pyright (Python), typescript-language-server (JS/TS),
+      ;; rust-analyzer (Rust), clangd (C/C++)
       (with-eval-after-load 'eglot
         (add-to-list 'eglot-server-programs '(nix-mode . ("nil")))
         (add-to-list 'eglot-server-programs '(python-mode . ("pyright-langserver" "--stdio")))
         (add-to-list 'eglot-server-programs '(gdscript-mode . ("localhost" 6005)))
         (add-to-list 'eglot-server-programs '((js-mode typescript-mode web-mode) . ("typescript-language-server" "--stdio")))
-        (add-to-list 'eglot-server-programs '(rust-mode . ("rust-analyzer"))))
+        (add-to-list 'eglot-server-programs '(rust-mode . ("rust-analyzer")))
+        (add-to-list 'eglot-server-programs '((c-mode c++-mode) . ("clangd"))))
 
       (require 'dap-mode)
       (require 'dap-python)
