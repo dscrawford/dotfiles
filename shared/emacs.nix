@@ -30,6 +30,7 @@ in
       flycheck
       corfu
       xclip
+      rust-mode
       gdscript-mode
       ace-window
       windresize
@@ -317,17 +318,20 @@ in
       ;; Automatically start eglot and flymake for supported modes
       ;; gdscript-mode omitted from flymake — diagnostics via Godot LSP connection
       (dolist (hook '(nix-mode-hook python-mode-hook gdscript-mode-hook
-                      js-mode-hook typescript-mode-hook web-mode-hook))
+                      js-mode-hook typescript-mode-hook web-mode-hook
+                      rust-mode-hook))
         (add-hook hook 'eglot-ensure))
       (dolist (hook '(nix-mode-hook python-mode-hook
-                      js-mode-hook typescript-mode-hook web-mode-hook))
+                      js-mode-hook typescript-mode-hook web-mode-hook
+                      rust-mode-hook))
         (add-hook hook 'flymake-mode))
-      ;; Language servers: nil (Nix), pyright (Python), typescript-language-server (JS/TS)
+      ;; Language servers: nil (Nix), pyright (Python), typescript-language-server (JS/TS), rust-analyzer (Rust)
       (with-eval-after-load 'eglot
         (add-to-list 'eglot-server-programs '(nix-mode . ("nil")))
         (add-to-list 'eglot-server-programs '(python-mode . ("pyright-langserver" "--stdio")))
         (add-to-list 'eglot-server-programs '(gdscript-mode . ("localhost" 6005)))
-        (add-to-list 'eglot-server-programs '((js-mode typescript-mode web-mode) . ("typescript-language-server" "--stdio"))))
+        (add-to-list 'eglot-server-programs '((js-mode typescript-mode web-mode) . ("typescript-language-server" "--stdio")))
+        (add-to-list 'eglot-server-programs '(rust-mode . ("rust-analyzer"))))
 
       (require 'dap-mode)
       (require 'dap-python)

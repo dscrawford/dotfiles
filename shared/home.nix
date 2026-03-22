@@ -104,6 +104,9 @@ in
     nil            # Nix language server
     nixfmt         # Nix formatter
 
+    # Rust
+    rust-analyzer
+
     # JavaScript/TypeScript
     nodePackages.typescript
     nodePackages.typescript-language-server
