@@ -137,6 +137,7 @@ in
     # IDE
     claude-code
     claude-agent-acp
+    gemini-cli
     github-copilot-cli
     nodejs  # Provides npx for keegancsmith/emacs-mcp-server and copilot.el
 
@@ -278,6 +279,9 @@ in
       if [ -f ${config.sops.secrets.anthropic_api_key.path} ]; then
         export ANTHROPIC_API_KEY=$(cat ${config.sops.secrets.anthropic_api_key.path})
       fi
+      if [ -f ${config.sops.secrets.gemini_api_key.path} ]; then
+        export GEMINI_API_KEY=$(cat ${config.sops.secrets.gemini_api_key.path})
+      fi
     '';
   };
 
@@ -335,5 +339,6 @@ in
     age.keyFile = "${homeDir}/.config/sops/age/keys.txt";
     defaultSopsFile = ../secrets/secrets.yaml;
     secrets.anthropic_api_key = {};
+    secrets.gemini_api_key = {};
   };
 }
