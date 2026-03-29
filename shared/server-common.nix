@@ -70,6 +70,7 @@
       allowedTCPPortRanges = [
         { from = 30500; to = 30799; }
       ];
+      allowedUDPPorts = [ 51820 ];
       allowedUDPPortRanges = [
         { from = 30800; to = 30899; }
       ];
