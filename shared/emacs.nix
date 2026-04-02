@@ -194,9 +194,15 @@ in
         (claude-code-ide-emacs-tools-setup))
       (require 'ein)
       (require 'ein-notebook)
+      ;; Alt-Up/Down to quickly traverse between cells in ein notebooks
+      (with-eval-after-load 'ein-notebook
+        (keymap-set ein:notebook-mode-map "M-<up>" #'ein:worksheet-goto-prev-input)
+        (keymap-set ein:notebook-mode-map "M-<down>" #'ein:worksheet-goto-next-input))
 
       (require 'agent-shell)
       (global-set-key (kbd "C-c s") 'agent-shell)
+      ;; Always prompt for session on start so we can resume from another session
+      (setq agent-shell-session-strategy 'prompt)
       ;; Point agent-shell to the nix-built claude-agent-acp binary
       (setq agent-shell-anthropic-claude-acp-command
             '("${pkgs.callPackage ../pkgs/claude-agent-acp {}}/bin/claude-agent-acp"))
