@@ -93,7 +93,20 @@ in
     lynx
 
     # Python
-    (python3.withPackages (ps: with ps; [ numpy pandas fastparquet fsspec s3fs pip black debugpy jupyter ipykernel ]))
+    (python3.withPackages (ps: with ps; [
+      # Core data science
+      numpy pandas scipy scikit-learn matplotlib seaborn plotly
+      # Jupyter
+      jupyter ipykernel debugpy
+      # File formats
+      openpyxl xlsxwriter fastparquet pyarrow
+      # Cloud / storage
+      fsspec s3fs boto3
+      # Databricks
+      databricks-sql-connector
+      # Tooling
+      pip black requests
+    ]))
     uv
     poetry
 
@@ -111,8 +124,8 @@ in
     clang-tools  # clangd language server
 
     # JavaScript/TypeScript
-    nodePackages.typescript
-    nodePackages.typescript-language-server
+    typescript
+    typescript-language-server
 
     # Development tools
     openssl
@@ -135,14 +148,14 @@ in
     postgresql
 
     # IDE
-    claude-code
+    (pkgs.callPackage ../pkgs/claude-code {})
     claude-agent-acp
     gemini-cli
     github-copilot-cli
     nodejs  # Provides npx for keegancsmith/emacs-mcp-server and copilot.el
 
     # Other
-    goose-cli
+    # goose-cli  # disabled: broken in nixpkgs-unstable (Rust recursion limit)
   ] ++ lib.optionals isDarwin [
     docker
     docker-buildx
@@ -309,6 +322,7 @@ in
   # Git configuration
   programs.git = {
     enable = true;
+    signing.format = null;
     settings = {
       user = if gitUser != null then gitUser else {
         name = "Daniel Crawford";
