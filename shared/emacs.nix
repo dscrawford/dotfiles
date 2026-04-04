@@ -202,6 +202,13 @@ in
         (keymap-set ein:notebook-mode-map "M-<up>" #'ein:worksheet-goto-prev-input)
         (keymap-set ein:notebook-mode-map "M-<down>" #'ein:worksheet-goto-next-input))
 
+      ;; Inferior Python (run-python) — enable native readline completion for corfu
+      ;; PYTHON_BASIC_REPL disables pyrepl (which needs a real terminal) so
+      ;; Python falls back to readline-based completion that Emacs can drive.
+      (setq python-shell-completion-native-enable t
+            python-shell-interpreter "python3")
+      (setenv "PYTHON_BASIC_REPL" "1")
+
       (require 'agent-shell)
       (global-set-key (kbd "C-c s") 'agent-shell)
       ;; Always prompt for session on start so we can resume from another session
