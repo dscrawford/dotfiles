@@ -167,6 +167,9 @@ in
       (savehist-mode 1)
       (setq find-file-visit-truename t)
 
+      ;; Ediff: use single frame (no separate control window)
+      (setq ediff-window-setup-function 'ediff-setup-windows-plain)
+
       ;; macOS modifier keys
       (when (eq system-type 'darwin)
         (setq mac-option-modifier 'meta
