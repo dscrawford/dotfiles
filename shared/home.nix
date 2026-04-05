@@ -149,6 +149,7 @@ in
 
     # IDE
     (pkgs.callPackage ../pkgs/claude-code {})
+    (pkgs.callPackage ../pkgs/ruflo {})
     claude-agent-acp
     gemini-cli
     github-copilot-cli
@@ -195,6 +196,10 @@ in
         emacs-mcp = {
           command = "npx";
           args = [ "-y" "@keegancsmith/emacs-mcp-server" ];
+        };
+        ruflo = {
+          command = "ruflo";
+          args = [ "mcp" "start" ];
         };
       };
     };
