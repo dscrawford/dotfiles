@@ -167,6 +167,10 @@ in
       (savehist-mode 1)
       (setq find-file-visit-truename t)
 
+      ;; Persist safe-variable declarations (press ! at the prompt to trust permanently)
+      (setq custom-file "~/.emacs.d/custom.el")
+      (when (file-exists-p custom-file) (load custom-file))
+
       ;; Ediff: use single frame (no separate control window)
       (setq ediff-window-setup-function 'ediff-setup-windows-plain)
 
