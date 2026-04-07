@@ -216,12 +216,13 @@ in
       ;; Point agent-shell to the nix-built claude-agent-acp binary
       (setq agent-shell-anthropic-claude-acp-command
             '("${pkgs.callPackage ../pkgs/claude-agent-acp {}}/bin/claude-agent-acp"))
-      ;; Wayland clipboard image support (wl-paste) — not included upstream
+      ;; Clipboard image support for agent-shell (not included upstream)
       ;; Checks MIME types first so text clipboard falls through to yank
       (with-eval-after-load 'agent-shell
         ;; Rebind cycle-session-mode from C-<tab> (conflicts with Emacs) to C-M-<tab>
         (keymap-set agent-shell-mode-map "C-M-<tab>" #'agent-shell-cycle-session-mode)
         (keymap-unset agent-shell-mode-map "C-<tab>")
+        ;; Wayland (Linux): wl-paste
         (when (executable-find "wl-paste")
           (push (list (cons :command "wl-paste")
                       (cons :save (lambda (file-path)
@@ -234,6 +235,14 @@ in
                                                                       "-t" "image/png")))
                                         (unless (zerop exit-code)
                                           (error "wl-paste failed with exit code %d" exit-code)))))))
+                agent-shell-clipboard-image-handlers))
+        ;; macOS: pngpaste
+        (when (executable-find "pngpaste")
+          (push (list (cons :command "pngpaste")
+                      (cons :save (lambda (file-path)
+                                    (let ((exit-code (call-process "pngpaste" nil nil nil file-path)))
+                                      (unless (zerop exit-code)
+                                        (error "No image in clipboard (pngpaste exit %d)" exit-code))))))
                 agent-shell-clipboard-image-handlers)))
 
       (global-auto-revert-mode 1)

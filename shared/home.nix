@@ -160,6 +160,8 @@ in
   ] ++ lib.optionals isDarwin [
     docker
     docker-buildx
+    pngpaste  # Clipboard image paste for agent-shell (macOS equivalent of wl-paste)
+
   ] ++ lib.optionals isLinux [
     xclip
     zsync
