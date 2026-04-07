@@ -197,10 +197,11 @@ in
         (claude-code-ide-emacs-tools-setup))
       (require 'ein)
       (require 'ein-notebook)
-      ;; Alt-Up/Down to quickly traverse between cells in ein notebooks
+      ;; ein notebook navigation:
+      ;; S-Up/Down: jump between cells, M-Up/Down: paragraph movement (global default)
       (with-eval-after-load 'ein-notebook
-        (keymap-set ein:notebook-mode-map "M-<up>" #'ein:worksheet-goto-prev-input)
-        (keymap-set ein:notebook-mode-map "M-<down>" #'ein:worksheet-goto-next-input))
+        (keymap-set ein:notebook-mode-map "S-<up>" #'ein:worksheet-goto-prev-input)
+        (keymap-set ein:notebook-mode-map "S-<down>" #'ein:worksheet-goto-next-input))
 
       ;; Inferior Python (run-python) — enable native readline completion for corfu
       ;; PYTHON_BASIC_REPL disables pyrepl (which needs a real terminal) so
