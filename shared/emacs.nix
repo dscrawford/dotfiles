@@ -200,6 +200,7 @@ in
         :config
         (claude-code-ide-emacs-tools-setup))
       (require 'ein)
+      (require 'ein-log)
       (require 'ein-notebook)
       ;; ein notebook navigation:
       ;; S-Up/Down: jump between cells, M-Up/Down: paragraph movement (global default)
