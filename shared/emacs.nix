@@ -203,6 +203,7 @@ in
       (require 'ein-notebook)
       ;; ein notebook navigation:
       ;; S-Up/Down: jump between cells, M-Up/Down: paragraph movement (global default)
+      (setq ein:worksheet-warn-obsolesced-keybinding nil)
       (with-eval-after-load 'ein-notebook
         (keymap-set ein:notebook-mode-map "S-<up>" #'ein:worksheet-goto-prev-input)
         (keymap-set ein:notebook-mode-map "S-<down>" #'ein:worksheet-goto-next-input))
