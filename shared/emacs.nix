@@ -202,12 +202,13 @@ in
       (require 'ein)
       (require 'ein-log)
       (require 'ein-notebook)
-      ;; ein notebook navigation:
-      ;; S-Up/Down: jump between cells, M-Up/Down: paragraph movement (global default)
-      (setq ein:worksheet-warn-obsolesced-keybinding nil)
+      ;; ein notebook keybindings:
+      ;; Fix ein's broken M-up/M-down stubs (cause infinite recursion via max-lisp-eval-depth)
+      ;; Rebind M-up/M-down to paragraph movement (same as global) so notebooks feel like normal files
+      ;; Cell navigation: C-c C-p / C-c C-n (ein built-in, always works)
       (with-eval-after-load 'ein-notebook
-        (keymap-set ein:notebook-mode-map "S-<up>" #'ein:worksheet-goto-prev-input)
-        (keymap-set ein:notebook-mode-map "S-<down>" #'ein:worksheet-goto-next-input))
+        (keymap-set ein:notebook-mode-map "M-<up>" #'backward-paragraph)
+        (keymap-set ein:notebook-mode-map "M-<down>" #'forward-paragraph))
 
       ;; Inferior Python (run-python) — enable native readline completion for corfu
       ;; PYTHON_BASIC_REPL disables pyrepl (which needs a real terminal) so
