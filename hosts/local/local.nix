@@ -224,6 +224,7 @@
       gawk
       util-linux
       jq
+      libva-utils
     ];
     variables = {
       GSETTINGS_SCHEMA_DIR = "${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}/glib-2.0/schemas";
