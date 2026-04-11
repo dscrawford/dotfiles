@@ -184,7 +184,15 @@ in
     vlc
     pavucontrol
     alacritty
-    vesktop
+    (pkgs.symlinkJoin {
+      name = "vesktop-wrapped";
+      paths = [ pkgs.vesktop ];
+      buildInputs = [ pkgs.makeWrapper ];
+      postBuild = ''
+        wrapProgram $out/bin/vesktop \
+          --append-flags "--disable-features=VaapiVideoEncoder,AcceleratedVideoEncoder"
+      '';
+    })
     discord
     fastfetch
     jetbrains.pycharm-oss

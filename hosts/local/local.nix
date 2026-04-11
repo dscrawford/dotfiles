@@ -47,6 +47,9 @@
     graphics = {
       enable = true;
       enable32Bit = true;
+      extraPackages = with pkgs; [
+        nvidia-vaapi-driver
+      ];
     };
     nvidia = {
       modesetting.enable = true;
@@ -231,6 +234,7 @@
       NIXOS_OZONE_WL = "1";       # Electron/Chromium apps use Wayland
       GBM_BACKEND = "nvidia-drm";
       __GLX_VENDOR_LIBRARY_NAME = "nvidia";
+      NVD_BACKEND = "direct";             # nvidia-vaapi-driver direct backend
     };
     pathsToLink = [ "/libexec" ];
   };
