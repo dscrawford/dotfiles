@@ -134,13 +134,21 @@ in
 
       (require 'envrc)
       (envrc-global-mode 1)
+      ;; envrc: debounce re-exports when switching buffers rapidly
+      (setq envrc-none-lighter nil   ; hide "none" in modeline for non-direnv buffers
+            envrc-show-summary-in-minibuffer nil) ; reduce minibuffer noise
 
       ;; Performance optimizations
       (setq gc-cons-threshold (* 100 1024 1024)   ; 100MB - reduce GC pauses
             read-process-output-max (* 1024 1024)  ; 1MB - faster subprocess communication
-            inhibit-compacting-font-caches t)
+            inhibit-compacting-font-caches t
+            fast-but-imprecise-scrolling t          ; skip fontification during fast scroll
+            jit-lock-defer-time 0.05               ; defer font-lock 50ms — keeps typing snappy
+            process-adaptive-read-buffering nil)    ; don't delay reading subprocess output
       (setq-default bidi-display-reordering nil    ; Disable bidirectional text
                     bidi-paragraph-direction 'left-to-right)
+      ;; so-long-mode: gracefully handle files with very long lines (AI-generated, minified, etc.)
+      (global-so-long-mode 1)
 
       ;; Reset GC after startup
       (add-hook 'emacs-startup-hook
@@ -253,6 +261,12 @@ in
                                         (error "No image in clipboard (pngpaste exit %d)" exit-code))))))
                 agent-shell-clipboard-image-handlers)))
 
+      ;; Auto-revert: pick up external edits (AI tools, git, etc.) quickly
+      (setq auto-revert-interval 1                ; check every 1s instead of 5s
+            auto-revert-avoid-polling t            ; use inotify/kqueue instead of polling
+            auto-revert-check-vc-info nil          ; don't re-check VC on every revert (faster)
+            auto-revert-verbose nil                ; don't spam *Messages* on every revert
+            revert-without-query '(".*"))          ; never prompt "file changed, revert?" — just do it
       (global-auto-revert-mode 1)
 
       (require 'ansi-color)
