@@ -190,7 +190,8 @@ in
       buildInputs = [ pkgs.makeWrapper ];
       postBuild = ''
         wrapProgram $out/bin/vesktop \
-          --append-flags "--disable-features=VaapiVideoEncoder,AcceleratedVideoEncoder"
+          --append-flags "--disable-features=VaapiVideoEncoder,AcceleratedVideoEncoder" \
+          --set LIBVA_DRIVER_NAME none
       '';
     })
     discord
