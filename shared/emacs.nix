@@ -324,7 +324,7 @@ in
       ;; C-c t spawns a new eat terminal, C-c r lists existing eat sessions
       (require 'eat)
       (setq eat-shell "${bashPath}")
-      (eat-compile-terminfo)
+
       (advice-add 'eat-emacs-mode :after (lambda (&rest _) (setq-local cursor-type 'box)))
       (global-set-key (kbd "C-c t") #'(lambda () (interactive) (let ((current-prefix-arg '(4))) (call-interactively 'eat))))
       (global-set-key (kbd "C-c r") #'(lambda () (interactive)
