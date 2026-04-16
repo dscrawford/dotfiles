@@ -30,16 +30,24 @@ let
     { secret = "m365_client_secret"; env = "M365_CLIENT_SECRET"; desc = "Azure app registration client secret for Microsoft 365 CLI"; }
   ];
 
-  # Generate bash export lines: only export if file exists and is non-empty
-  secretExportLines = lib.concatMapStringsSep "\n" (entry: ''
-    _val="$(cat ${config.sops.secrets.${entry.secret}.path} 2>/dev/null)"
-    [ -n "$_val" ] && export ${entry.env}="$_val"
-    unset _val'') secretEnvVars;
+  # Path to the sops-encrypted secrets file (resolved at build time for the nix store,
+  # but we reference the well-known runtime path so `sops -d` works in bash)
+  secretsFile = "${homeDir}/.local/dotfiles/secrets/secrets.yaml";
 
-  # Generate sops.secrets declarations from the mapping
-  secretDeclarations = lib.listToAttrs (map (entry:
-    lib.nameValuePair entry.secret {}
-  ) secretEnvVars);
+  # Generate bash export lines from a single `sops -d | yq` decryption.
+  # Keys missing from the YAML or set to "" are silently skipped.
+  secretExportLines = ''
+    # Decrypt secrets once; silently skip if age key or file is unavailable
+    _sops_yaml="$(sops -d ${secretsFile} 2>/dev/null)" || _sops_yaml=""
+    if [ -n "$_sops_yaml" ]; then
+  '' + lib.concatMapStringsSep "\n" (entry: ''
+      # ${entry.desc}
+      _val="$(echo "$_sops_yaml" | yq -r '.${entry.secret} // empty')"
+      [ -n "$_val" ] && export ${entry.env}="$_val"'') secretEnvVars + ''
+
+      unset _val
+    fi
+    unset _sops_yaml'';
 
   # Scan claude/skills/ (local) and build home.file entries for each skill directory
   skillsDir = ../claude/skills;
@@ -398,11 +406,4 @@ in
     settings.experimental-features = [ "nix-command" "flakes" ];
   };
 
-} // lib.optionalAttrs enableSecrets {
-  # SOPS configuration for secrets management (only when enableSecrets is true)
-  sops = {
-    age.keyFile = "${homeDir}/.config/sops/age/keys.txt";
-    defaultSopsFile = ../secrets/secrets.yaml;
-    secrets = secretDeclarations;
-  };
 }
