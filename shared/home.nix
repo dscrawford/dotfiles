@@ -9,6 +9,38 @@ let
 
   claude-agent-acp = pkgs.callPackage ../pkgs/claude-agent-acp {};
 
+  # Secret-to-environment-variable mapping for sops-nix
+  # Each entry: { secret = "sops_key"; env = "ENV_VAR_NAME"; }
+  # Secrets with empty values in sops YAML are silently skipped at shell init.
+  secretEnvVars = [
+    # AI / IDE
+    { secret = "anthropic_api_key"; env = "ANTHROPIC_API_KEY"; desc = "Anthropic API key for Claude Code and Claude API access"; }
+    { secret = "gemini_api_key";    env = "GEMINI_API_KEY";    desc = "Google Gemini API key for Gemini CLI"; }
+    # Jira — issue tracking and project management (jira-cli-go)
+    { secret = "jira_api_token";    env = "JIRA_API_TOKEN";    desc = "Atlassian API token for jira-cli (issue create/view/search)"; }
+    # Confluence — wiki and documentation (confluence-cli)
+    { secret = "confluence_domain";    env = "CONFLUENCE_DOMAIN";    desc = "Atlassian domain (e.g. myorg.atlassian.net) for confluence-cli"; }
+    { secret = "confluence_email";     env = "CONFLUENCE_EMAIL";     desc = "Atlassian account email for confluence-cli basic auth"; }
+    { secret = "confluence_api_token"; env = "CONFLUENCE_API_TOKEN"; desc = "Atlassian API token for confluence-cli (page read/create/search)"; }
+    # Slack — team messaging (slack-cli)
+    { secret = "slack_bot_token";   env = "SLACK_BOT_TOKEN";   desc = "Slack bot token (xoxb-...) for sending messages and reading channels"; }
+    # Microsoft 365 — Outlook, Teams, SharePoint, OneDrive (m365 CLI)
+    { secret = "m365_tenant_id";     env = "M365_TENANT_ID";     desc = "Azure AD tenant ID for Microsoft 365 CLI authentication"; }
+    { secret = "m365_client_id";     env = "M365_CLIENT_ID";     desc = "Azure app registration client ID for Microsoft 365 CLI"; }
+    { secret = "m365_client_secret"; env = "M365_CLIENT_SECRET"; desc = "Azure app registration client secret for Microsoft 365 CLI"; }
+  ];
+
+  # Generate bash export lines: only export if file exists and is non-empty
+  secretExportLines = lib.concatMapStringsSep "\n" (entry: ''
+    _val="$(cat ${config.sops.secrets.${entry.secret}.path} 2>/dev/null)"
+    [ -n "$_val" ] && export ${entry.env}="$_val"
+    unset _val'') secretEnvVars;
+
+  # Generate sops.secrets declarations from the mapping
+  secretDeclarations = lib.listToAttrs (map (entry:
+    lib.nameValuePair entry.secret {}
+  ) secretEnvVars);
+
   # Scan claude/skills/ (local) and build home.file entries for each skill directory
   skillsDir = ../claude/skills;
   skillNames = builtins.attrNames (lib.filterAttrs (_: type: type == "directory") (builtins.readDir skillsDir));
@@ -155,6 +187,12 @@ in
     github-copilot-cli
     nodejs  # Provides npx for keegancsmith/emacs-mcp-server and copilot.el
 
+    # Business / Productivity CLIs
+    jira-cli-go                                        # Jira CLI (Go)
+    (pkgs.callPackage ../pkgs/cli-microsoft365 {})     # Microsoft 365 CLI (Outlook, Teams, SharePoint)
+    (pkgs.callPackage ../pkgs/confluence-cli {})        # Confluence CLI
+    (pkgs.callPackage ../pkgs/slack-cli {})             # Slack CLI
+
     # Other
     # goose-cli  # disabled: broken in nixpkgs-unstable (Rust recursion limit)
   ] ++ lib.optionals isDarwin [
@@ -274,6 +312,10 @@ in
     '' + lib.optionalString isDarwin ''
       export PATH=$PATH:/opt/homebrew/bin
       export SHELL="/run/current-system/sw/bin/bash"
+    '' + lib.optionalString enableSecrets ''
+
+      # Load secrets as environment variables (skip empty/unconfigured ones)
+      ${secretExportLines}
     '' + ''
 
       # Set emacsclient socket name to match the current tmux pane's server
@@ -304,13 +346,6 @@ in
 
       # Hook direnv into interactive bash (disabled auto-integration to keep it after the interactive guard)
       eval "$(direnv hook bash)"
-    '' + lib.optionalString enableSecrets ''
-      if [ -f ${config.sops.secrets.anthropic_api_key.path} ]; then
-        export ANTHROPIC_API_KEY=$(cat ${config.sops.secrets.anthropic_api_key.path})
-      fi
-      if [ -f ${config.sops.secrets.gemini_api_key.path} ]; then
-        export GEMINI_API_KEY=$(cat ${config.sops.secrets.gemini_api_key.path})
-      fi
     '';
   };
 
@@ -368,7 +403,6 @@ in
   sops = {
     age.keyFile = "${homeDir}/.config/sops/age/keys.txt";
     defaultSopsFile = ../secrets/secrets.yaml;
-    secrets.anthropic_api_key = {};
-    secrets.gemini_api_key = {};
+    secrets = secretDeclarations;
   };
 }
