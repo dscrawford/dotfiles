@@ -203,6 +203,15 @@ echo "trusted-users = root $(whoami)" | sudo tee -a /etc/nix/nix.conf
 sudo launchctl kickstart -k system/org.nixos.nix-daemon
 ```
 
+## Temporary Patches
+
+Patches to remove once upstream fixes land:
+
+- **xdg-desktop-portal-wlr duplicate frame crash** (`patches/xdg-desktop-portal-wlr-fix-duplicate-frame.patch`)
+  - Fixes `ext_image_copy_capture_session_v1: session already has a frame object` crash during screen sharing
+  - PR: https://github.com/emersion/xdg-desktop-portal-wlr/pull/380
+  - Remove when: `xdg-desktop-portal-wlr` > 0.8.1 is released with the fix
+
 ## References
 
 - [NixOS Manual](https://nixos.org/manual/nixos/stable/)

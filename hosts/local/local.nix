@@ -175,7 +175,15 @@
   xdg.portal = {
     enable = true;
     wlr.enable = true;
-    extraPortals = lib.mkForce [ pkgs.xdg-desktop-portal-wlr ];
+    # TODO: Remove patch once xdg-desktop-portal-wlr > 0.8.1 is released
+    # PR: https://github.com/emersion/xdg-desktop-portal-wlr/pull/380
+    extraPortals = lib.mkForce [
+      (pkgs.xdg-desktop-portal-wlr.overrideAttrs (old: {
+        patches = (old.patches or []) ++ [
+          ../../patches/xdg-desktop-portal-wlr-fix-duplicate-frame.patch
+        ];
+      }))
+    ];
     config = lib.mkForce {
       sway = {
         default = [ "wlr" ];
