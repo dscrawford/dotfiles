@@ -24,6 +24,16 @@ buildNpmPackage rec {
 
   dontNpmBuild = true;
 
+  # Redirect @xenova/transformers ONNX model cache out of the read-only nix store.
+  # env.js is an ES module so require() is not available; use process.env instead.
+  # Tested against @xenova/transformers 2.17.2.
+  postInstall = ''
+    substituteInPlace $out/lib/node_modules/ruflo/node_modules/@xenova/transformers/src/env.js \
+      --replace-fail \
+        "path.join(__dirname, '/.cache/')" \
+        "(process.env.XDG_CACHE_HOME || (process.env.HOME + '/.cache')) + '/ruflo/transformers'"
+  '';
+
   meta = {
     description = "Enterprise AI agent orchestration platform for Claude Code";
     homepage = "https://github.com/ruvnet/ruflo";

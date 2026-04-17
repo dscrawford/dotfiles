@@ -22,3 +22,8 @@ result-*
 .DS_Store
 Thumbs.db
 /.agent-shell/
+
+# Ruflo per-project runtime state
+.swarm/
+.claude-flow/
+claude-flow.config.json
