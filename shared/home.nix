@@ -81,6 +81,13 @@ in
     };
   };
 
+  # PATH additions (replaces manual export in bashrc)
+  home.sessionPath = [
+    "${homeDir}/.local/bin"
+  ] ++ lib.optionals isDarwin [
+    "/opt/homebrew/bin"
+  ];
+
   # Environment variables
   home.sessionVariables = {
     EDITOR = "emacsclient";
@@ -124,10 +131,8 @@ in
     enableCompletion = true;
     bashrcExtra = ''
       PS1='\u:\W\$ '
-      export PATH=${homeDir}/.local/bin/:$PATH
       export EDITOR="emacs -nw"
     '' + lib.optionalString isDarwin ''
-      export PATH=$PATH:/opt/homebrew/bin
       export SHELL="/run/current-system/sw/bin/bash"
     '' + lib.optionalString enableSecrets ''
 
