@@ -76,7 +76,6 @@
   };
 
   # === Display ===
-  services.xserver.videoDrivers = [ "nvidia" ];
   programs.sway = {
     enable = true;
     wrapperFeatures.gtk = true;
@@ -95,23 +94,24 @@
       libnotify      # notify-send command
     ];
   };
-  services.greetd = {
-    enable = true;
-    settings.default_session.command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd 'sway --unsupported-gpu'";
-  };
 
   # === Audio ===
   security.rtkit.enable = true;
-  services.pipewire = {
-    enable = true;
-    alsa.enable = true;
-    alsa.support32Bit = true;
-    pulse.enable = true;
-    jack.enable = true;
-  };
 
   # === Services ===
   services = {
+    xserver.videoDrivers = [ "nvidia" ];
+    greetd = {
+      enable = true;
+      settings.default_session.command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd 'sway --unsupported-gpu'";
+    };
+    pipewire = {
+      enable = true;
+      alsa.enable = true;
+      alsa.support32Bit = true;
+      pulse.enable = true;
+      jack.enable = true;
+    };
     dbus.enable = true;
     printing.enable = true;
     blueman.enable = true;

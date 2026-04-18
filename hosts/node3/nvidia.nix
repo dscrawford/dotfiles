@@ -6,22 +6,26 @@
     "nvidia-settings"
     "nvidia-container-toolkit"
   ];
-  hardware.graphics.enable = true;
-  hardware.graphics.enable32Bit = true;
 
   services.xserver.videoDrivers = [ "nvidia" ];
 
-  hardware.nvidia = {
-    modesetting.enable = true;
-    open = false;  # GTX 1080 Ti is not supported by the open driver
-    package = config.boot.kernelPackages.nvidiaPackages.production;
+  hardware = {
+    graphics = {
+      enable = true;
+      enable32Bit = true;
+    };
+    nvidia = {
+      modesetting.enable = true;
+      open = false;  # GTX 1080 Ti is not supported by the open driver
+      package = config.boot.kernelPackages.nvidiaPackages.production;
+    };
+    # Expose GPU to containers via CDI (Container Device Interface)
+    # NixOS generates CDI specs at /var/run/cdi/ via nvidia-container-toolkit.
+    # Use generic-cdi-plugin (not NVIDIA's k8s-device-plugin) since it reads
+    # CDI specs directly without needing FHS paths or /etc/ld.so.cache.
+    nvidia-container-toolkit.enable = true;
   };
 
-  # Expose GPU to containers via CDI (Container Device Interface)
-  # NixOS generates CDI specs at /var/run/cdi/ via nvidia-container-toolkit.
-  # Use generic-cdi-plugin (not NVIDIA's k8s-device-plugin) since it reads
-  # CDI specs directly without needing FHS paths or /etc/ld.so.cache.
-  hardware.nvidia-container-toolkit.enable = true;
   virtualisation.docker.enable = true;
 
   # Enable CDI in containerd so kubelet can schedule GPU pods

@@ -30,7 +30,7 @@
 
   outputs = { self, nixpkgs, home-manager, sops-nix, nix-darwin, darwin-emacs, everything-claude-code, cli-anything }:
   let
-    lib = nixpkgs.lib;
+    inherit (nixpkgs) lib;
 
     # Claude Code skill sources — add new repos here
     # Each entry: { src, skillsDir } where skillsDir is a function from src to the skills directory
