@@ -105,7 +105,15 @@ let
 
   externalSkillFiles = lib.concatMapAttrs (prefix: entry: scanExternalSkills prefix entry.src) claudeSkills;
 
-  skillFiles = localSkillFiles // externalSkillFiles;
+  # Scan skills bundled in the ruflo npm package
+  rufloPackage = pkgs.callPackage ../pkgs/ruflo {};
+  rufloSkillsDir = "${rufloPackage}/lib/node_modules/ruflo/node_modules/@claude-flow/cli/.claude/skills";
+  rufloSkillNames = builtins.filter (name:
+    (builtins.readDir rufloSkillsDir).${name} == "directory"
+  ) (builtins.attrNames (builtins.readDir rufloSkillsDir));
+  rufloSkillFiles = mkSkillEntries "ruflo" rufloSkillsDir rufloSkillNames;
+
+  skillFiles = localSkillFiles // externalSkillFiles // rufloSkillFiles;
 in
 {
   # Basic user info
@@ -189,7 +197,7 @@ in
 
     # IDE
     (pkgs.callPackage ../pkgs/claude-code {})
-    (pkgs.callPackage ../pkgs/ruflo {})
+    rufloPackage
     claude-agent-acp
     gemini-cli
     github-copilot-cli

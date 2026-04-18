@@ -56,6 +56,19 @@ Before executing complex tasks, search memory for relevant context:
 ruflo memory search -q "$ARGUMENTS"
 ```
 
+## Bundled Skills
+
+37 specialized skills are available as `/ruflo:<skill-name>`. Key groups:
+
+**Swarm & Orchestration:** swarm-orchestration, swarm-advanced, hive-mind-advanced, stream-chain
+**AgentDB & Memory:** agentdb-advanced, agentdb-learning, agentdb-memory-patterns, agentdb-optimization, agentdb-vector-search
+**GitHub Workflows:** github-code-review, github-multi-repo, github-project-management, github-release-management, github-workflow-automation
+**ReasoningBank:** reasoningbank-agentdb, reasoningbank-intelligence
+**Flow Nexus:** flow-nexus-neural, flow-nexus-platform, flow-nexus-swarm
+**Development:** pair-programming, browser, hooks-automation, skill-builder, sparc-methodology, agentic-jujutsu
+**V3 Architecture:** v3-core-implementation, v3-ddd-architecture, v3-cli-modernization, v3-integration-deep, v3-mcp-optimization, v3-memory-unification, v3-performance-optimization, v3-security-overhaul, v3-swarm-coordination
+**Quality:** verification-quality, performance-analysis, worker-benchmarks, worker-integration
+
 ## When to Activate
 
 - User asks for multi-agent orchestration or swarm coordination
