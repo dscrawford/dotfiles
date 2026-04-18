@@ -7,8 +7,6 @@ let
   isLinux = pkgs.stdenv.isLinux;
   homeDir = if isDarwin then "/Users/${username}" else "/home/${username}";
 
-  claude-agent-acp = pkgs.callPackage ../pkgs/claude-agent-acp {};
-
   # Secret-to-environment-variable mapping for sops-nix
   # Each entry: { secret = "sops_key"; env = "ENV_VAR_NAME"; }
   # Secrets with empty values in sops YAML are silently skipped at shell init.
@@ -30,12 +28,9 @@ let
     { secret = "m365_client_secret"; env = "M365_CLIENT_SECRET"; desc = "Azure app registration client secret for Microsoft 365 CLI"; }
   ];
 
-  # Path to the sops-encrypted secrets file (resolved at build time for the nix store,
-  # but we reference the well-known runtime path so `sops -d` works in bash)
   secretsFile = "${homeDir}/.local/dotfiles/secrets/secrets.yaml";
 
   # Generate bash export lines from a single `sops -d | yq` decryption.
-  # Keys missing from the YAML or set to "" are silently skipped.
   secretExportLines = ''
     # Decrypt secrets once; silently skip if age key or file is unavailable
     _sops_yaml="$(sops -d ${secretsFile} 2>/dev/null)" || _sops_yaml=""
@@ -48,72 +43,6 @@ let
       unset _val
     fi
     unset _sops_yaml'';
-
-  # Scan claude/skills/ (local) and build home.file entries for each skill directory
-  skillsDir = ../claude/skills;
-  skillNames = builtins.attrNames (lib.filterAttrs (_: type: type == "directory") (builtins.readDir skillsDir));
-  localSkillFiles = lib.listToAttrs (builtins.concatMap (skill:
-    let
-      dir = skillsDir + "/${skill}";
-      files = builtins.attrNames (builtins.readDir dir);
-    in map (file: lib.nameValuePair
-      ".claude/skills/${skill}/${file}"
-      { source = dir + "/${file}"; force = true; }
-    ) files
-  ) skillNames);
-
-  # Scan external Claude skill sources (from flake inputs)
-  # Supports two layouts:
-  #   1. .agents/skills/<name>/SKILL.md  (everything-claude-code)
-  #   2. <app>/agent-harness/cli_anything/<app>/skills/SKILL.md  (cli-anything)
-  mkSkillEntries = prefix: dir: skillDirs:
-    lib.listToAttrs (builtins.concatMap (skill:
-      let
-        skillDir = dir + "/${skill}";
-        files = builtins.attrNames (lib.filterAttrs (_: type: type == "regular") (builtins.readDir skillDir));
-      in map (file: lib.nameValuePair
-        ".claude/skills/${prefix}:${skill}/${file}"
-        { source = skillDir + "/${file}"; force = true; }
-      ) files
-    ) skillDirs);
-
-  scanExternalSkills = prefix: src:
-    let
-      # Layout 1: .agents/skills/<name>/SKILL.md
-      agentsDir = src + "/.agents/skills";
-      hasAgentsDir = builtins.pathExists agentsDir;
-      agentsSkills = if hasAgentsDir
-        then builtins.attrNames (lib.filterAttrs (_: type: type == "directory") (builtins.readDir agentsDir))
-        else [];
-      agentsEntries = mkSkillEntries prefix agentsDir agentsSkills;
-
-      # Layout 2: <app>/agent-harness/cli_anything/<app>/skills/SKILL.md
-      topDirs = builtins.attrNames (lib.filterAttrs (_: type: type == "directory") (builtins.readDir src));
-      cliAnythingSkills = builtins.filter (app:
-        builtins.pathExists (src + "/${app}/agent-harness/cli_anything/${app}/skills")
-      ) topDirs;
-      cliAnythingEntries = lib.listToAttrs (builtins.concatMap (app:
-        let
-          skillDir = src + "/${app}/agent-harness/cli_anything/${app}/skills";
-          files = builtins.attrNames (lib.filterAttrs (_: type: type == "regular") (builtins.readDir skillDir));
-        in map (file: lib.nameValuePair
-          ".claude/skills/${prefix}:${app}/${file}"
-          { source = skillDir + "/${file}"; force = true; }
-        ) files
-      ) cliAnythingSkills);
-    in agentsEntries // cliAnythingEntries;
-
-  externalSkillFiles = lib.concatMapAttrs (prefix: entry: scanExternalSkills prefix entry.src) claudeSkills;
-
-  # Scan skills bundled in the ruflo npm package
-  rufloPackage = pkgs.callPackage ../pkgs/ruflo {};
-  rufloSkillsDir = "${rufloPackage}/lib/node_modules/ruflo/node_modules/@claude-flow/cli/.claude/skills";
-  rufloSkillNames = builtins.filter (name:
-    (builtins.readDir rufloSkillsDir).${name} == "directory"
-  ) (builtins.attrNames (builtins.readDir rufloSkillsDir));
-  rufloSkillFiles = mkSkillEntries "ruflo" rufloSkillsDir rufloSkillNames;
-
-  skillFiles = localSkillFiles // externalSkillFiles // rufloSkillFiles;
 in
 {
   # Basic user info
@@ -121,136 +50,11 @@ in
   home.homeDirectory = homeDir;
   home.stateVersion = "23.05";
 
-  # User packages
-  home.packages = with pkgs; [
-    # Fonts
-    nerd-fonts.symbols-only
-
-    # Utilities
-    zip
-    unzip
-    cachix
-    virtualenv
-    docker-compose
-    atool
-    httpie
-    yq
-    gnupg
-    cacert
-    sops
-    lynx
-
-    # Python
-    (python3.withPackages (ps: with ps; [
-      # Core data science
-      numpy pandas scipy scikit-learn matplotlib seaborn plotly
-      # Jupyter
-      jupyter ipykernel debugpy
-      # File formats
-      openpyxl xlsxwriter fastparquet pyarrow
-      # Cloud / storage
-      fsspec s3fs boto3
-      # Databricks
-      databricks-sql-connector
-      # Tooling
-      pip black requests
-    ]))
-    uv
-    poetry
-
-    # Linting tools
-    ruff           # Python linter
-    pyright        # Python language server
-    statix         # Nix linter
-    nil            # Nix language server
-    nixfmt         # Nix formatter
-
-    # Rust
-    rust-analyzer
-
-    # C/C++
-    clang-tools  # clangd language server
-
-    # JavaScript/TypeScript
-    typescript
-    typescript-language-server
-
-    # Development tools
-    openssl
-    curl
-    gcc
-    redis
-    ripgrep    # rg — fast search (used by Claude Code)
-    fd         # fd — fast find (used by Claude Code)
-    dnsutils   # dig, nslookup, nsupdate
-    jq         # JSON processing
-
-    # Cloud & Kubernetes
-    kubectl
-    awscli2
-    kubernetes-helm
-    argo-rollouts
-    argocd
-
-    # Database
-    postgresql
-
-    # IDE
-    (pkgs.callPackage ../pkgs/claude-code {})
-    rufloPackage
-    claude-agent-acp
-    gemini-cli
-    github-copilot-cli
-    nodejs  # Provides npx for keegancsmith/emacs-mcp-server and copilot.el
-
-    # Business / Productivity CLIs
-    jira-cli-go                                        # Jira CLI (Go)
-    (pkgs.callPackage ../pkgs/cli-microsoft365 {})     # Microsoft 365 CLI (Outlook, Teams, SharePoint)
-    (pkgs.callPackage ../pkgs/confluence-cli {})        # Confluence CLI
-    (pkgs.callPackage ../pkgs/slack-cli {})             # Slack CLI
-
-    # Other
-    # goose-cli  # disabled: broken in nixpkgs-unstable (Rust recursion limit)
-  ] ++ lib.optionals isDarwin [
-    docker
-    docker-buildx
-    pngpaste  # Clipboard image paste for agent-shell (macOS equivalent of wl-paste)
-
-  ] ++ lib.optionals isLinux [
-    xclip
-    zsync
-    appstream
-    appimage-run
-    simplescreenrecorder
-    nghttp2
-    libidn2
-    rtmpdump
-    libpsl
-    krb5
-    keyutils
-
-    # GUI Applications (Linux)
-    firefox
-    chromium
-    brave
-    spotify
-    gimp
-    vlc
-    pavucontrol
-    alacritty
-    (pkgs.symlinkJoin {
-      name = "vesktop-wrapped";
-      paths = [ pkgs.vesktop ];
-      buildInputs = [ pkgs.makeWrapper ];
-      postBuild = ''
-        wrapProgram $out/bin/vesktop \
-          --append-flags "--disable-features=VaapiVideoEncoder,AcceleratedVideoEncoder" \
-          --set LIBVA_DRIVER_NAME none
-      '';
-    })
-    discord
-    fastfetch
-    jetbrains.pycharm-oss
+  # Modular configs
+  imports = [
+    ./emacs.nix
+    ./home/packages.nix
+    ./home/skills.nix
   ];
 
   # Dotfiles and configuration files
@@ -275,7 +79,7 @@ in
         keep-derivations = true
       '';
     };
-  } // skillFiles;
+  };
 
   # Environment variables
   home.sessionVariables = {
@@ -297,9 +101,6 @@ in
 
   # Enable home-manager
   programs.home-manager.enable = true;
-
-  # Modular configs
-  imports = [ ./emacs.nix ];
 
   # Direnv for development environments
   programs.direnv = {
@@ -413,5 +214,4 @@ in
   nix = lib.mkIf isLinux {
     settings.experimental-features = [ "nix-command" "flakes" ];
   };
-
 }
