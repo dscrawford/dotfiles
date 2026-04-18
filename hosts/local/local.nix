@@ -31,16 +31,7 @@
   };
 
   # === Nixpkgs ===
-  nixpkgs.config = {
-    allowUnfree = true;
-    allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
-      "nvidia-x11"
-      "nvidia-settings"
-      "nvidia-persistenced"
-      "steam-original"
-      "steam-unwrapped"
-    ];
-  };
+  nixpkgs.config.allowUnfree = true;
 
   # === Hardware ===
   hardware = {
