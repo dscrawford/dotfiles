@@ -12,22 +12,25 @@ let
 
       # Get sorted list of active outputs
       mapfile -t OUTPUTS < <(swaymsg -t get_outputs | jq -r '.[] | select(.active) | .name' | sort)
-      FOCUSED=$(swaymsg -t get_outputs | jq -r '.[] | select(.focused) | .name')
-
-      # Map focused output to its prefix
-      PREFIX="A"
-      for i in "''${!OUTPUTS[@]}"; do
-        if [ "''${OUTPUTS[$i]}" = "$FOCUSED" ]; then
-          PREFIX="''${PREFIXES[$i]}"
-          break
-        fi
-      done
-
-      NUM=$(printf "%02d" "$2")
 
       case "$1" in
-        switch) swaymsg workspace "''${PREFIX}$NUM" ;;
-        move)   swaymsg move container to workspace "''${PREFIX}$NUM" ;;
+        switch|move)
+          FOCUSED=$(swaymsg -t get_outputs | jq -r '.[] | select(.focused) | .name')
+          # Map focused output to its prefix
+          PREFIX="A"
+          for i in "''${!OUTPUTS[@]}"; do
+            if [ "''${OUTPUTS[$i]}" = "$FOCUSED" ]; then
+              PREFIX="''${PREFIXES[$i]}"
+              break
+            fi
+          done
+          NUM=$(printf "%02d" "$2")
+          if [ "$1" = "switch" ]; then
+            swaymsg workspace "''${PREFIX}$NUM"
+          else
+            swaymsg move container to workspace "''${PREFIX}$NUM"
+          fi
+          ;;
         focus)
           # Focus the Nth output (1-indexed)
           IDX=$(($2 - 1))
