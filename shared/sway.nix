@@ -11,7 +11,7 @@ let
       PREFIXES=(A B C D E F G H I J)
 
       # Get sorted list of active outputs
-      OUTPUTS=($(swaymsg -t get_outputs | jq -r '.[] | select(.active) | .name' | sort))
+      mapfile -t OUTPUTS < <(swaymsg -t get_outputs | jq -r '.[] | select(.active) | .name' | sort)
       FOCUSED=$(swaymsg -t get_outputs | jq -r '.[] | select(.focused) | .name')
 
       # Map focused output to its prefix
