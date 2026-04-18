@@ -3,23 +3,16 @@
 # Migrated from ~/.config/i3/config
 { pkgs, ... }:
 
-{
-  home.packages = with pkgs; [
-    thunar
-    tumbler      # Thumbnail service for Thunar (images, videos, PDFs)
-    xdg-desktop-portal-gtk
-  ];
-  home.file.".local/bin/workspace.sh" = {
-    executable = true;
+let
+  workspace-script = pkgs.writeShellApplication {
+    name = "workspace.sh";
+    runtimeInputs = [ pkgs.sway pkgs.jq ];
     text = ''
-      #!/bin/bash
-      SWAYMSG=/run/current-system/sw/bin/swaymsg
-      JQ=/run/current-system/sw/bin/jq
       PREFIXES=(A B C D E F G H I J)
 
       # Get sorted list of active outputs
-      OUTPUTS=($($SWAYMSG -t get_outputs | $JQ -r '.[] | select(.active) | .name' | sort))
-      FOCUSED=$($SWAYMSG -t get_outputs | $JQ -r '.[] | select(.focused) | .name')
+      OUTPUTS=($(swaymsg -t get_outputs | jq -r '.[] | select(.active) | .name' | sort))
+      FOCUSED=$(swaymsg -t get_outputs | jq -r '.[] | select(.focused) | .name')
 
       # Map focused output to its prefix
       PREFIX="A"
@@ -33,20 +26,20 @@
       NUM=$(printf "%02d" "$2")
 
       case "$1" in
-        switch) $SWAYMSG workspace "''${PREFIX}$NUM" ;;
-        move)   $SWAYMSG move container to workspace "''${PREFIX}$NUM" ;;
+        switch) swaymsg workspace "''${PREFIX}$NUM" ;;
+        move)   swaymsg move container to workspace "''${PREFIX}$NUM" ;;
         focus)
           # Focus the Nth output (1-indexed)
           IDX=$(($2 - 1))
-          if [ $IDX -lt ''${#OUTPUTS[@]} ]; then
-            $SWAYMSG focus output "''${OUTPUTS[$IDX]}"
+          if [ "$IDX" -lt ''${#OUTPUTS[@]} ]; then
+            swaymsg focus output "''${OUTPUTS[$IDX]}"
           fi
           ;;
         move-to)
           # Move container to the Nth output (1-indexed)
           IDX=$(($2 - 1))
-          if [ $IDX -lt ''${#OUTPUTS[@]} ]; then
-            $SWAYMSG move container to output "''${OUTPUTS[$IDX]}"
+          if [ "$IDX" -lt ''${#OUTPUTS[@]} ]; then
+            swaymsg move container to output "''${OUTPUTS[$IDX]}"
           fi
           ;;
         init)
@@ -55,39 +48,38 @@
             P="''${PREFIXES[$i]}"
             O="''${OUTPUTS[$i]}"
             for W in $(seq 1 10); do
-              $SWAYMSG workspace "''${P}$(printf '%02d' $W)" output "$O"
+              swaymsg workspace "''${P}$(printf '%02d' "$W")" output "$O"
             done
-            $SWAYMSG workspace "''${P}01"
+            swaymsg workspace "''${P}01"
           done
           ;;
       esac
     '';
   };
 
-  home.file.".local/bin/wallpaper.sh" = {
-    executable = true;
+  wallpaper-script = pkgs.writeShellApplication {
+    name = "wallpaper.sh";
+    runtimeInputs = [ pkgs.sway pkgs.jq pkgs.findutils ];
     text = ''
-      #!/bin/bash
-      SWAYMSG=/run/current-system/sw/bin/swaymsg
       WALLPAPER_DIR="$HOME/.local/share/wallpapers"
 
       if [ ! -d "$WALLPAPER_DIR" ] || [ -z "$(ls -A "$WALLPAPER_DIR" 2>/dev/null)" ]; then
         exit 0
       fi
 
-      for OUTPUT in $($SWAYMSG -t get_outputs | /run/current-system/sw/bin/jq -r '.[] | select(.active) | .name'); do
+      for OUTPUT in $(swaymsg -t get_outputs | jq -r '.[] | select(.active) | .name'); do
         IMG=$(find "$WALLPAPER_DIR" -type f \( -name '*.jpg' -o -name '*.jpeg' -o -name '*.png' -o -name '*.webp' \) | shuf -n 1)
         if [ -n "$IMG" ]; then
-          $SWAYMSG "output $OUTPUT bg '$IMG' fill"
+          swaymsg "output $OUTPUT bg '$IMG' fill"
         fi
       done
     '';
   };
 
-  home.file.".local/bin/lock.sh" = {
-    executable = true;
+  lock-script = pkgs.writeShellApplication {
+    name = "lock.sh";
+    runtimeInputs = [ pkgs.swaylock pkgs.findutils ];
     text = ''
-      #!/bin/bash
       WALLPAPER_DIR="$HOME/.local/share/wallpapers"
       IMG=$(find "$WALLPAPER_DIR" -type f \( -name '*.jpg' -o -name '*.jpeg' -o -name '*.png' -o -name '*.webp' \) 2>/dev/null | shuf -n 1)
       if [ -n "$IMG" ]; then
@@ -98,56 +90,62 @@
     '';
   };
 
-  home.file.".local/bin/volume.sh" = {
-    executable = true;
+  volume-script = pkgs.writeShellApplication {
+    name = "volume.sh";
+    runtimeInputs = [ pkgs.wireplumber pkgs.libnotify pkgs.gawk ];
     text = ''
-      #!/bin/bash
-      WPCTL=/run/current-system/sw/bin/wpctl
-      NOTIFY=/run/current-system/sw/bin/notify-send
-
       case "$1" in
-        up)       $WPCTL set-volume @DEFAULT_AUDIO_SINK@ 0.05+ ;;
-        down)     $WPCTL set-volume @DEFAULT_AUDIO_SINK@ 0.05- ;;
-        mute)     $WPCTL set-mute @DEFAULT_AUDIO_SINK@ toggle ;;
-        mic-mute) $WPCTL set-mute @DEFAULT_AUDIO_SOURCE@ toggle ;;
+        up)       wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.05+ ;;
+        down)     wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.05- ;;
+        mute)     wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle ;;
+        mic-mute) wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle ;;
       esac
 
-      VOL_RAW=$($WPCTL get-volume @DEFAULT_AUDIO_SINK@)
+      VOL_RAW=$(wpctl get-volume @DEFAULT_AUDIO_SINK@)
       VOL_PCT=$(echo "$VOL_RAW" | awk '{printf "%.0f", $2 * 100}')
-      MUTED=$(echo "$VOL_RAW" | grep -c MUTED)
+      MUTED=$(echo "$VOL_RAW" | grep -c MUTED || true)
 
       if [ "$MUTED" -eq 1 ]; then
-        $NOTIFY -h string:x-canonical-private-synchronous:volume -h int:value:$VOL_PCT -t 1500 "Volume: Muted"
+        notify-send -h string:x-canonical-private-synchronous:volume -h int:value:"$VOL_PCT" -t 1500 "Volume: Muted"
       else
-        $NOTIFY -h string:x-canonical-private-synchronous:volume -h int:value:$VOL_PCT -t 1500 "Volume: $VOL_PCT%"
+        notify-send -h string:x-canonical-private-synchronous:volume -h int:value:"$VOL_PCT" -t 1500 "Volume: $VOL_PCT%"
       fi
     '';
   };
 
-  home.file.".local/bin/record.sh" = {
-    executable = true;
+  record-script = pkgs.writeShellApplication {
+    name = "record.sh";
+    runtimeInputs = [ pkgs.sway pkgs.jq pkgs.wf-recorder pkgs.libnotify pkgs.procps ];
     text = ''
-      #!/bin/bash
-      SWAYMSG=/run/current-system/sw/bin/swaymsg
-      JQ=/run/current-system/sw/bin/jq
-      NOTIFY=/run/current-system/sw/bin/notify-send
-      WF_RECORDER=/run/current-system/sw/bin/wf-recorder
       RECORDINGS_DIR="$HOME/Videos/recordings"
 
       if pgrep -x wf-recorder > /dev/null; then
         pkill -INT -x wf-recorder
-        $NOTIFY -t 3000 "Recording stopped" "Saved to $RECORDINGS_DIR"
+        notify-send -t 3000 "Recording stopped" "Saved to $RECORDINGS_DIR"
         exit 0
       fi
 
-      OUTPUT=$($SWAYMSG -t get_outputs | $JQ -r '.[] | select(.focused) | .name')
+      OUTPUT=$(swaymsg -t get_outputs | jq -r '.[] | select(.focused) | .name')
       mkdir -p "$RECORDINGS_DIR"
       FILENAME="$RECORDINGS_DIR/recording-$(date +%Y-%m-%d_%H-%M-%S).mp4"
-      $WF_RECORDER -o "$OUTPUT" --audio -f "$FILENAME" &
+      wf-recorder -o "$OUTPUT" --audio -f "$FILENAME" &
       disown
-      $NOTIFY -t 3000 "Recording started" "Press Ctrl+Alt+Shift+R to stop"
+      notify-send -t 3000 "Recording started" "Press Ctrl+Alt+Shift+R to stop"
     '';
   };
+
+  workspaceBin = "${workspace-script}/bin/workspace.sh";
+  wallpaperBin = "${wallpaper-script}/bin/wallpaper.sh";
+  lockBin = "${lock-script}/bin/lock.sh";
+  volumeBin = "${volume-script}/bin/volume.sh";
+  recordBin = "${record-script}/bin/record.sh";
+in
+{
+  home.packages = with pkgs; [
+    thunar
+    tumbler      # Thumbnail service for Thunar (images, videos, PDFs)
+    xdg-desktop-portal-gtk
+  ];
 
   home.file.".config/waybar/config".text = builtins.toJSON {
     layer = "top";
@@ -288,26 +286,26 @@
     include ~/.config/sway/outputs
 
     # Initialize workspaces on startup and when monitors change
-    exec_always ~/.local/bin/workspace.sh init
-    exec swaymsg -t subscribe -m '["output"]' | while read -r _; do sleep 1; ~/.local/bin/workspace.sh init; done
+    exec_always ${workspaceBin} init
+    exec swaymsg -t subscribe -m '["output"]' | while read -r _; do sleep 1; ${workspaceBin} init; done
 
     # Randomized wallpaper (on startup and every 30 minutes)
-    exec_always ~/.local/bin/wallpaper.sh
-    exec bash -c 'while true; do sleep 1800; ~/.local/bin/wallpaper.sh; done'
+    exec_always ${wallpaperBin}
+    exec bash -c 'while true; do sleep 1800; ${wallpaperBin}; done'
 
     # Idle and lock
     exec_always pkill swayidle; swayidle -w \
-      timeout 1800 '~/.local/bin/lock.sh' \
+      timeout 1800 '${lockBin}' \
       timeout 3600 'swaymsg "output * power off"' \
       resume 'swaymsg "output * power on"' \
-      before-sleep '~/.local/bin/lock.sh'
+      before-sleep '${lockBin}'
 
     # Volume controls (wpctl/PipeWire) with notifications
     set $refresh_i3status killall -SIGUSR1 i3status
-    bindsym XF86AudioRaiseVolume exec ~/.local/bin/volume.sh up
-    bindsym XF86AudioLowerVolume exec ~/.local/bin/volume.sh down
-    bindsym XF86AudioMute exec ~/.local/bin/volume.sh mute
-    bindsym XF86AudioMicMute exec ~/.local/bin/volume.sh mic-mute
+    bindsym XF86AudioRaiseVolume exec ${volumeBin} up
+    bindsym XF86AudioLowerVolume exec ${volumeBin} down
+    bindsym XF86AudioMute exec ${volumeBin} mute
+    bindsym XF86AudioMicMute exec ${volumeBin} mic-mute
 
     # Mouse+$mod to drag floating windows
     floating_modifier $mod
@@ -364,52 +362,52 @@
     bindsym $mod+a focus parent
 
     # Desktop switching (focus output/monitor)
-    bindsym $mod+F1 exec ~/.local/bin/workspace.sh focus 1
-    bindsym $mod+F2 exec ~/.local/bin/workspace.sh focus 2
-    bindsym $mod+F3 exec ~/.local/bin/workspace.sh focus 3
-    bindsym $mod+F4 exec ~/.local/bin/workspace.sh focus 4
-    bindsym $mod+F5 exec ~/.local/bin/workspace.sh focus 5
-    bindsym $mod+F6 exec ~/.local/bin/workspace.sh focus 6
-    bindsym $mod+F7 exec ~/.local/bin/workspace.sh focus 7
-    bindsym $mod+F8 exec ~/.local/bin/workspace.sh focus 8
-    bindsym $mod+F9 exec ~/.local/bin/workspace.sh focus 9
-    bindsym $mod+F10 exec ~/.local/bin/workspace.sh focus 10
+    bindsym $mod+F1 exec ${workspaceBin} focus 1
+    bindsym $mod+F2 exec ${workspaceBin} focus 2
+    bindsym $mod+F3 exec ${workspaceBin} focus 3
+    bindsym $mod+F4 exec ${workspaceBin} focus 4
+    bindsym $mod+F5 exec ${workspaceBin} focus 5
+    bindsym $mod+F6 exec ${workspaceBin} focus 6
+    bindsym $mod+F7 exec ${workspaceBin} focus 7
+    bindsym $mod+F8 exec ${workspaceBin} focus 8
+    bindsym $mod+F9 exec ${workspaceBin} focus 9
+    bindsym $mod+F10 exec ${workspaceBin} focus 10
 
     # Move focused window to another desktop
-    bindsym $mod+Shift+F1 exec ~/.local/bin/workspace.sh move-to 1
-    bindsym $mod+Shift+F2 exec ~/.local/bin/workspace.sh move-to 2
-    bindsym $mod+Shift+F3 exec ~/.local/bin/workspace.sh move-to 3
-    bindsym $mod+Shift+F4 exec ~/.local/bin/workspace.sh move-to 4
-    bindsym $mod+Shift+F5 exec ~/.local/bin/workspace.sh move-to 5
-    bindsym $mod+Shift+F6 exec ~/.local/bin/workspace.sh move-to 6
-    bindsym $mod+Shift+F7 exec ~/.local/bin/workspace.sh move-to 7
-    bindsym $mod+Shift+F8 exec ~/.local/bin/workspace.sh move-to 8
-    bindsym $mod+Shift+F9 exec ~/.local/bin/workspace.sh move-to 9
-    bindsym $mod+Shift+F10 exec ~/.local/bin/workspace.sh move-to 10
+    bindsym $mod+Shift+F1 exec ${workspaceBin} move-to 1
+    bindsym $mod+Shift+F2 exec ${workspaceBin} move-to 2
+    bindsym $mod+Shift+F3 exec ${workspaceBin} move-to 3
+    bindsym $mod+Shift+F4 exec ${workspaceBin} move-to 4
+    bindsym $mod+Shift+F5 exec ${workspaceBin} move-to 5
+    bindsym $mod+Shift+F6 exec ${workspaceBin} move-to 6
+    bindsym $mod+Shift+F7 exec ${workspaceBin} move-to 7
+    bindsym $mod+Shift+F8 exec ${workspaceBin} move-to 8
+    bindsym $mod+Shift+F9 exec ${workspaceBin} move-to 9
+    bindsym $mod+Shift+F10 exec ${workspaceBin} move-to 10
 
     # Switch workspace on focused desktop
-    bindsym $mod+1 exec ~/.local/bin/workspace.sh switch 1
-    bindsym $mod+2 exec ~/.local/bin/workspace.sh switch 2
-    bindsym $mod+3 exec ~/.local/bin/workspace.sh switch 3
-    bindsym $mod+4 exec ~/.local/bin/workspace.sh switch 4
-    bindsym $mod+5 exec ~/.local/bin/workspace.sh switch 5
-    bindsym $mod+6 exec ~/.local/bin/workspace.sh switch 6
-    bindsym $mod+7 exec ~/.local/bin/workspace.sh switch 7
-    bindsym $mod+8 exec ~/.local/bin/workspace.sh switch 8
-    bindsym $mod+9 exec ~/.local/bin/workspace.sh switch 9
-    bindsym $mod+0 exec ~/.local/bin/workspace.sh switch 10
+    bindsym $mod+1 exec ${workspaceBin} switch 1
+    bindsym $mod+2 exec ${workspaceBin} switch 2
+    bindsym $mod+3 exec ${workspaceBin} switch 3
+    bindsym $mod+4 exec ${workspaceBin} switch 4
+    bindsym $mod+5 exec ${workspaceBin} switch 5
+    bindsym $mod+6 exec ${workspaceBin} switch 6
+    bindsym $mod+7 exec ${workspaceBin} switch 7
+    bindsym $mod+8 exec ${workspaceBin} switch 8
+    bindsym $mod+9 exec ${workspaceBin} switch 9
+    bindsym $mod+0 exec ${workspaceBin} switch 10
 
     # Move window to workspace on focused desktop
-    bindsym $mod+Shift+1 exec ~/.local/bin/workspace.sh move 1
-    bindsym $mod+Shift+2 exec ~/.local/bin/workspace.sh move 2
-    bindsym $mod+Shift+3 exec ~/.local/bin/workspace.sh move 3
-    bindsym $mod+Shift+4 exec ~/.local/bin/workspace.sh move 4
-    bindsym $mod+Shift+5 exec ~/.local/bin/workspace.sh move 5
-    bindsym $mod+Shift+6 exec ~/.local/bin/workspace.sh move 6
-    bindsym $mod+Shift+7 exec ~/.local/bin/workspace.sh move 7
-    bindsym $mod+Shift+8 exec ~/.local/bin/workspace.sh move 8
-    bindsym $mod+Shift+9 exec ~/.local/bin/workspace.sh move 9
-    bindsym $mod+Shift+0 exec ~/.local/bin/workspace.sh move 10
+    bindsym $mod+Shift+1 exec ${workspaceBin} move 1
+    bindsym $mod+Shift+2 exec ${workspaceBin} move 2
+    bindsym $mod+Shift+3 exec ${workspaceBin} move 3
+    bindsym $mod+Shift+4 exec ${workspaceBin} move 4
+    bindsym $mod+Shift+5 exec ${workspaceBin} move 5
+    bindsym $mod+Shift+6 exec ${workspaceBin} move 6
+    bindsym $mod+Shift+7 exec ${workspaceBin} move 7
+    bindsym $mod+Shift+8 exec ${workspaceBin} move 8
+    bindsym $mod+Shift+9 exec ${workspaceBin} move 9
+    bindsym $mod+Shift+0 exec ${workspaceBin} move 10
 
     # Reload config
     bindsym $mod+Shift+slash reload
@@ -427,7 +425,7 @@
     bindsym Control+Shift+Mod1+s exec grim -g "$(slurp)" - | wl-copy
 
     # Screen recording toggle
-    bindsym Control+Shift+Mod1+r exec ~/.local/bin/record.sh
+    bindsym Control+Shift+Mod1+r exec ${recordBin}
 
     # Applications
     bindsym Control+Shift+Mod1+f exec firefox
