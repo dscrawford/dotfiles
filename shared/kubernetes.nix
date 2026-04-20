@@ -17,6 +17,23 @@ in
     easyCerts = true;
     pki.cfsslAPIExtraSANs = lib.mkIf isMaster [ kubeMasterIP ];
 
+    # Override CFSSL cert lifetime from 30 days to 1 year
+    # The upstream NixOS module hardcodes 720h; we override configFile
+  };
+
+  services.cfssl.configFile = lib.mkIf isMaster (lib.mkForce (toString (pkgs.writeText "cfssl-config.json" (builtins.toJSON {
+    signing.profiles.default = {
+      usages = [ "digital signature" ];
+      auth_key = "default";
+      expiry = "8760h";  # 1 year
+    };
+    auth_keys.default = {
+      type = "standard";
+      key = "file:${config.services.cfssl.dataDir}/apitoken.secret";
+    };
+  }))));
+
+  services.kubernetes = {
     apiserver = lib.mkIf isMaster {
       securePort = kubeMasterAPIServerPort;
       advertiseAddress = kubeMasterIP;

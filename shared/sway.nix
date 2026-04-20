@@ -349,6 +349,9 @@ in
     bindsym $mod+h split h
     bindsym $mod+v split v
 
+    # Toggle waybar visibility
+    bindsym $mod+b bar mode toggle
+
     # Fullscreen
     bindsym $mod+f fullscreen toggle
 
