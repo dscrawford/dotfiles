@@ -18,7 +18,11 @@
       };
     };
     supportedFilesystems = [ "ntfs" ];
-    kernelModules = [ "uinput" ];
+    kernelModules = [ "uinput" "v4l2loopback" ];
+    extraModulePackages = [ config.boot.kernelPackages.v4l2loopback ];
+    extraModprobeConfig = ''
+      options v4l2loopback devices=1 video_nr=10 card_label="OBS-VirtualCam" exclusive_caps=1
+    '';
   };
 
   # === Locale ===
@@ -102,6 +106,44 @@
       alsa.support32Bit = true;
       pulse.enable = true;
       jack.enable = true;
+      extraConfig.pipewire = {
+        "99-input-denoising" = {
+          "context.modules" = [
+            {
+              name = "libpipewire-module-filter-chain";
+              args = {
+                "node.description" = "Noise Canceling source";
+                "media.name" = "Noise Canceling source";
+                "filter.graph" = {
+                  nodes = [
+                    {
+                      type = "ladspa";
+                      name = "rnnoise";
+                      plugin = "${pkgs.rnnoise-plugin}/lib/ladspa/librnnoise_ladspa.so";
+                      label = "noise_suppressor_mono";
+                      control = {
+                        "VAD Threshold (%)" = 50.0;
+                        "VAD Grace Period (ms)" = 200;
+                        "Retroactive VAD Grace (ms)" = 0;
+                      };
+                    }
+                  ];
+                };
+                "capture.props" = {
+                  "node.name" = "capture.rnnoise_source";
+                  "node.passive" = true;
+                  "audio.rate" = 48000;
+                };
+                "playback.props" = {
+                  "node.name" = "rnnoise_source";
+                  "media.class" = "Audio/Source";
+                  "audio.rate" = 48000;
+                };
+              };
+            }
+          ];
+        };
+      };
     };
     dbus.enable = true;
     printing.enable = true;
@@ -214,6 +256,7 @@
       (ffmpeg-full.override { withUnfree = true; withOpengl = true; })
       v4l-utils
       guvcview
+      obs-studio
       gnome-keyring
       libsecret
       tree
@@ -225,6 +268,7 @@
       jq
       libva-utils
       jellyfin-media-player
+      rnnoise-plugin
     ];
     variables = {
       GSETTINGS_SCHEMA_DIR = "${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}/glib-2.0/schemas";
@@ -246,7 +290,7 @@
   # === Users ===
   users.users.daniel = {
     isNormalUser = true;
-    extraGroups = [ "wheel" "docker" "bluetooth" "input" ];
+    extraGroups = [ "wheel" "docker" "bluetooth" "input" "video" ];
   };
 
   # === Networking ===

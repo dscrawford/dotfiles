@@ -127,6 +127,7 @@ in
     spotify
     gimp
     vlc
+    mpv
     pavucontrol
     alacritty
     (pkgs.symlinkJoin {
