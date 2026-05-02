@@ -69,6 +69,12 @@
         inherit hostname username;
       };
       modules = [
+        # FIXME: remove once nixpkgs fixes openldap test017-syncreplication-refresh
+        # Upstream bug: flaky syncrepl timing in check phase
+        { nixpkgs.overlays = [(final: prev: {
+          openldap = prev.openldap.overrideAttrs (old: { doCheck = false; });
+        })]; }
+
         ./shared/common.nix
         ./shared/boot-common.nix
         ./shared/local-common.nix
