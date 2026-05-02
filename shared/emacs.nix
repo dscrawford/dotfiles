@@ -229,6 +229,16 @@ in
       (global-set-key (kbd "C-c s") 'agent-shell)
       ;; Always prompt for session on start so we can resume from another session
       (setq agent-shell-session-strategy 'prompt)
+      ;; Centralize agent-shell data in ~/.emacs.d/agent-shell/<project>/
+      ;; instead of per-project .agent-shell/ so transcripts survive repo
+      ;; cleanups and are easy to search across all projects.
+      (setq agent-shell-dot-subdir-function
+            (lambda (subdir)
+              (let ((project (file-name-nondirectory
+                              (directory-file-name (agent-shell-cwd)))))
+                (expand-file-name
+                 (concat "agent-shell/" project "/" subdir "/")
+                 user-emacs-directory))))
       ;; Point agent-shell to the nix-built claude-agent-acp binary
       (setq agent-shell-anthropic-claude-acp-command
             '("${pkgs.callPackage ../pkgs/claude-agent-acp {}}/bin/claude-agent-acp"))

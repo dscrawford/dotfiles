@@ -2,11 +2,11 @@
 
 buildNpmPackage rec {
   pname = "claude-agent-acp";
-  version = "0.22.0";
+  version = "0.23.1";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/@zed-industries/claude-agent-acp/-/claude-agent-acp-${version}.tgz";
-    hash = "sha256-Yc/kfXLlBYbHll1JY+vs7UdvbZJPqEgTgjSTaDzvIC4=";
+    hash = "sha256-s4cKDvYAIzYK3c78URIlvsuGXvoIXyd4ssV0iJeJ4Mw=";
   };
 
   sourceRoot = "package";
@@ -15,7 +15,7 @@ buildNpmPackage rec {
     cp ${./package-lock.json} package-lock.json
   '';
 
-  npmDepsHash = "sha256-veyeionYrED07a5Hi7tQiyh4wCISE9fPdKIO0mZFnaQ=";
+  npmDepsHash = "sha256-fzhaRMcwLQJplhHxd7vWiTRIo+UVg7QLWOqipw+FNJY=";
 
   dontNpmBuild = true;
 
