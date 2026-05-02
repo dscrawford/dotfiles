@@ -106,6 +106,8 @@
       alsa.support32Bit = true;
       pulse.enable = true;
       jack.enable = true;
+      # PipeWire 1.6.x requires LADSPA_PATH for filter-chain plugin loading
+      extraLadspaPackages = [ pkgs.rnnoise-plugin ];
       extraConfig.pipewire = {
         "99-input-denoising" = {
           "context.modules" = [
@@ -119,7 +121,7 @@
                     {
                       type = "ladspa";
                       name = "rnnoise";
-                      plugin = "${pkgs.rnnoise-plugin}/lib/ladspa/librnnoise_ladspa.so";
+                      plugin = "librnnoise_ladspa"; # PipeWire 1.6.x appends .so automatically
                       label = "noise_suppressor_mono";
                       control = {
                         "VAD Threshold (%)" = 50.0;
