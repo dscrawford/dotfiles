@@ -18,7 +18,7 @@
     nvidia = {
       modesetting.enable = true;
       open = false;  # GTX 1080 Ti is not supported by the open driver
-      package = config.boot.kernelPackages.nvidiaPackages.production;
+      package = config.boot.kernelPackages.nvidiaPackages.legacy_580;
     };
     # Expose GPU to containers via CDI (Container Device Interface)
     # NixOS generates CDI specs at /var/run/cdi/ via nvidia-container-toolkit.
