@@ -290,6 +290,7 @@
   security.pam.services.login.enableGnomeKeyring = true;
 
   # === Users ===
+  users.groups.bluetooth = {};
   users.users.daniel = {
     isNormalUser = true;
     extraGroups = [ "wheel" "docker" "bluetooth" "input" "video" ];
