@@ -284,6 +284,7 @@ in
     include /etc/sway/config.d/*
     exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP
     exec mako
+    exec blueman-applet
 
     # Monitor layout (managed by nwg-displays)
     include ~/.config/sway/outputs
