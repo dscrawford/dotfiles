@@ -21,15 +21,9 @@
   system = {
     stateVersion = 5;
     primaryUser = username;
-    # Symlink Emacs.app to /Applications/Nix Apps for Spotlight
-    activationScripts.applications.text = pkgs.lib.mkForce ''
-      echo "setting up /Applications/Nix Apps..." >&2
-      rm -rf /Applications/Nix\ Apps
-      mkdir -p /Applications/Nix\ Apps
-      for app in ${pkgs.emacs30}/Applications/*.app; do
-        cp -rL "$app" /Applications/Nix\ Apps/
-      done
-    '';
+    # Emacs.app launcher in /Applications/Nix Apps is created manually (not managed by nix).
+    # It's a thin wrapper that runs ~/.nix-profile/bin/emacs so it always picks up
+    # the Home Manager wrapped version with all extraPackages.
     # Ensure user is a trusted Nix user (macOS doesn't resolve group membership correctly)
     # See: https://github.com/NixOS/nix/issues/5885
     # See: https://gerrit.lix.systems/c/lix/+/2566 (proper daemon fix, not yet shipped)
