@@ -26,7 +26,7 @@
       echo "setting up /Applications/Nix Apps..." >&2
       rm -rf /Applications/Nix\ Apps
       mkdir -p /Applications/Nix\ Apps
-      for app in ${pkgs.emacs-30}/Applications/*.app; do
+      for app in ${pkgs.emacs30}/Applications/*.app; do
         cp -rL "$app" /Applications/Nix\ Apps/
       done
     '';

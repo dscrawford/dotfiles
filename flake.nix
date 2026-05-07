@@ -14,10 +14,6 @@
       url = "github:LnL7/nix-darwin";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    darwin-emacs = {
-      url = "github:nix-giant/nix-darwin-emacs";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     everything-claude-code = {
       url = "github:affaan-m/everything-claude-code";
       flake = false;
@@ -28,7 +24,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, sops-nix, nix-darwin, darwin-emacs, everything-claude-code, cli-anything }:
+  outputs = { self, nixpkgs, home-manager, sops-nix, nix-darwin, everything-claude-code, cli-anything }:
   let
     inherit (nixpkgs) lib;
 
@@ -105,7 +101,26 @@
         inherit hostname username;
       };
       modules = [
-        { nixpkgs.overlays = [ darwin-emacs.overlays.emacs ]; }
+        { nixpkgs.overlays = [
+            # Clang 19 strictness breaks ffmpeg-dependent Python packages on Darwin.
+            # Force gnu17 for av (PyAV) and imageio builds until upstream fixes land.
+            (final: prev: {
+              pythonPackagesExtensions = (prev.pythonPackagesExtensions or []) ++ [
+                (pyfinal: pyprev: {
+                  av = pyprev.av.overrideAttrs (old: {
+                    env = (old.env or {}) // {
+                      NIX_CFLAGS_COMPILE = (old.env.NIX_CFLAGS_COMPILE or "") + " -std=gnu17";
+                    };
+                  });
+                  imageio = pyprev.imageio.overrideAttrs (old: {
+                    env = (old.env or {}) // {
+                      NIX_CFLAGS_COMPILE = (old.env.NIX_CFLAGS_COMPILE or "") + " -std=gnu17";
+                    };
+                  });
+                })
+              ];
+            })
+          ]; }
         ./shared/darwin-common.nix
 
         # Home Manager integration
