@@ -24,11 +24,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1777695361,
-        "narHash": "sha256-GIwn4v6XEomEbZcL+qBnrVEQDpJUH66s6bCmHjQJSSA=",
+        "lastModified": 1778128302,
+        "narHash": "sha256-aWA7lOD/n84hb535mP6MOjBpv4EnOUVDJ0sOyAznba0=",
         "owner": "nix-giant",
         "repo": "nix-darwin-emacs",
-        "rev": "5ae52eeca2f846cc3c99b9f94bfcc84e8dbe7b60",
+        "rev": "48176949b045f6801b235bfc9d34de4193db4def",
         "type": "github"
       },
       "original": {

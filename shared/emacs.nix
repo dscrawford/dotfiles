@@ -9,7 +9,7 @@ in
 {
   programs.emacs = {
     enable = true;
-    package = if isDarwin then pkgs.emacs-30 else pkgs.emacs-pgtk;
+    package = if isDarwin then pkgs.emacs-unstable else pkgs.emacs-pgtk;
     extraPackages = epkgs: (with epkgs; [
       nix-mode
       magit
