@@ -6,17 +6,36 @@ let
   secretsPath = config.services.kubernetes.secretsPath;
   isMaster = config.services.kubernetes.apiserver.enable;
 
+  kubeMasterIP = "192.168.0.2";
+
   renewScript = pkgs.writeShellApplication {
     name = "kube-cert-renew";
-    runtimeInputs = [ pkgs.openssl pkgs.coreutils pkgs.systemd ];
+    runtimeInputs = [ pkgs.openssl pkgs.coreutils pkgs.systemd pkgs.openssh ];
     text = ''
       SECRETS="${secretsPath}"
       RENEW_THRESHOLD=$((7 * 24 * 3600))
       RENEWED=0
+      MASTER="${kubeMasterIP}"
+      TOKEN_FILE="$SECRETS/apitoken.secret"
+      MASTER_TOKEN_FILE="/var/lib/cfssl/apitoken.secret"
 
       if [ ! -d "$SECRETS" ]; then
         echo "kube-cert-renew: secrets dir $SECRETS not found, skipping"
         exit 0
+      fi
+
+      # Sync API token from master (worker nodes only)
+      if [ "${lib.boolToString isMaster}" = "false" ]; then
+        echo "kube-cert-renew: syncing API token from master"
+        if ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new \
+             "host@$MASTER" "sudo cat $MASTER_TOKEN_FILE" > "$TOKEN_FILE.tmp" 2>/dev/null; then
+          mv "$TOKEN_FILE.tmp" "$TOKEN_FILE"
+          chmod 600 "$TOKEN_FILE"
+          echo "kube-cert-renew: API token synced"
+        else
+          rm -f "$TOKEN_FILE.tmp"
+          echo "kube-cert-renew: WARNING: could not sync API token from master"
+        fi
       fi
 
       NOW=$(date +%s)
@@ -52,10 +71,8 @@ let
             case "$cert" in
               *-key.pem) continue ;;
             esac
-            # If the glob matched nothing, the literal pattern is returned
             [ -f "$cert" ] || MISSING=$((MISSING + 1))
           done
-          # All certs that were deleted should reappear
           [ "$MISSING" -eq 0 ] && break
           i=$((i + 1))
           sleep 1
