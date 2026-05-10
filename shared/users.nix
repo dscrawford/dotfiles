@@ -1,6 +1,17 @@
 # users.nix
 { pkgs, ... }:
 {
+  # Passwordless sudo for inter-node cert/secret reads (kube-cert-renew, kube-cert-sync)
+  security.sudo.extraRules = [{
+    users = [ "host" ];
+    commands = [
+      { command = "/run/current-system/sw/bin/cat /var/lib/cfssl/apitoken.secret"; options = [ "NOPASSWD" ]; }
+      { command = "/run/current-system/sw/bin/cat /var/lib/kubernetes/secrets/ca.pem"; options = [ "NOPASSWD" ]; }
+      { command = "/run/current-system/sw/bin/cat /var/lib/kubernetes/secrets/cluster-admin.pem"; options = [ "NOPASSWD" ]; }
+      { command = "/run/current-system/sw/bin/cat /var/lib/kubernetes/secrets/cluster-admin-key.pem"; options = [ "NOPASSWD" ]; }
+    ];
+  }];
+
   users.users.host = {
     isNormalUser = true;
     extraGroups = [ "wheel" ];

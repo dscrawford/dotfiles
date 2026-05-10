@@ -234,19 +234,12 @@ in
 
             mkdir -p "$KUBE_DIR"
 
-            # certmgr writes certs as kubernetes:nogroup; copy via sudo on master
-            REMOTE_TMP="/tmp/kube-certs-export"
-            # shellcheck disable=SC2029
-            ssh "$MASTER" "mkdir -p $REMOTE_TMP && sudo cp $SECRETS/{ca.pem,cluster-admin.pem,cluster-admin-key.pem} $REMOTE_TMP/ && sudo chown \$(id -un) $REMOTE_TMP/*"
-
             for cert in $CERTS; do
-              scp "$MASTER":"$REMOTE_TMP/$cert" "$KUBE_DIR/$cert.tmp"
+              # shellcheck disable=SC2029
+              ssh "$MASTER" "sudo cat $SECRETS/$cert" > "$KUBE_DIR/$cert.tmp"
               mv "$KUBE_DIR/$cert.tmp" "$KUBE_DIR/$cert"
               chmod 600 "$KUBE_DIR/$cert"
             done
-
-            # shellcheck disable=SC2029
-            ssh "$MASTER" "rm -rf $REMOTE_TMP"
 
             EXPIRY=$(openssl x509 -in "$KUBE_DIR/cluster-admin.pem" -noout -enddate)
             echo "kube-cert-sync: certs updated, ''${EXPIRY#notAfter=}"
