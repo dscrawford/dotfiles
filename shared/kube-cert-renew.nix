@@ -15,29 +15,27 @@ let
       SECRETS="${secretsPath}"
       RENEW_THRESHOLD=$((7 * 24 * 3600))
       RENEWED=0
-      MASTER="${kubeMasterIP}"
-      TOKEN_FILE="$SECRETS/apitoken.secret"
-      MASTER_TOKEN_FILE="/var/lib/cfssl/apitoken.secret"
 
       if [ ! -d "$SECRETS" ]; then
         echo "kube-cert-renew: secrets dir $SECRETS not found, skipping"
         exit 0
       fi
 
-      # Sync API token from master (worker nodes only)
-      if [ "${lib.boolToString isMaster}" = "false" ]; then
-        echo "kube-cert-renew: syncing API token from master"
-        if ssh -i /home/host/.ssh/id_ed25519 -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new \
-             "host@$MASTER" "sudo cat $MASTER_TOKEN_FILE" > "$TOKEN_FILE.tmp" 2>/dev/null; then
-          mv "$TOKEN_FILE.tmp" "$TOKEN_FILE"
-          chmod 600 "$TOKEN_FILE"
-          echo "kube-cert-renew: API token synced"
-        else
-          rm -f "$TOKEN_FILE.tmp"
-          echo "kube-cert-renew: WARNING: could not sync API token from master"
-        fi
+    '' + lib.optionalString (!isMaster) ''
+      # Sync API token from master
+      echo "kube-cert-renew: syncing API token from master"
+      TOKEN_FILE="$SECRETS/apitoken.secret"
+      if ssh -i /home/host/.ssh/id_ed25519 -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new \
+           "host@${kubeMasterIP}" "sudo cat /var/lib/cfssl/apitoken.secret" > "$TOKEN_FILE.tmp" 2>/dev/null; then
+        mv "$TOKEN_FILE.tmp" "$TOKEN_FILE"
+        chmod 600 "$TOKEN_FILE"
+        echo "kube-cert-renew: API token synced"
+      else
+        rm -f "$TOKEN_FILE.tmp"
+        echo "kube-cert-renew: WARNING: could not sync API token from master"
       fi
 
+    '' + ''
       NOW=$(date +%s)
 
       for cert in "$SECRETS"/*.pem; do
