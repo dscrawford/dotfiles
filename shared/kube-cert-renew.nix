@@ -27,7 +27,7 @@ let
       # Sync API token from master (worker nodes only)
       if [ "${lib.boolToString isMaster}" = "false" ]; then
         echo "kube-cert-renew: syncing API token from master"
-        if ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new \
+        if ssh -i /home/host/.ssh/id_ed25519 -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new \
              "host@$MASTER" "sudo cat $MASTER_TOKEN_FILE" > "$TOKEN_FILE.tmp" 2>/dev/null; then
           mv "$TOKEN_FILE.tmp" "$TOKEN_FILE"
           chmod 600 "$TOKEN_FILE"
