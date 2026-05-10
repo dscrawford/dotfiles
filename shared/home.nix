@@ -215,6 +215,57 @@ in
     };
   };
 
+  # Sync cluster-admin certs from the Kubernetes master (Linux only).
+  # Certs are issued by CFSSL with easyCerts; this pulls them to ~/.kube/certs
+  # so kubectl works from the local desktop.
+  systemd.user.services.kube-cert-sync = lib.mkIf isLinux {
+    Unit.Description = "Sync kubectl certs from Kubernetes master";
+    Service = {
+      Type = "oneshot";
+      ExecStart = let
+        script = pkgs.writeShellApplication {
+          name = "kube-cert-sync";
+          runtimeInputs = [ pkgs.openssh pkgs.openssl pkgs.coreutils ];
+          text = ''
+            KUBE_DIR="${homeDir}/.kube/certs"
+            MASTER="node1"
+            SECRETS="/var/lib/kubernetes/secrets"
+            CERTS="ca.pem cluster-admin.pem cluster-admin-key.pem"
+
+            mkdir -p "$KUBE_DIR"
+
+            # certmgr writes certs as kubernetes:nogroup; copy via sudo on master
+            REMOTE_TMP="/tmp/kube-certs-export"
+            # shellcheck disable=SC2029
+            ssh "$MASTER" "mkdir -p $REMOTE_TMP && sudo cp $SECRETS/{ca.pem,cluster-admin.pem,cluster-admin-key.pem} $REMOTE_TMP/ && sudo chown \$(id -un) $REMOTE_TMP/*"
+
+            for cert in $CERTS; do
+              scp "$MASTER":"$REMOTE_TMP/$cert" "$KUBE_DIR/$cert.tmp"
+              mv "$KUBE_DIR/$cert.tmp" "$KUBE_DIR/$cert"
+              chmod 600 "$KUBE_DIR/$cert"
+            done
+
+            # shellcheck disable=SC2029
+            ssh "$MASTER" "rm -rf $REMOTE_TMP"
+
+            EXPIRY=$(openssl x509 -in "$KUBE_DIR/cluster-admin.pem" -noout -enddate)
+            echo "kube-cert-sync: certs updated, ''${EXPIRY#notAfter=}"
+          '';
+        };
+      in "${script}/bin/kube-cert-sync";
+    };
+  };
+
+  systemd.user.timers.kube-cert-sync = lib.mkIf isLinux {
+    Unit.Description = "Weekly kubectl cert sync from Kubernetes master";
+    Timer = {
+      OnCalendar = "weekly";
+      RandomizedDelaySec = "1h";
+      Persistent = true;
+    };
+    Install.WantedBy = [ "timers.target" ];
+  };
+
   # Nix settings (flakes support) - only on Linux, Darwin uses Determinate Nix
   nix = lib.mkIf isLinux {
     settings.experimental-features = [ "nix-command" "flakes" ];
