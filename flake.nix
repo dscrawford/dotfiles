@@ -152,6 +152,7 @@
           ./hosts/node1/hardware-configuration.nix
           ./hosts/node1/boot.nix
           ./shared/kubernetes.nix
+          ./shared/kube-cert-renew.nix
           ./shared/iscsi.nix
         ];
       };
@@ -162,6 +163,7 @@
           ./hosts/node2/hardware-configuration.nix
           ./hosts/node2/boot.nix
           ./shared/kubernetes.nix
+          ./shared/kube-cert-renew.nix
           ./shared/iscsi.nix
         ];
       };
@@ -175,6 +177,7 @@
           ./hosts/node3/nvidia.nix
           ./hosts/node3/storage.nix
           ./shared/kubernetes.nix
+          ./shared/kube-cert-renew.nix
           ./shared/iscsi.nix
         ];
       };

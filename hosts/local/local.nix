@@ -209,8 +209,8 @@
   # === XDG ===
   xdg.portal = {
     enable = true;
-    wlr.enable = true;
-    # TODO: Remove patch once xdg-desktop-portal-wlr > 0.8.1 is released
+    # wlr.enable adds the unpatched package; our extraPortals provides the patched one
+    # TODO: Remove patch once xdg-desktop-portal-wlr > 0.8.2 is released
     # PR: https://github.com/emersion/xdg-desktop-portal-wlr/pull/380
     extraPortals = lib.mkForce [
       (pkgs.xdg-desktop-portal-wlr.overrideAttrs (old: {
