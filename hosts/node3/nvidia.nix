@@ -39,12 +39,6 @@
     cdi_spec_dirs = lib.mkForce [ "/var/run/cdi" "/etc/cdi" ];
   };
 
-  # Udev rule: ensure /dev/nvidia* device nodes are always created on boot.
-  # Without this, containers can intermittently fail to access the GPU.
-  services.udev.extraRules = ''
-    ACTION=="add", DEVPATH=="/bus/pci/drivers/nvidia", RUN+="${lib.getExe' config.hardware.nvidia.package.bin "nvidia-modprobe"} -c 0 -u"
-  '';
-
   # Fonts for Jellyfin subtitle burn-in (ASS/SSA).
   # Mounted into the Jellyfin pod via hostPath at /usr/share/fonts.
   # Set Jellyfin Dashboard > Playback > Fallback Font to /usr/share/fonts/custom/.
