@@ -19,6 +19,10 @@
       modesetting.enable = true;
       open = false;  # GTX 1080 Ti is not supported by the open driver
       package = config.boot.kernelPackages.nvidiaPackages.legacy_580;
+      # Keep GPU initialized — prevents containers from losing GPU access
+      # over time (FFmpeg exit code 187 / "Failed to initialize NVML")
+      nvidiaPersistenced = true;
+      powerManagement.enable = true;
     };
     # Expose GPU to containers via CDI (Container Device Interface)
     # NixOS generates CDI specs at /var/run/cdi/ via nvidia-container-toolkit.
@@ -34,4 +38,18 @@
     enable_cdi = lib.mkForce true;
     cdi_spec_dirs = lib.mkForce [ "/var/run/cdi" "/etc/cdi" ];
   };
+
+  # Udev rule: ensure /dev/nvidia* device nodes are always created on boot.
+  # Without this, containers can intermittently fail to access the GPU.
+  services.udev.extraRules = ''
+    ACTION=="add", DEVPATH=="/bus/pci/drivers/nvidia", RUN+="${lib.getExe' config.hardware.nvidia.package.bin "nvidia-modprobe"} -c 0 -u"
+  '';
+
+  # Fonts for Jellyfin subtitle burn-in (ASS/SSA).
+  # Mounted into the Jellyfin pod via hostPath at /usr/share/fonts.
+  # Set Jellyfin Dashboard > Playback > Fallback Font to /usr/share/fonts/custom/.
+  fonts.packages = with pkgs; [
+    noto-fonts
+    noto-fonts-cjk-sans
+  ];
 }
