@@ -85,8 +85,8 @@ in
         src = pkgs.fetchFromGitHub {
           owner = "xenodium";
           repo = "agent-shell";
-          rev = "6f9400da2a36e3843175724049e5a332dc4a0dce";
-          hash = "sha256-tAgbz4dnSFVXoQg+jUdlMrytb5Z8TZXBokRlaxBxRi0=";
+          rev = "67babec2278f8ee1cf1c4dc605e976247388df51";
+          hash = "sha256-0PCztBWTqfxbSgTIx9ti3Bzmm+n+byIcXp1vkjwihTk=";
         };
         packageRequires = with epkgs; [ shell-maker acp ];
       })

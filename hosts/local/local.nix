@@ -263,7 +263,13 @@
     gamescope.enable = true;
     steam = {
       enable = true;
-      gamescopeSession.enable = true;
+      gamescopeSession = {
+        enable = true;
+        args = [
+          "--expose-wayland"
+          "--force-grab-cursor"
+        ];
+      };
       package = pkgs.steam.override {
         extraPkgs = pkgs: with pkgs; [ gamemode gamescope ];
       };
