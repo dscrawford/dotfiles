@@ -242,6 +242,16 @@ in
       ;; Point agent-shell to the nix-built claude-agent-acp binary
       (setq agent-shell-anthropic-claude-acp-command
             '("${pkgs.callPackage ../pkgs/claude-agent-acp {}}/bin/claude-agent-acp"))
+      ;; Register agent-shell sessions with ruflo for orchestration
+      (defun my/ruflo-register-session ()
+        "Register the current agent-shell session with ruflo for coordination."
+        (when (executable-find "ruflo")
+          (let* ((cwd (agent-shell-cwd))
+                 (project (file-name-nondirectory (directory-file-name cwd)))
+                 (buf-name (buffer-name)))
+            (start-process "ruflo-register" nil "ruflo" "session" "save"
+                           "-n" (format "agent-shell:%s:%s" project buf-name)))))
+      (add-hook 'agent-shell-mode-hook #'my/ruflo-register-session)
       ;; Clipboard image support for agent-shell (not included upstream)
       ;; Checks MIME types first so text clipboard falls through to yank
       (with-eval-after-load 'agent-shell
