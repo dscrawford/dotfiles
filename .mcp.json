@@ -1,5 +1,15 @@
 {
   "mcpServers": {
+    "trueline": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "trueline-mcp@latest"
+      ],
+      "env": {
+        "npm_config_update_notifier": "false"
+      }
+    },
     "claude-flow": {
       "command": "npx",
       "args": [
@@ -16,7 +26,7 @@
         "CLAUDE_FLOW_MAX_AGENTS": "15",
         "CLAUDE_FLOW_MEMORY_BACKEND": "hybrid"
       },
-      "autoStart": true
+      "autoStart": false
     }
   }
 }

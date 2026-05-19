@@ -1,11 +1,56 @@
 # shared/home/skills.nix
 # Claude Code skill scanning and provisioning
+# Only whitelisted skills are installed to keep the system prompt small (~130K+ tokens saved).
+# To re-enable a skill, add its name to the appropriate whitelist below.
 { lib, pkgs, claudeSkills ? {}, ... }:
 
 let
+  # Whitelist of skills to install (all others are ignored)
+  enabledLocalSkills = [
+    "design-doc"
+    "make-envrc"
+    "ruflo"
+    "ruflo-agent-shell"
+    "update-readme"
+  ];
+
+  enabledExternalSkills = [
+    # everything-claude-code
+    "everything-claude-code:api-design"
+    "everything-claude-code:coding-standards"
+    "everything-claude-code:deep-research"
+    "everything-claude-code:e2e-testing"
+    "everything-claude-code:fal-ai-media"
+    "everything-claude-code:investor-materials"
+    "everything-claude-code:investor-outreach"
+    "everything-claude-code:market-research"
+    "everything-claude-code:security-review"
+    "everything-claude-code:strategic-compact"
+    "everything-claude-code:tdd-workflow"
+    "everything-claude-code:verification-loop"
+    # cli-anything
+    "cli-anything:adguardhome"
+    "cli-anything:audacity"
+    "cli-anything:blender"
+    "cli-anything:browser"
+    "cli-anything:confluence"
+    "cli-anything:jira"
+    "cli-anything:novita"
+    "cli-anything:ollama"
+    "cli-anything:slack"
+  ];
+
+  enabledRufloSkills = [
+    # Keep empty — the base "ruflo" skill is local, and ruflo-bundled skills
+    # are rarely invoked directly. Re-add specific ones here if needed.
+  ];
+
+  isEnabled = whitelist: name: builtins.elem name whitelist;
+
   # Scan claude/skills/ (local) and build home.file entries for each skill directory
   skillsDir = ../../claude/skills;
-  skillNames = builtins.attrNames (lib.filterAttrs (_: type: type == "directory") (builtins.readDir skillsDir));
+  skillNames = builtins.filter (isEnabled enabledLocalSkills)
+    (builtins.attrNames (lib.filterAttrs (_: type: type == "directory") (builtins.readDir skillsDir)));
   localSkillFiles = lib.listToAttrs (builtins.concatMap (skill:
     let
       dir = skillsDir + "/${skill}";
@@ -36,15 +81,17 @@ let
       # Layout 1: .agents/skills/<name>/SKILL.md
       agentsDir = src + "/.agents/skills";
       hasAgentsDir = builtins.pathExists agentsDir;
-      agentsSkills = if hasAgentsDir
-        then builtins.attrNames (lib.filterAttrs (_: type: type == "directory") (builtins.readDir agentsDir))
-        else [];
+      agentsSkills = builtins.filter (name: isEnabled enabledExternalSkills "${prefix}:${name}")
+        (if hasAgentsDir
+         then builtins.attrNames (lib.filterAttrs (_: type: type == "directory") (builtins.readDir agentsDir))
+         else []);
       agentsEntries = mkSkillEntries prefix agentsDir agentsSkills;
 
       # Layout 2: <app>/agent-harness/cli_anything/<app>/skills/SKILL.md
       topDirs = builtins.attrNames (lib.filterAttrs (_: type: type == "directory") (builtins.readDir src));
       cliAnythingSkills = builtins.filter (app:
-        builtins.pathExists (src + "/${app}/agent-harness/cli_anything/${app}/skills")
+        isEnabled enabledExternalSkills "${prefix}:${app}"
+        && builtins.pathExists (src + "/${app}/agent-harness/cli_anything/${app}/skills")
       ) topDirs;
       cliAnythingEntries = lib.listToAttrs (builtins.concatMap (app:
         let
@@ -62,9 +109,10 @@ let
   # Scan skills bundled in the ruflo npm package
   rufloPackage = pkgs.callPackage ../../pkgs/ruflo {};
   rufloSkillsDir = "${rufloPackage}/lib/node_modules/ruflo/node_modules/@claude-flow/cli/.claude/skills";
-  rufloSkillNames = builtins.filter (name:
-    (builtins.readDir rufloSkillsDir).${name} == "directory"
-  ) (builtins.attrNames (builtins.readDir rufloSkillsDir));
+  rufloSkillNames = builtins.filter (isEnabled enabledRufloSkills)
+    (builtins.filter (name:
+      (builtins.readDir rufloSkillsDir).${name} == "directory"
+    ) (builtins.attrNames (builtins.readDir rufloSkillsDir)));
   rufloSkillFiles = mkSkillEntries "ruflo" rufloSkillsDir rufloSkillNames;
 in
 {
