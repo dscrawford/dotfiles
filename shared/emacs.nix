@@ -75,8 +75,8 @@ in
         src = pkgs.fetchFromGitHub {
           owner = "xenodium";
           repo = "shell-maker";
-          rev = "6377cbdb49248d670170f1c8dbe045648063583e";
-          hash = "sha256-KeC3NN0wR3yxwekuLxwb9EsRQZoIcS1EK89yL/LGUWw=";
+          rev = "11f4a9913e7625f122625dd89d668ad5c93cf151";
+          hash = "sha256-4xJ4X7CuosPA0PEjiKRcfdR8mj7vUkGnajUIDBV+oEk=";
         };
       })
       (trivialBuild {
@@ -85,8 +85,8 @@ in
         src = pkgs.fetchFromGitHub {
           owner = "xenodium";
           repo = "agent-shell";
-          rev = "67babec2278f8ee1cf1c4dc605e976247388df51";
-          hash = "sha256-0PCztBWTqfxbSgTIx9ti3Bzmm+n+byIcXp1vkjwihTk=";
+          rev = "33cfb8e9827e571806e8b2284c8af96ffa395173";
+          hash = "sha256-mlzZOilM/qTzk9srdWHljofyMnr5jgAtPeS+dTI3Y18=";
         };
         packageRequires = with epkgs; [ shell-maker acp ];
       })
