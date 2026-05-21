@@ -73,7 +73,7 @@ in
       };
     };
     # Global gitattributes: strip outputs from .ipynb on commit (all repos)
-    ".config/git/attributes".text = "*.ipynb filter=nbstripout\n";
+    ".config/git/attributes".text = "*.ipynb filter=nbstripout diff=ipynb\n";
     # Darwin: user-level nix.conf (Determinate Nix manages the daemon, so nix.settings unavailable)
     ".config/nix/nix.conf" = lib.mkIf isDarwin {
       text = ''
@@ -219,6 +219,11 @@ in
           clean = "nbstripout";
           smudge = "cat";
           required = true;
+        };
+      };
+      diff = {
+        ipynb = {
+          textconv = "nbstripout -t";
         };
       };
     };
