@@ -44,7 +44,7 @@ in
       # Databricks
       databricks-sql-connector
       # Tooling
-      pip black requests
+      pip black requests nbstripout
     ]))
     uv
     poetry
