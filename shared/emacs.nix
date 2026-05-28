@@ -9,7 +9,7 @@ in
 {
   programs.emacs = {
     enable = true;
-    package = if isDarwin then pkgs.emacs30 else pkgs.emacs-pgtk;
+    package = if isDarwin then pkgs.emacs-unstable else pkgs.emacs-pgtk;
     extraPackages = epkgs: (with epkgs; [
       nix-mode
       magit
@@ -63,8 +63,8 @@ in
         src = pkgs.fetchFromGitHub {
           owner = "manzaltu";
           repo = "claude-code-ide.el";
-          rev = "5f12e60c6d2d1802c8c1b7944bbdf935d5db1364";
-          hash = "sha256-tivRvgfI/8XBRImE3wuZ1UD0t2dNWYscv3Aa53BmHZE=";
+          rev = "56db02ee386d009ddb8b1482310f1f9beeefb810";
+          hash = "sha256-qH1QnG5G+0UiH/v0KaS7oSpQZY+BkUMZvrjbx6kyFhg=";
         };
         packageRequires = with epkgs; [ websocket transient web-server ];
       })
@@ -75,8 +75,8 @@ in
         src = pkgs.fetchFromGitHub {
           owner = "xenodium";
           repo = "shell-maker";
-          rev = "11f4a9913e7625f122625dd89d668ad5c93cf151";
-          hash = "sha256-4xJ4X7CuosPA0PEjiKRcfdR8mj7vUkGnajUIDBV+oEk=";
+          rev = "e8bdf6dca18f39d592728e8440118d9f57092e65";
+          hash = "sha256-tmhZ9WApwSjzAlXUcZy+aMpW/07bTpIaaDMCALXtyzI=";
         };
       })
       (trivialBuild {
@@ -85,8 +85,8 @@ in
         src = pkgs.fetchFromGitHub {
           owner = "xenodium";
           repo = "agent-shell";
-          rev = "33cfb8e9827e571806e8b2284c8af96ffa395173";
-          hash = "sha256-mlzZOilM/qTzk9srdWHljofyMnr5jgAtPeS+dTI3Y18=";
+          rev = "89bd6e136a08e1527dd630e4573639c838fd7e22";
+          hash = "sha256-ZSxCxiA+DH0tvIrGVhOUGOgrn1k0ilNr9WL4n3Aox+8=";
         };
         packageRequires = with epkgs; [ shell-maker acp ];
       })

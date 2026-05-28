@@ -14,6 +14,10 @@
       url = "github:LnL7/nix-darwin";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    darwin-emacs = {
+      url = "github:nix-giant/nix-darwin-emacs";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     everything-claude-code = {
       url = "github:affaan-m/everything-claude-code";
       flake = false;
@@ -24,7 +28,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, sops-nix, nix-darwin, everything-claude-code, cli-anything }:
+  outputs = { self, nixpkgs, home-manager, sops-nix, nix-darwin, darwin-emacs, everything-claude-code, cli-anything }:
   let
     inherit (nixpkgs) lib;
 
@@ -102,6 +106,7 @@
       };
       modules = [
         { nixpkgs.overlays = [
+            darwin-emacs.overlays.emacs
             # Clang 19 strictness breaks ffmpeg-dependent Python packages on Darwin.
             # Force gnu17 for av (PyAV) and imageio builds until upstream fixes land.
             (final: prev: {
