@@ -80,6 +80,19 @@ let
           echo "kube-cert-renew: WARNING: timed out waiting for certmgr to re-issue certs"
         fi
 
+        # Update kubeconfig cert copies so kubectl keeps working
+        KUBE_CERTS="/home/host/.kube/certs"
+        if [ -d "$KUBE_CERTS" ]; then
+          echo "kube-cert-renew: updating kubeconfig cert copies in $KUBE_CERTS"
+          for f in ca.pem cluster-admin.pem cluster-admin-key.pem; do
+            if [ -f "$SECRETS/$f" ]; then
+              cp "$SECRETS/$f" "$KUBE_CERTS/$f"
+              chown host:users "$KUBE_CERTS/$f"
+              chmod 600 "$KUBE_CERTS/$f"
+            fi
+          done
+        fi
+
         echo "kube-cert-renew: restarting kubernetes services"
         systemctl restart kubelet.service || echo "kube-cert-renew: kubelet restart failed"
         systemctl restart kube-proxy.service || echo "kube-cert-renew: kube-proxy restart failed"

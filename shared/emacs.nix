@@ -68,7 +68,16 @@ in
         };
         packageRequires = with epkgs; [ websocket transient web-server ];
       })
-      acp
+      (trivialBuild {
+        pname = "acp";
+        version = "0.12.2";
+        src = pkgs.fetchFromGitHub {
+          owner = "xenodium";
+          repo = "acp.el";
+          rev = "v0.12.2";
+          hash = "sha256-gtRoM8hdB+opnIPn49KkHwdWoR8qbt9sPdg9TvzQtv8=";
+        };
+      })
       (trivialBuild {
         pname = "shell-maker";
         version = "0-unstable-2025";

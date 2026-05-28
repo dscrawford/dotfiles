@@ -242,7 +242,7 @@ in
           runtimeInputs = [ pkgs.openssh pkgs.openssl pkgs.coreutils ];
           text = ''
             KUBE_DIR="${homeDir}/.kube/certs"
-            MASTER="node1"
+            MASTER="host@node1"
             SECRETS="/var/lib/kubernetes/secrets"
             CERTS="ca.pem cluster-admin.pem cluster-admin-key.pem"
 
