@@ -101,11 +101,9 @@ in
   programs.ssh = {
     enable = true;
     enableDefaultConfig = false;
-    settings = {
-      SetEnv = {
-        TERM = "xterm-256color";
-      };
-    };
+    extraConfig = ''
+      SetEnv TERM=xterm-256color
+    '';
   };
 
   # Enable home-manager
