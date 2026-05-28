@@ -102,7 +102,9 @@ in
     enable = true;
     enableDefaultConfig = false;
     settings = {
-      SetEnv = "TERM=xterm-256color";
+      SetEnv = {
+        TERM = "xterm-256color";
+      };
     };
   };
 
