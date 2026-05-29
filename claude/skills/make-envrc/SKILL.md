@@ -36,6 +36,7 @@ Create `flake.nix` with a `devShells.default` that provides:
   - Runs `uv sync` / `poetry install` if the venv doesn't exist
   - Exports `VIRTUAL_ENV` and prepends `.venv/bin` to `PATH`
   - If Jupyter support: registers a project-specific kernel via `python -m ipykernel install --user --name=<project-name> --display-name="Python (<project-name>)"` (only if the kernel isn't already registered)
+  - If Jupyter support: exports `JUPYTER_NOTEBOOK_ARGS="--ServerApp.disable_check_xsrf=True"` to prevent 403 XSRF errors when connecting from Emacs
 
 ### Node.js projects
 - Node.js version from `.node-version` or `package.json` engines
