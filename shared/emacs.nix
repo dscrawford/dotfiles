@@ -257,6 +257,13 @@ in
       ;; Point agent-shell to the nix-built claude-agent-acp binary
       (setq agent-shell-anthropic-claude-acp-command
             '("${pkgs.callPackage ../pkgs/claude-agent-acp {}}/bin/claude-agent-acp"))
+      ;; Default to Claude so agent selection prompt is skipped
+      (setq agent-shell-preferred-agent-config 'anthropic-claude)
+      ;; Show color-coded context window usage in the header
+      (setq agent-shell-show-context-usage-indicator t)
+      ;; Pass ruflo MCP server to agent-shell so claude gets ruflo tools inside Emacs
+      (setq agent-shell-mcp-servers
+            '(("ruflo" . (:command "ruflo" :args ("mcp" "start")))))
       ;; Register agent-shell sessions with ruflo for orchestration
       (defun my/ruflo-register-session ()
         "Register the current agent-shell session with ruflo for coordination."

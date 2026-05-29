@@ -10,9 +10,6 @@ let
   rufloPackage = pkgs.callPackage ../../pkgs/ruflo {};
 in
 {
-  # Export rufloPackage for use by skills.nix
-  _module.args.rufloPackage = rufloPackage;
-
   home.packages = with pkgs; [
     # Fonts
     nerd-fonts.symbols-only

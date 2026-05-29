@@ -9,8 +9,6 @@ let
   enabledLocalSkills = [
     "design-doc"
     "make-envrc"
-    "ruflo"
-    "ruflo-agent-shell"
     "update-readme"
   ];
 
@@ -38,11 +36,6 @@ let
     "cli-anything:novita"
     "cli-anything:ollama"
     "cli-anything:slack"
-  ];
-
-  enabledRufloSkills = [
-    # Keep empty — the base "ruflo" skill is local, and ruflo-bundled skills
-    # are rarely invoked directly. Re-add specific ones here if needed.
   ];
 
   isEnabled = whitelist: name: builtins.elem name whitelist;
@@ -106,15 +99,7 @@ let
 
   externalSkillFiles = lib.concatMapAttrs (prefix: entry: scanExternalSkills prefix entry.src) claudeSkills;
 
-  # Scan skills bundled in the ruflo npm package
-  rufloPackage = pkgs.callPackage ../../pkgs/ruflo {};
-  rufloSkillsDir = "${rufloPackage}/lib/node_modules/ruflo/node_modules/@claude-flow/cli/.claude/skills";
-  rufloSkillNames = builtins.filter (isEnabled enabledRufloSkills)
-    (builtins.filter (name:
-      (builtins.readDir rufloSkillsDir).${name} == "directory"
-    ) (builtins.attrNames (builtins.readDir rufloSkillsDir)));
-  rufloSkillFiles = mkSkillEntries "ruflo" rufloSkillsDir rufloSkillNames;
 in
 {
-  home.file = localSkillFiles // externalSkillFiles // rufloSkillFiles;
+  home.file = localSkillFiles // externalSkillFiles;
 }
