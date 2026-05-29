@@ -1,12 +1,12 @@
-{ lib, buildNpmPackage, fetchurl, nodejs, vips, pkg-config, python3 }:
+{ lib, buildNpmPackage, fetchurl, vips, pkg-config, python3 }:
 
 buildNpmPackage rec {
   pname = "ruflo";
-  version = "3.5.51";
+  version = "3.10.5";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/ruflo/-/ruflo-${version}.tgz";
-    hash = "sha256-BTr0ukt1wOyAXEylij70jTrGMn7bCUyj7GJ69onjE3Y=";
+    hash = "sha256-mERb/RxQEuuN7aC6xJg0Qfi5GDU8P1SvkdfA1CiggbU=";
   };
 
   sourceRoot = "package";
@@ -15,24 +15,13 @@ buildNpmPackage rec {
     cp ${./package-lock.json} package-lock.json
   '';
 
-  npmDepsHash = "sha256-zslkeuwFr8MuJVhQ7yfi4U3N+ymdSUszViY1qua6HNE=";
-  npmFlags = [ "--legacy-peer-deps" ];
+  npmDepsHash = "sha256-BMK4d8xHqVpT/ElwQduxL5qx2IKADEbBwi4BFmiTg3c=";
   makeCacheWritable = true;
 
   nativeBuildInputs = [ pkg-config python3 ];
   buildInputs = [ vips ];
 
   dontNpmBuild = true;
-
-  # Redirect @xenova/transformers ONNX model cache out of the read-only nix store.
-  # env.js is an ES module so require() is not available; use process.env instead.
-  # Tested against @xenova/transformers 2.17.2.
-  postInstall = ''
-    substituteInPlace $out/lib/node_modules/ruflo/node_modules/@xenova/transformers/src/env.js \
-      --replace-fail \
-        "path.join(__dirname, '/.cache/')" \
-        "(process.env.XDG_CACHE_HOME || (process.env.HOME + '/.cache')) + '/ruflo/transformers'"
-  '';
 
   meta = {
     description = "Enterprise AI agent orchestration platform for Claude Code";

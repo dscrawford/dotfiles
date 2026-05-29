@@ -2,20 +2,24 @@
 
 buildNpmPackage rec {
   pname = "confluence-cli";
-  version = "1.30.1";
+  version = "2.10.0";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/confluence-cli/-/confluence-cli-${version}.tgz";
-    hash = "sha256-kUwvwuQ6HEwFoXHExWUlcNvgWB78XPPhV6dmUv8SqQg=";
+    hash = "sha256-DHiZT+F+kYlXotbIHjL5cWZ7/IyuO8pazB5SRAXqL9o=";
   };
 
   sourceRoot = "package";
 
   postPatch = ''
     cp ${./package-lock.json} package-lock.json
+
+    # Remove devDependencies so npm doesn't try to fetch them in the sandbox
+    sed -i '/"devDependencies"/,/}/d' package.json
   '';
 
-  npmDepsHash = "sha256-40Id6atb3HrXX4tN/VqtL37rdYrOJP1zNYEKDe6PeEY=";
+  npmDepsHash = "sha256-jXstuaq8erZl4nY7dAKL2t5odlGydWF0pcMCPy0J27M=";
+  npmFlags = [ "--omit=dev" ];
 
   dontNpmBuild = true;
 

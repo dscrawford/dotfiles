@@ -2,11 +2,11 @@
 
 buildNpmPackage rec {
   pname = "cli-microsoft365";
-  version = "11.6.0";
+  version = "11.8.0";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/@pnp/cli-microsoft365/-/cli-microsoft365-${version}.tgz";
-    hash = "sha256-QQGCKjomQxDKlBAxS5RV78KQ/648wSaGx12LoAqVLOg=";
+    hash = "sha256-xNgK9+0K0xfhTdyQ9NopYiuxOozhXbYkYyCsMmIzFVI=";
   };
 
   sourceRoot = "package";
@@ -15,7 +15,7 @@ buildNpmPackage rec {
     cp ${./package-lock.json} package-lock.json
   '';
 
-  npmDepsHash = "sha256-Xr0RaEHZ1qsq98nbifMfEeHYccTCtOAZKxuK7bidITc=";
+  npmDepsHash = "sha256-pVS6/MLJyEcV+hBoZIqLwy16L/3EjDgZdvf6e1LHrGk=";
 
   dontNpmBuild = true;
 
