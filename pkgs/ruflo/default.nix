@@ -28,5 +28,6 @@ buildNpmPackage rec {
     homepage = "https://github.com/ruvnet/ruflo";
     license = lib.licenses.mit;
     mainProgram = "ruflo";
+    platforms = lib.platforms.unix;
   };
 }

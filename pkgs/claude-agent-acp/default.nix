@@ -17,8 +17,10 @@ buildNpmPackage rec {
 
   npmDepsHash = "sha256-vah4q9PzzHnGuvgyUhRSSrJYVwo3AT+J7BOxlq95IeE=";
 
+  # autoPatchelfHook + libstdc++ are only needed to fix up ELF binaries from
+  # native npm deps on Linux; Darwin needs neither.
   nativeBuildInputs = lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
-  buildInputs = [ stdenv.cc.cc.lib ];
+  buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ stdenv.cc.cc.lib ];
 
   dontNpmBuild = true;
 
@@ -27,5 +29,6 @@ buildNpmPackage rec {
     homepage = "https://github.com/agentclientprotocol/claude-agent-acp";
     license = lib.licenses.mit;
     mainProgram = "claude-agent-acp";
+    platforms = lib.platforms.unix;
   };
 }
