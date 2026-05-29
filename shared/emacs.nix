@@ -263,7 +263,9 @@ in
       (setq agent-shell-show-context-usage-indicator t)
       ;; Pass ruflo MCP server to agent-shell so claude gets ruflo tools inside Emacs
       (setq agent-shell-mcp-servers
-            '((ruflo . (:command "ruflo" :args ("mcp" "start")))))
+            '(((name . "ruflo")
+               (command . "ruflo")
+               (args . ("mcp" "start")))))
       ;; Register agent-shell sessions with ruflo for orchestration
       (defun my/ruflo-register-session ()
         "Register the current agent-shell session with ruflo for coordination."
