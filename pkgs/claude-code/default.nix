@@ -1,32 +1,33 @@
-{ lib, stdenv, buildNpmPackage, fetchurl, bubblewrap, procps, socat }:
+{ lib, stdenv, fetchurl, glibc, bubblewrap, procps, socat, makeWrapper, patchelf }:
 
-buildNpmPackage rec {
+stdenv.mkDerivation rec {
   pname = "claude-code";
-  version = "2.1.91";
+  version = "2.1.156";
 
   src = fetchurl {
-    url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz";
-    hash = "sha256-T7Ta53HW+tHnRwN0EUj17i0kg39KBOqycEF0b3pbPis=";
+    url = "https://registry.npmjs.org/@anthropic-ai/claude-code-linux-x64/-/claude-code-linux-x64-${version}.tgz";
+    hash = "sha256-CPyCuWyJO6/ZJ2iEL3vidYUbtFXV0UnbH1PThNKM74A=";
   };
 
   sourceRoot = "package";
 
-  postPatch = ''
-    cp ${./package-lock.json} package-lock.json
+  nativeBuildInputs = [ makeWrapper patchelf ];
 
-    # https://github.com/anthropics/claude-code/issues/15195
-    substituteInPlace cli.js \
-      --replace-fail '#!/bin/sh' '#!/usr/bin/env sh'
-  '';
+  dontBuild = true;
+  dontConfigure = true;
+  dontFixup = true;
 
-  npmDepsHash = "sha256-0ppKP+XMgTzVVZtL7GDsOjgvSPUDrUa7SoG048RLaNg=";
+  installPhase = ''
+    runHook preInstall
 
-  dontNpmBuild = true;
+    install -Dm755 claude $out/lib/claude-code/claude
 
-  env.AUTHORIZED = "1";
+    patchelf \
+      --set-interpreter "$(cat ${stdenv.cc}/nix-support/dynamic-linker)" \
+      --set-rpath "${lib.makeLibraryPath [ glibc ]}" \
+      $out/lib/claude-code/claude
 
-  postInstall = ''
-    wrapProgram $out/bin/claude \
+    makeWrapper $out/lib/claude-code/claude $out/bin/claude \
       --set DISABLE_AUTOUPDATER 1 \
       --set-default FORCE_AUTOUPDATE_PLUGINS 1 \
       --set DISABLE_INSTALLATION_CHECKS 1 \
@@ -40,6 +41,8 @@ buildNpmPackage rec {
           ]
         )
       }
+
+    runHook postInstall
   '';
 
   meta = {
@@ -47,5 +50,6 @@ buildNpmPackage rec {
     homepage = "https://github.com/anthropics/claude-code";
     license = lib.licenses.unfree;
     mainProgram = "claude";
+    platforms = [ "x86_64-linux" ];
   };
 }
