@@ -1,4 +1,4 @@
-{ lib, buildNpmPackage, fetchurl }:
+{ lib, buildNpmPackage, fetchurl, autoPatchelfHook, stdenv }:
 
 buildNpmPackage rec {
   pname = "claude-agent-acp";
@@ -16,6 +16,9 @@ buildNpmPackage rec {
   '';
 
   npmDepsHash = "sha256-vah4q9PzzHnGuvgyUhRSSrJYVwo3AT+J7BOxlq95IeE=";
+
+  nativeBuildInputs = lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
+  buildInputs = [ stdenv.cc.cc.lib ];
 
   dontNpmBuild = true;
 
