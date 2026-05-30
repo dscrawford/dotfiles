@@ -305,7 +305,10 @@
       util-linux
       jq
       libva-utils
-      jellyfin-media-player
+      # Upstream renamed "Jellyfin Media Player" -> "Jellyfin Desktop" (v2.0.0);
+      # nixpkgs aliased jellyfin-media-player -> jellyfin-desktop on 2025-12-14.
+      # Use the canonical name so we don't depend on the deprecated alias.
+      jellyfin-desktop
       rnnoise-plugin
     ];
     variables = {

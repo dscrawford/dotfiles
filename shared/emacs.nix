@@ -232,6 +232,15 @@ in
         (keymap-set ein:notebook-mode-map "C-c C-h" #'ein:cell-toggle-output))
       ;; Structural cell folding via outline-minor-mode
       (add-hook 'ein:notebook-mode-hook #'outline-minor-mode)
+      ;; Reuse the current window instead of splitting/popping a new one.
+      ;; ein uses `pop-to-buffer' for both the notebooklist (ein:run) and for
+      ;; opening a notebook, so `display-buffer-alist' can force same-window.
+      ;; "*ein:notebooklist ...*" -> notebooklist; "*ein: url/path*" -> notebook
+      ;; worksheets (the trailing space distinguishes them from notebooklist).
+      (add-to-list 'display-buffer-alist
+                   '("\\*ein:notebooklist " (display-buffer-same-window)))
+      (add-to-list 'display-buffer-alist
+                   '("\\*ein: " (display-buffer-same-window)))
 
       ;; Inferior Python (run-python) — enable native readline completion for corfu
       ;; PYTHON_BASIC_REPL disables pyrepl (which needs a real terminal) so
@@ -401,6 +410,10 @@ in
 
       (require 'magit)
       (global-set-key (kbd "C-c g") 'magit-status)
+      ;; Open magit in the current window instead of splitting; diffs still get
+      ;; their own window so they can be viewed alongside the status buffer.
+      (setq magit-display-buffer-function
+            #'magit-display-buffer-same-window-except-diff-v1)
 
       (setq xclip-method (if (eq system-type 'darwin) 'pbpaste 'wl-copy))
       (xclip-mode 1)

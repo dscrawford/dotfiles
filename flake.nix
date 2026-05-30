@@ -18,6 +18,10 @@
       url = "github:nix-giant/nix-darwin-emacs";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    lsfg-vk-flake = {
+      url = "github:pabloaul/lsfg-vk-flake/main";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     everything-claude-code = {
       url = "github:affaan-m/everything-claude-code";
       flake = false;
@@ -28,7 +32,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, sops-nix, nix-darwin, darwin-emacs, everything-claude-code, cli-anything }:
+  outputs = { self, nixpkgs, home-manager, sops-nix, nix-darwin, darwin-emacs, lsfg-vk-flake, everything-claude-code, cli-anything }:
   let
     inherit (nixpkgs) lib;
 
@@ -190,6 +194,13 @@
         hostname = "nixos";
         username = "daniel";
         homeModules = [ ./shared/home.nix ./shared/sway.nix ./shared/gaming.nix ];
+        extraModules = [
+          # Lossless Scaling Frame Generation (Vulkan layer).
+          # Requires Lossless Scaling installed via Steam; activate per-game
+          # with `ENABLE_LSFG=1 %command%` in Steam launch options.
+          lsfg-vk-flake.nixosModules.default
+          { services.lsfg-vk = { enable = true; ui.enable = true; }; }
+        ];
       };
       terminal = mkLocal {
         hostname = "nixos";
