@@ -265,13 +265,6 @@ in
     default-timeout=5000
   '';
 
-  home.file.".config/xdg-desktop-portal-wlr/config".text = ''
-    [screencast]
-    max_fps=60
-    chooser_type=simple
-    chooser_cmd=slurp -f %o -or
-  '';
-
   home.file.".config/sway/config".text = ''
     # Sway config (migrated from i3)
 

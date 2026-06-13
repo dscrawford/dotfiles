@@ -238,18 +238,30 @@
   };
 
   # === XDG ===
-  xdg.portal = {
-    enable = true;
-    # wlr.enable adds the unpatched package; our extraPortals provides the patched one
-    # TODO: Remove patch once xdg-desktop-portal-wlr > 0.8.2 is released
-    # PR: https://github.com/emersion/xdg-desktop-portal-wlr/pull/380
-    extraPortals = lib.mkForce [
-      (pkgs.xdg-desktop-portal-wlr.overrideAttrs (old: {
+  # The xdg.portal.wlr module hardcodes pkgs.xdg-desktop-portal-wlr (no package
+  # option), so the duplicate-frame patch must be applied via overlay.
+  # TODO: Remove patch once xdg-desktop-portal-wlr > 0.8.2 is released
+  # PR: https://github.com/emersion/xdg-desktop-portal-wlr/pull/380
+  nixpkgs.overlays = [
+    (final: prev: {
+      xdg-desktop-portal-wlr = prev.xdg-desktop-portal-wlr.overrideAttrs (old: {
         patches = (old.patches or []) ++ [
           ../../patches/xdg-desktop-portal-wlr-fix-duplicate-frame.patch
         ];
-      }))
-    ];
+      });
+    })
+  ];
+  xdg.portal = {
+    enable = true;
+    # nixpkgs' programs.sway module force-enables xdg.portal.wlr, which runs the
+    # portal with an explicit --config that OVERRIDES ~/.config/xdg-desktop-portal-wlr.
+    # Without these settings the generated config is empty: no screencast chooser
+    # is found and screen sharing silently fails.
+    wlr.settings.screencast = {
+      max_fps = 60;
+      chooser_type = "simple";
+      chooser_cmd = "${pkgs.slurp}/bin/slurp -f %o -or";
+    };
     config = lib.mkForce {
       sway = {
         default = [ "wlr" ];
