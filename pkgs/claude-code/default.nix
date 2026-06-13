@@ -7,19 +7,19 @@ let
   sources = {
     "x86_64-linux" = {
       suffix = "linux-x64";
-      hash = "sha256-CPyCuWyJO6/ZJ2iEL3vidYUbtFXV0UnbH1PThNKM74A=";
+      hash = "sha256-WgnUx2ErN0L9rrGmQUh5jGqnldv9dYcQnTva15zNU/8=";
     };
     "aarch64-linux" = {
       suffix = "linux-arm64";
-      hash = "sha256-lwZe+vcqfuVT81k+OlmFfrmKO13v0WpaQJiORP4IIbc=";
+      hash = "sha256-np1UdJEhAz6o/1mJNPYVfqjmUWjK+/nN7IVjb4g5wU4=";
     };
     "x86_64-darwin" = {
       suffix = "darwin-x64";
-      hash = "sha256-etgvz0Rjx8iETPFLiSusQus14x34UegGhLc8c3pRcKA=";
+      hash = "sha256-8+YyVRc9w6n8qky+lFuHRUyFMOXSRa/81bIHsgw+i7A=";
     };
     "aarch64-darwin" = {
       suffix = "darwin-arm64";
-      hash = "sha256-qDlfkYPbNxoPe4Ue4xVLY7jJNlnwpOaATs8j40+K7nM=";
+      hash = "sha256-ldaZ3S8Dgn6VKG/oVJmdQuPQv+7DeviMW/SZCO5WqlM=";
     };
   };
 
@@ -30,7 +30,7 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "claude-code";
-  version = "2.1.156";
+  version = "2.1.170";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/@anthropic-ai/claude-code-${source.suffix}/-/claude-code-${source.suffix}-${version}.tgz";

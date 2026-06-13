@@ -2,11 +2,11 @@
 
 buildNpmPackage rec {
   pname = "ruflo";
-  version = "3.10.5";
+  version = "3.10.40";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/ruflo/-/ruflo-${version}.tgz";
-    hash = "sha256-mERb/RxQEuuN7aC6xJg0Qfi5GDU8P1SvkdfA1CiggbU=";
+    hash = "sha256-CgQdnn/HY1ON7hfyVbOZNXB/J32EQ+Vg3qpYW7eOMBA=";
   };
 
   sourceRoot = "package";
@@ -15,7 +15,7 @@ buildNpmPackage rec {
     cp ${./package-lock.json} package-lock.json
   '';
 
-  npmDepsHash = "sha256-BMK4d8xHqVpT/ElwQduxL5qx2IKADEbBwi4BFmiTg3c=";
+  npmDepsHash = "sha256-lXlOX69NkHMxo9pGx/OkLPLGAdplA9ORL5/653mYDj8=";
   makeCacheWritable = true;
 
   nativeBuildInputs = [ pkg-config python3 ];
