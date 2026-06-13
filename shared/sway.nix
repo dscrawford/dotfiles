@@ -148,6 +148,7 @@ in
     thunar
     tumbler      # Thumbnail service for Thunar (images, videos, PDFs)
     xdg-desktop-portal-gtk
+    librepods    # AirPods controller (ANC/transparency, ear detection, battery); autostarted via `exec librepods` below
   ];
 
   home.file.".config/waybar/config".text = builtins.toJSON {
@@ -285,6 +286,8 @@ in
     exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP
     exec mako
     exec blueman-applet
+    # LibrePods AirPods tray controller (left-click battery, right-click noise-control)
+    exec librepods
 
     # Monitor layout (managed by nwg-displays)
     include ~/.config/sway/outputs

@@ -22,6 +22,11 @@
     extraModulePackages = [ config.boot.kernelPackages.v4l2loopback ];
     extraModprobeConfig = ''
       options v4l2loopback devices=1 video_nr=10 card_label="OBS-VirtualCam" exclusive_caps=1
+      # Disable btusb USB autosuspend: the Intel AC9260 BT controller suspends
+      # its USB link mid-stream, dropping HCI packet-completion reports
+      # ("Missing completion reports ... firmware bug?") which stalls AirPods
+      # A2DP audio — connects fine, then drops with no sound after a few seconds.
+      options btusb enable_autosuspend=0
     '';
   };
 
@@ -69,12 +74,6 @@
           Disable = "Socket";
           FastConnectable = true;
           Experimental = true;
-        };
-        Policy = {
-          # Stop bluez retrying HFP connections every 60s when AirPods are in case
-          # ("Unable to get Hands-Free Voice gateway SDP record: Host is down" spam)
-          # Trade-off: no auto-reconnect; put AirPods in, then connect manually
-          ReconnectAttempts = 0;
         };
       };
     };
@@ -127,12 +126,10 @@
             "bluez5.enable-hw-volume" = true;
             # A2DP only — prevents HFP profile switching that drops AirPods audio
             "bluez5.roles" = [ "a2dp_sink" "a2dp_source" ];
-            # Exclude AAC: on AirPods it causes packet dropouts/popping
-            # ("Missing completion reports ... firmware bug?"). SBC-XQ is
-            # lighter, near-identical quality, and stable. AirPods only do
-            # AAC/SBC, so dropping AAC forces SBC-XQ.
+            # AAC re-enabled: its dropouts ("Missing completion reports") were
+            # btusb USB autosuspend, fixed in boot.extraModprobeConfig.
             # Exclude LDAC (PipeWire 1.6.x decoder crash).
-            "bluez5.codecs" = [ "sbc" "sbc_xq" "aptx" "aptx_hd" ];
+            "bluez5.codecs" = [ "sbc" "sbc_xq" "aac" "aptx" "aptx_hd" ];
           };
         };
         "11-bluetooth-policy" = {
@@ -211,13 +208,6 @@
       KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="28de", ATTRS{idProduct}=="2300", MODE="0660", TAG+="uaccess"
       KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="28de", ATTRS{idProduct}=="2301", MODE="0660", TAG+="uaccess"
       SUBSYSTEM=="tty", ATTRS{idVendor}=="28de", ATTRS{idProduct}=="2102", MODE="0660", TAG+="uaccess"
-      # Disable the TP-Link UB500 Bluetooth dongle (Realtek RTL8761B, comes up
-      # as hci1). Its firmware drops HCI packet-completion reports ("Missing
-      # completion reports for packet ... firmware bug?"), which stalls AirPods
-      # A2DP audio and makes it pop in and out. Deauthorizing the USB device
-      # forces all Bluetooth onto the reliable onboard Intel adapter
-      # (8087:0025, hci0). Re-pair the AirPods after rebuild.
-      ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="2357", ATTR{idProduct}=="0604", ATTR{authorized}="0"
     '';
   };
 
