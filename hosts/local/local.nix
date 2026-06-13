@@ -319,7 +319,16 @@
       # Upstream renamed "Jellyfin Media Player" -> "Jellyfin Desktop" (v2.0.0);
       # nixpkgs aliased jellyfin-media-player -> jellyfin-desktop on 2025-12-14.
       # Use the canonical name so we don't depend on the deprecated alias.
-      jellyfin-desktop
+      # Run under XWayland: Qt-embedded mpv on native Wayland + NVIDIA shows
+      # out-of-order frames (flash of a previous frame) on sway.
+      (pkgs.symlinkJoin {
+        name = "jellyfin-desktop-xcb";
+        paths = [ pkgs.jellyfin-desktop ];
+        buildInputs = [ pkgs.makeWrapper ];
+        postBuild = ''
+          wrapProgram $out/bin/jellyfin-desktop --set QT_QPA_PLATFORM xcb
+        '';
+      })
       rnnoise-plugin
     ];
     variables = {
