@@ -288,11 +288,6 @@
       # NVIDIA 610.43.02). Select per-game in Steam → Properties → Compatibility.
       extraCompatPackages = [ (pkgs.callPackage ../../pkgs/proton-cachyos { }) ];
     };
-    alvr = {
-      enable = true;
-      openFirewall = true;
-      package = pkgs.alvr;
-    };
   };
 
   # === Virtualization ===
