@@ -91,8 +91,11 @@ in
     # Steer agent-shell/Claude Code memory to the ruflo MCP server instead of
     # the built-in file-based memory (memory/*.md + MEMORY.md index).
     ".claude/rules/common/ruflo-memory.md".source = ../claude/rules/common/ruflo-memory.md;
-    # Global gitattributes: strip outputs from .ipynb on commit (all repos)
-    ".config/git/attributes".text = "*.ipynb filter=nbstripout diff=ipynb\n";
+    # Global gitattributes: only show .ipynb diffs stripped (display-only, never
+    # rewrites files). The nbstripout clean/smudge *filter* is intentionally NOT
+    # applied here — it wipes local outputs on pull/checkout. Opt a single repo
+    # in with `*.ipynb filter=nbstripout` in that repo's .gitattributes.
+    ".config/git/attributes".text = "*.ipynb diff=ipynb\n";
     # Darwin: user-level nix.conf (Determinate Nix manages the daemon, so nix.settings unavailable)
     ".config/nix/nix.conf" = lib.mkIf isDarwin {
       text = ''
@@ -232,10 +235,12 @@ in
         pager = "cat";
       };
       filter = {
+        # Defined but not applied globally (see git/attributes above). Opt-in
+        # per-repo only. required=false so opt-in can't hard-fail a checkout.
         nbstripout = {
           clean = "nbstripout";
           smudge = "cat";
-          required = true;
+          required = false;
         };
       };
       diff = {
