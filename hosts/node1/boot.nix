@@ -1,7 +1,1 @@
-{ ... }:
-{
-  boot.loader.grub = {
-    enable = true;
-    device = "/dev/sda";
-  };
-}
+{ ... }: { imports = [ ../../shared/server-boot.nix ]; }
