@@ -88,6 +88,9 @@ in
         };
       };
     };
+    # Steer agent-shell/Claude Code memory to the ruflo MCP server instead of
+    # the built-in file-based memory (memory/*.md + MEMORY.md index).
+    ".claude/rules/common/ruflo-memory.md".source = ../claude/rules/common/ruflo-memory.md;
     # Global gitattributes: strip outputs from .ipynb on commit (all repos)
     ".config/git/attributes".text = "*.ipynb filter=nbstripout diff=ipynb\n";
     # Darwin: user-level nix.conf (Determinate Nix manages the daemon, so nix.settings unavailable)
