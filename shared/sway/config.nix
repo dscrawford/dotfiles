@@ -27,7 +27,8 @@
     exec mako
     exec blueman-applet
     # LibrePods AirPods tray controller (left-click battery, right-click noise-control)
-    exec librepods
+    # --hide: start minimized to tray instead of opening a window
+    exec librepods --hide
 
     # Monitor layout (managed by nwg-displays)
     include ~/.config/sway/outputs
