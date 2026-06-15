@@ -13,15 +13,6 @@ in
 {
   inherit mkEmacsPackage;
 
-  ultra-scroll = mkEmacsPackage {
-    pname = "ultra-scroll";
-    version = "0-unstable-2025";
-    owner = "jdtsmith";
-    repo = "ultra-scroll";
-    rev = "08758c6772c5fbce54fb74fb5cce080b6425c6ce";
-    hash = "sha256-hKgwjs4qZikbvHKjWIJFlkI/4LXR6qovCoTBM5miVr8=";
-  };
-
   claude-code-ide = mkEmacsPackage {
     pname = "claude-code-ide";
     version = "0-unstable-2025";

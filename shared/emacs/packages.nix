@@ -29,7 +29,7 @@ with epkgs; [
   gdscript-mode
   ace-window
   windresize
-  custom.ultra-scroll
+  ultra-scroll
   pdf-tools
   doom-modeline
   nerd-icons
