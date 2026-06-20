@@ -14,6 +14,7 @@
     heroic
     r2modman
     ferium
+    cemu
 
     # Wayland game display management
     gamescope

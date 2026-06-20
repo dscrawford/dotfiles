@@ -73,6 +73,7 @@ in
     fd         # fd — fast find (used by Claude Code)
     dnsutils   # dig, nslookup, nsupdate
     jq         # JSON processing
+    gh         # GitHub CLI (PRs, issues, gh api)
 
     # Cloud & Kubernetes
     kubectl
