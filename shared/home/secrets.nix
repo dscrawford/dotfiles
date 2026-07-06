@@ -13,7 +13,7 @@ let
   # Secrets with empty values in sops YAML are silently skipped at shell init.
   secretEnvVars = [
     # AI / IDE
-    { secret = "anthropic_api_key"; env = "ANTHROPIC_API_KEY"; desc = "Anthropic API key for Claude Code and Claude API access"; }
+    # { secret = "anthropic_api_key"; env = "ANTHROPIC_API_KEY"; desc = "Anthropic API key for Claude Code and Claude API access"; }
     { secret = "gemini_api_key";    env = "GEMINI_API_KEY";    desc = "Google Gemini API key for Gemini CLI"; }
     # Research MCP servers (firecrawl + exa) for the deep-research skill
     { secret = "firecrawl_api_key"; env = "FIRECRAWL_API_KEY"; desc = "Firecrawl API key for the firecrawl MCP server (web scrape/search/crawl)"; }

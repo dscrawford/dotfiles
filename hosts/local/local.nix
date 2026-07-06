@@ -25,6 +25,11 @@
 
   # === Nixpkgs ===
   nixpkgs.config.allowUnfree = true;
+  # vesktop (Discord client) uses pnpm 10.29.2 as a build-time dep to fetch its
+  # node modules. Recent nixpkgs marks that pnpm insecure (CVE-2026-48995 et al.),
+  # but it only runs sandboxed at build time here, so allow it until nixpkgs bumps
+  # vesktop's pinned pnpm.
+  nixpkgs.config.permittedInsecurePackages = [ "pnpm-10.29.2" ];
 
   # === Environment ===
   environment = {

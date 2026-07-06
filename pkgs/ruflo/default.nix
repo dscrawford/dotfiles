@@ -2,11 +2,11 @@
 
 buildNpmPackage rec {
   pname = "ruflo";
-  version = "3.10.40";
+  version = "3.16.3";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/ruflo/-/ruflo-${version}.tgz";
-    hash = "sha256-CgQdnn/HY1ON7hfyVbOZNXB/J32EQ+Vg3qpYW7eOMBA=";
+    hash = "sha256-yOKYoDNozsVS6E4YuQ5tVCgcDXKD2EJNyyS9KJ10iMg=";
   };
 
   sourceRoot = "package";
@@ -15,8 +15,14 @@ buildNpmPackage rec {
     cp ${./package-lock.json} package-lock.json
   '';
 
-  npmDepsHash = "sha256-lXlOX69NkHMxo9pGx/OkLPLGAdplA9ORL5/653mYDj8=";
+  npmDepsHash = "sha256-hqDCgqC3xTMsxmsj18YlQUMkNYSggOm5xgiZGbHzdrE=";
   makeCacheWritable = true;
+
+  # onnxruntime-node (pulled in transitively via agentic-flow) runs a
+  # postinstall that downloads extra execution-provider binaries from
+  # api.nuget.org, which fails in the offline build sandbox. The base CPU
+  # runtime is already bundled in the npm package, so skip the download.
+  ONNXRUNTIME_NODE_INSTALL = "skip";
 
   nativeBuildInputs = [ pkg-config python3 ];
   buildInputs = [ vips ];

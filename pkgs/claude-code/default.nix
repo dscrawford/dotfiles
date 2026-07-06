@@ -1,4 +1,4 @@
-{ lib, stdenv, fetchurl, glibc, bubblewrap, procps, socat, makeWrapper, patchelf }:
+{ lib, stdenv, fetchurl, bubblewrap, procps, socat, makeBinaryWrapper, autoPatchelfHook }:
 
 let
   # Anthropic ships a per-platform prebuilt native binary as a separate npm
@@ -7,19 +7,19 @@ let
   sources = {
     "x86_64-linux" = {
       suffix = "linux-x64";
-      hash = "sha256-WgnUx2ErN0L9rrGmQUh5jGqnldv9dYcQnTva15zNU/8=";
+      hash = "sha256-VkfafvwHPjJJ0vmIufcG9Xbr8kDxnVD9yjXwBwlUNFo=";
     };
     "aarch64-linux" = {
       suffix = "linux-arm64";
-      hash = "sha256-np1UdJEhAz6o/1mJNPYVfqjmUWjK+/nN7IVjb4g5wU4=";
+      hash = "sha256-1wENBrrhC+LcpwNjPHMNUsXBORFl6OzNSf9ufCVxwkQ=";
     };
     "x86_64-darwin" = {
       suffix = "darwin-x64";
-      hash = "sha256-8+YyVRc9w6n8qky+lFuHRUyFMOXSRa/81bIHsgw+i7A=";
+      hash = "sha256-P6/6Rx4btBjtHxhS2EpE+WyuYc7ktKPRDpzsYkRw0Xw=";
     };
     "aarch64-darwin" = {
       suffix = "darwin-arm64";
-      hash = "sha256-ldaZ3S8Dgn6VKG/oVJmdQuPQv+7DeviMW/SZCO5WqlM=";
+      hash = "sha256-y5rk5jGM9zgT5BGe1s7fwP0p9CH8ldGDzCk/FI2Z92o=";
     };
   };
 
@@ -30,7 +30,7 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "claude-code";
-  version = "2.1.170";
+  version = "2.1.200";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/@anthropic-ai/claude-code-${source.suffix}/-/claude-code-${source.suffix}-${version}.tgz";
@@ -40,28 +40,24 @@ stdenv.mkDerivation rec {
   sourceRoot = "package";
 
   nativeBuildInputs =
-    [ makeWrapper ]
-    ++ lib.optionals stdenv.hostPlatform.isLinux [ patchelf ];
+    [ makeBinaryWrapper ]
+    ++ lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
 
   dontBuild = true;
   dontConfigure = true;
-  dontFixup = true;
+  # The Linux binary is a Bun-compiled single-file executable: its JS payload is
+  # appended after the ELF. Stripping (or a manual `patchelf --set-rpath`, which
+  # rewrites/relocates and moves the payload) corrupts it and it segfaults on
+  # startup. autoPatchelfHook patches the interpreter/libs without disturbing the
+  # payload; dontStrip keeps the appended bundle intact. Darwin is self-contained
+  # Mach-O and needs neither.
+  dontStrip = true;
 
   installPhase = ''
     runHook preInstall
 
     install -Dm755 claude $out/lib/claude-code/claude
-  ''
-  # Linux binaries are glibc-linked ELF executables and must be patched to find
-  # the Nix loader + libc. Darwin binaries are self-contained Mach-O and need no
-  # patching.
-  + lib.optionalString stdenv.hostPlatform.isLinux ''
-    patchelf \
-      --set-interpreter "$(cat ${stdenv.cc}/nix-support/dynamic-linker)" \
-      --set-rpath "${lib.makeLibraryPath [ glibc ]}" \
-      $out/lib/claude-code/claude
-  ''
-  + ''
+
     makeWrapper $out/lib/claude-code/claude $out/bin/claude \
       --set DISABLE_AUTOUPDATER 1 \
       --set-default FORCE_AUTOUPDATE_PLUGINS 1 \
