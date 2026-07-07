@@ -29,6 +29,12 @@
               rev = "49879ba0d6997709765caa53d9029b2c3551f1eb";
               hash = "sha256-NHWjFOfeHE0GpiknnwSQ6Kqk5mxUNeUcoB+YT8gdgpo=";
             };
+            # nixpkgs' sdl3 postPatch does a --replace-fail on a testrwlock line
+            # (NONINTERACTIVE_TIMEOUT 20) that this pinned main-branch source has
+            # since changed, breaking patchPhase. That substitution only runs under
+            # doCheck, and SDL's own test suite is irrelevant for this override, so
+            # skip checks to stay robust against upstream test/CMakeLists.txt drift.
+            doCheck = false;
           });
         };
       };

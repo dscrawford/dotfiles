@@ -23,11 +23,20 @@
 
   # The xdg.portal.wlr module hardcodes pkgs.xdg-desktop-portal-wlr (no package
   # option), so the duplicate-frame patch must be applied via overlay.
-  # TODO: Remove patch once xdg-desktop-portal-wlr > 0.8.2 is released
+  # Pinned to 0.8.2: the 0.8.3 release stalls screencasts after the first frame
+  # (upstream release notes warn about this; PR #380 was closed unmerged).
+  # TODO: Unpin and drop patch once a fixed release (> 0.8.3) lands.
   # PR: https://github.com/emersion/xdg-desktop-portal-wlr/pull/380
   nixpkgs.overlays = [
     (final: prev: {
       xdg-desktop-portal-wlr = prev.xdg-desktop-portal-wlr.overrideAttrs (old: {
+        version = "0.8.2";
+        src = prev.fetchFromGitHub {
+          owner = "emersion";
+          repo = "xdg-desktop-portal-wlr";
+          rev = "v0.8.2";
+          hash = "sha256-HITf/hgiASWvn/z49mzS8IS1vuyXwdk1JiAOOHRSQMo=";
+        };
         patches = (old.patches or []) ++ [
           ../../patches/xdg-desktop-portal-wlr-fix-duplicate-frame.patch
         ];
