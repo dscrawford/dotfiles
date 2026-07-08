@@ -65,6 +65,43 @@
         ;; Rebind cycle-session-mode from C-<tab> (conflicts with Emacs) to C-M-<tab>
         (keymap-set agent-shell-mode-map "C-M-<tab>" #'agent-shell-cycle-session-mode)
         (keymap-unset agent-shell-mode-map "C-<tab>")
+        ;; ACP model-switch shim (C-c C-v). claude-agent-acp implements
+        ;; session/set_config_option {configId:"model"} but not session/set_model
+        ;; (rejected with -32601, which left model switches hanging). Upstream
+        ;; agent-shell only sends set_config_option when a "model"-category config
+        ;; option is present in session state; when it's absent it falls back to
+        ;; the rejected set_model. Current pins do advertise the option, so this
+        ;; advice normally defers to upstream -- it reroutes only when the option
+        ;; is missing from state.
+        (defun my/agent-shell-set-model-via-config-option (orig-fn &rest args)
+          (if (agent-shell--config-option-by-category (agent-shell--state) "model")
+              (apply orig-fn args)
+            (let ((model-id (plist-get args :model-id))
+                  (on-success (plist-get args :on-success))
+                  (on-failure (plist-get args :on-failure)))
+              (agent-shell--set-session-config-option
+               :config-id "model"
+               :value model-id
+               :on-success (lambda ()
+                             (map-put! (map-elt (agent-shell--state) :session)
+                                       :model-id model-id)
+                             (message "Model: %s" model-id)
+                             (when on-success (funcall on-success)))
+               ;; Only method-not-found means "agent wants set_model instead"
+               ;; (e.g. a non-Claude agent): retry via the upstream path (orig-fn
+               ;; is the un-advised function, so no loop). Other errors (invalid
+               ;; model, dead session) surface instead of being re-sent. acp.el
+               ;; runs this callback in the shell buffer, so buffer-local state
+               ;; is intact.
+               :on-failure (lambda (acp-error raw-message)
+                             (cond ((equal -32601 (map-elt acp-error 'code))
+                                    (apply orig-fn args))
+                                   (on-failure
+                                    (funcall on-failure acp-error raw-message))
+                                   (t
+                                    (message "Failed to change model: %s" acp-error))))))))
+        (advice-add 'agent-shell--config-option-set-model-id :around
+                    #'my/agent-shell-set-model-via-config-option)
         ;; Wayland (Linux): wl-paste
         (when (executable-find "wl-paste")
           (push (list (cons :command "wl-paste")
