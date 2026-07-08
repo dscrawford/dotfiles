@@ -35,6 +35,16 @@ in
   programs.emacs = {
     enable = true;
     package = if isDarwin then pkgs.emacs-unstable else pkgs.emacs-pgtk;
+    # elpa.gnu.org regenerated org-9.8.6.tar in place, so the hash pinned in
+    # nixpkgs no longer matches; drop this once nixpkgs catches up.
+    overrides = final: prev: {
+      org = prev.org.overrideAttrs (old: {
+        src = pkgs.fetchurl {
+          url = "https://elpa.gnu.org/packages/org-9.8.6.tar";
+          hash = "sha256-QyrhwAW55Y4vtgMbIjSQOkNr+8uTSmXdumi2qc8dTIE=";
+        };
+      });
+    };
     extraPackages = epkgs: import ./emacs/packages.nix { inherit pkgs epkgs; };
     # Trailing newline matches the original ''...'' block, which ended with one.
     extraConfig = (lib.concatStringsSep "\n" sections) + "\n";
