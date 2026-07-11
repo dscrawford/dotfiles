@@ -28,6 +28,8 @@ let
     ""
     (chunk (import ./emacs/misc.nix { inherit pkgs lib config bashPath; }))
     ""
+    (chunk (import ./emacs/markdown.nix { inherit pkgs; }))
+    ""
     (chunk (import ./emacs/lsp.nix { inherit pkgs lib config; }))
   ];
 in

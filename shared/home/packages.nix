@@ -27,6 +27,7 @@ in
     cacert
     sops
     lynx
+    pandoc  # Markdown/document conversion (markdown-mode preview, ox-pandoc)
 
     # Python
     (python3.withPackages (ps: with ps; [
