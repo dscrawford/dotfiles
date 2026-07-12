@@ -17,7 +17,6 @@ let
     # everything-claude-code
     "everything-claude-code:api-design"
     "everything-claude-code:coding-standards"
-    "everything-claude-code:dmux-workflows"
     "everything-claude-code:e2e-testing"
     "everything-claude-code:investor-materials"
     "everything-claude-code:investor-outreach"

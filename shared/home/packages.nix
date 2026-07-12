@@ -93,7 +93,6 @@ in
     gemini-cli
     github-copilot-cli
     nodejs  # Provides npx for keegancsmith/emacs-mcp-server and copilot.el
-    (pkgs.callPackage ../../pkgs/dmux {})  # tmux pane manager for parallel AI agent sessions (dmux-workflows skill)
 
     # Business / Productivity CLIs
     jira-cli-go                                        # Jira CLI (Go)
