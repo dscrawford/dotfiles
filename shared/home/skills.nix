@@ -7,6 +7,7 @@
 let
   # Whitelist of skills to install (all others are ignored)
   enabledLocalSkills = [
+    "deep-research"
     "design-doc"
     "make-envrc"
     "update-readme"
@@ -16,7 +17,6 @@ let
     # everything-claude-code
     "everything-claude-code:api-design"
     "everything-claude-code:coding-standards"
-    "everything-claude-code:deep-research"
     "everything-claude-code:e2e-testing"
     "everything-claude-code:fal-ai-media"
     "everything-claude-code:investor-materials"

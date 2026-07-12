@@ -13,18 +13,17 @@
         command = "ruflo";
         args = [ "mcp" "start" ];
       };
-      # Research MCP servers for the deep-research skill. API keys are read
-      # from the environment (exported from sops by secretExportLines) via
-      # Claude Code's ${VAR} expansion, so no secrets land in the Nix store.
-      firecrawl = {
+      # Free multi-engine web search + content extraction for the
+      # deep-research skill (replaces the paid firecrawl/exa servers).
+      # No API key; scrapes public engine results, so bursts can get blocked.
+      web-search = {
         command = "npx";
-        args = [ "-y" "firecrawl-mcp" ];
-        env.FIRECRAWL_API_KEY = "\${FIRECRAWL_API_KEY}";
-      };
-      exa = {
-        command = "npx";
-        args = [ "-y" "exa-mcp-server" ];
-        env.EXA_API_KEY = "\${EXA_API_KEY}";
+        args = [ "-y" "open-websearch@latest" ];
+        env = {
+          MODE = "stdio";
+          DEFAULT_SEARCH_ENGINE = "duckduckgo";
+          ALLOWED_SEARCH_ENGINES = "duckduckgo,bing,brave,startpage";
+        };
       };
     };
   };

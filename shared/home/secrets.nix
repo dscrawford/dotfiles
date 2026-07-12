@@ -15,9 +15,6 @@ let
     # AI / IDE
     # { secret = "anthropic_api_key"; env = "ANTHROPIC_API_KEY"; desc = "Anthropic API key for Claude Code and Claude API access"; }
     { secret = "gemini_api_key";    env = "GEMINI_API_KEY";    desc = "Google Gemini API key for Gemini CLI"; }
-    # Research MCP servers (firecrawl + exa) for the deep-research skill
-    { secret = "firecrawl_api_key"; env = "FIRECRAWL_API_KEY"; desc = "Firecrawl API key for the firecrawl MCP server (web scrape/search/crawl)"; }
-    { secret = "exa_api_key";       env = "EXA_API_KEY";       desc = "Exa API key for the exa MCP server (web/research search)"; }
     # Jira — issue tracking and project management (jira-cli-go)
     { secret = "jira_api_token";    env = "JIRA_API_TOKEN";    desc = "Atlassian API token for jira-cli (issue create/view/search)"; }
     # Confluence — wiki and documentation (confluence-cli)
