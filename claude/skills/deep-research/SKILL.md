@@ -22,7 +22,7 @@ Produce thorough, cited research reports from multiple web sources using only fr
 | Primary search | `WebSearch` (built-in) | Included with Claude Code, no key |
 | Second-engine search | `search` from the **web-search** MCP (open-websearch) | Multi-engine (DuckDuckGo, Bing, Brave, Startpage), no key; pass `engines` to pick one |
 | Read a page (guided) | `WebFetch` (built-in) | Fetches URL, answers a prompt against it |
-| Read a page (raw markdown) | Jina Reader via Bash: `curl -s "https://r.jina.ai/<url>"` | Free without a key (~20 req/min); renders JS-heavy pages; add `-H "X-No-Cache: true"` to skip stale snapshots |
+| Read a page (raw markdown) | Jina Reader via Bash: `curl -s --max-time 30 "https://r.jina.ai/<url>"` | Free without a key (~20 req/min); renders JS-heavy pages (can take ~10s uncached — never omit `--max-time`); add `-H "X-No-Cache: true"` to skip stale snapshots |
 | Content extraction fallback | `fetchWebContent` from the web-search MCP | When WebFetch fails or truncates |
 | GitHub research | `gh search repos`, `gh search code`, `gh api` | Authenticated CLI, no scraping needed |
 
@@ -142,6 +142,11 @@ Launch 3 research agents in parallel:
 ```
 
 Each agent searches, reads sources, and returns findings with URLs. The main session synthesizes into the final report. For contested or high-stakes claims, add a verification agent prompted to REFUTE each key claim by finding contradicting sources — drop or flag claims that don't survive.
+
+**Concurrency limits (important — the free engines rate-limit bursts):**
+- Cap parallel research agents at 3.
+- Subagents use built-in `WebSearch`/`WebFetch` only. Reserve the web-search MCP and Jina Reader for the main session, which can pace its own calls — N agents hitting the same scraped engines simultaneously gets everyone blocked, and a blocked scrape stalls until timeout.
+- If an MCP search or Jina fetch fails or hangs, don't retry immediately — fall back to the built-in tool for that query and come back later.
 
 ## Quality Rules
 

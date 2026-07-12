@@ -19,7 +19,10 @@ in
     ./home/packages.nix
     ./home/skills.nix
     ./home/secrets.nix
-    ./home/mcp-servers.nix
+    # MCP servers are configured in two real places, not here:
+    # Emacs sessions get them from agent-shell-mcp-servers (emacs/agent-shell.nix);
+    # the claude CLI reads user scope in ~/.claude.json (`claude mcp add -s user`).
+    # A previous mcp-servers.nix wrote ~/.claude/.mcp.json, which nothing reads.
     ./home/bash.nix
     ./home/tmux.nix
     ./home/git.nix

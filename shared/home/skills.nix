@@ -7,6 +7,7 @@
 let
   # Whitelist of skills to install (all others are ignored)
   enabledLocalSkills = [
+    "agentize"
     "deep-research"
     "design-doc"
     "make-envrc"

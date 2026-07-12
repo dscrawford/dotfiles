@@ -44,11 +44,25 @@
       (setq agent-shell-preferred-agent-config 'anthropic-claude)
       ;; Show color-coded context window usage in the header
       (setq agent-shell-show-context-usage-indicator t)
-      ;; Pass ruflo MCP server to agent-shell so claude gets ruflo tools inside Emacs
+      ;; MCP servers passed to claude via ACP. agent-shell sessions do NOT read
+      ;; ~/.claude/.mcp.json or `claude mcp` user scope — this list is the only
+      ;; source, so keep it in sync with shared/home/mcp-servers.nix.
       (setq agent-shell-mcp-servers
             '(((name . "ruflo")
                (command . "ruflo")
-               (args . ("mcp" "start")))))
+               (args . ("mcp" "start")))
+              ((name . "emacs-mcp")
+               (command . "npx")
+               (args . ("-y" "@keegancsmith/emacs-mcp-server")))
+              ;; Free multi-engine web search for the deep-research skill.
+              ;; Version pinned so npx serves it from cache instead of
+              ;; re-checking the registry on every session start.
+              ((name . "web-search")
+               (command . "npx")
+               (args . ("-y" "open-websearch@1.2.0"))
+               (env . (((name . "MODE") (value . "stdio"))
+                       ((name . "DEFAULT_SEARCH_ENGINE") (value . "duckduckgo"))
+                       ((name . "ALLOWED_SEARCH_ENGINES") (value . "duckduckgo,bing,brave,startpage")))))))
       ;; Register agent-shell sessions with ruflo for orchestration
       (defun my/ruflo-register-session ()
         "Register the current agent-shell session with ruflo for coordination."
