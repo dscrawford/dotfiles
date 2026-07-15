@@ -130,16 +130,6 @@ in
     mpv
     pavucontrol
     alacritty
-    (pkgs.symlinkJoin {
-      name = "vesktop-wrapped";
-      paths = [ pkgs.vesktop ];
-      buildInputs = [ pkgs.makeWrapper ];
-      postBuild = ''
-        wrapProgram $out/bin/vesktop \
-          --append-flags "--disable-features=VaapiVideoEncoder,AcceleratedVideoEncoder" \
-          --set LIBVA_DRIVER_NAME none
-      '';
-    })
     discord
     fastfetch
     jetbrains.pycharm-oss
