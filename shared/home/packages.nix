@@ -128,7 +128,7 @@ in
     gimp
     vlc
     mpv
-    pavucontrol
+    pwvucontrol # PipeWire-native mixer with per-app volume (pavucontrol successor)
     alacritty
     discord
     fastfetch
