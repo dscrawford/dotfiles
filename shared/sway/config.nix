@@ -177,8 +177,9 @@
     # Applications
     bindsym Control+Shift+Mod1+f exec firefox
 
-    # Volume mixer (waybar on-click): compact floating popup with per-app sliders
-    for_window [app_id="com.saivert.pwvucontrol"] floating enable, resize set 700 400, move position cursor, move down 220
+    # Volume mixer (waybar on-click): dropdown-style panel with per-app sliders.
+    # Size must match the anchor math in the waybar volume-dropdown script.
+    for_window [app_id="com.saivert.pwvucontrol"] floating enable, resize set 520 400
 
     # Float popup/dialog windows automatically
     for_window [window_role="pop-up"] floating enable

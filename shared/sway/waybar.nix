@@ -22,6 +22,38 @@ let
     echo "{\"percentage\": $pct, \"tooltip\": \"/ ''${used/ / of }\"}"
   '';
 
+  # Dropdown-style volume mixer: toggle pwvucontrol anchored to the top-right
+  # of the focused workspace, just under the bar. Size must match the
+  # for_window rule for app_id com.saivert.pwvucontrol in sway/config.nix.
+  volume-dropdown = pkgs.writeShellScript "waybar-volume-dropdown" ''
+    app_id="com.saivert.pwvucontrol"
+    has_window() {
+      swaymsg -t get_tree | ${pkgs.jq}/bin/jq -e --arg a "$app_id" \
+        '[recurse(.nodes[]?, .floating_nodes[]?) | select(.app_id? == $a)]
+         | length > 0' >/dev/null
+    }
+    if has_window; then
+      swaymsg "[app_id=$app_id] kill"
+      exit 0
+    fi
+    ${pkgs.pwvucontrol}/bin/pwvucontrol &
+    # Wait for the window and grab the width of the workspace it landed on
+    # (not the focused one — they can differ on multi-monitor)
+    for _ in $(seq 50); do
+      ww=$(swaymsg -t get_tree | ${pkgs.jq}/bin/jq --arg a "$app_id" '
+        [recurse(.nodes[]?) | select(.type? == "workspace")
+         | select([recurse(.nodes[]?, .floating_nodes[]?)
+                   | select(.app_id? == $a)] | length > 0)
+        ][0].rect.width // empty')
+      [ -n "$ww" ] && break
+      sleep 0.1
+    done
+    [ -n "$ww" ] || exit 1
+    # move position is workspace-relative, and the workspace rect already
+    # excludes the bar — so anchor to the top-right with a small margin
+    swaymsg "[app_id=$app_id] move position $((ww - 528)) 4"
+  '';
+
   gpu-status = pkgs.writeShellScript "waybar-gpu" ''
     pct=$(nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits 2>/dev/null)
     if [ -z "$pct" ]; then
@@ -80,7 +112,7 @@ in
       format-muted = "MUTED";
       format-icons.default = bars;
       tooltip-format = "{desc} {volume}%";
-      on-click = "pwvucontrol";
+      on-click = volume-dropdown;
     };
     # Only rendered on machines with a battery; waybar skips the module
     # at startup when none is present.
