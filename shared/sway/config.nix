@@ -25,6 +25,7 @@
     exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP
     exec mako
     exec blueman-applet
+    exec easyeffects --hide-window
 
     # Monitor layout (managed by nwg-displays)
     include ~/.config/sway/outputs

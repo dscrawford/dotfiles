@@ -82,7 +82,7 @@
       local = mkLocal {
         hostname = "nixos";
         username = "daniel";
-        homeModules = [ ./shared/home.nix ./shared/sway.nix ./shared/gaming.nix ];
+        homeModules = [ ./shared/home.nix ./shared/sway.nix ./shared/gaming.nix ./shared/easyeffects.nix ];
         extraModules = [
           # VR streaming for Quest 3 (WiVRn + ALVR)
           ./shared/vr.nix
