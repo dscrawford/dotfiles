@@ -60,7 +60,6 @@
           wrapProgram $out/bin/jellyfin-desktop --set QT_QPA_PLATFORM xcb
         '';
       })
-      rnnoise-plugin
     ];
     variables = {
       GSETTINGS_SCHEMA_DIR = "${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}/glib-2.0/schemas";
