@@ -6,12 +6,12 @@
 let
   inherit (pkgs) lib;
 
-  # 11-step ASCII load bar: [----------] .. [##########].
+  # 11-step unicode load bar: ░░░░░░░░░░ .. ██████████.
   # Used as format-icons so waybar picks the step matching the percentage.
   barWidth = 10;
   bars = builtins.genList
-    (i: "[" + lib.concatStrings (builtins.genList (_: "#") i)
-       + lib.concatStrings (builtins.genList (_: "-") (barWidth - i)) + "]")
+    (i: lib.concatStrings (builtins.genList (_: "█") i)
+      + lib.concatStrings (builtins.genList (_: "░") (barWidth - i)))
     (barWidth + 1);
 
   # disk and the GPU exec lack format-icons support, so these scripts emit
