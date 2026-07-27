@@ -17,6 +17,7 @@ in
   imports = [
     ./emacs.nix
     ./home/packages.nix
+    ./home/diagrams.nix
     ./home/skills.nix
     ./home/secrets.nix
     # MCP servers are configured in two real places, not here:

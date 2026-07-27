@@ -10,6 +10,7 @@ let
     "agentize"
     "deep-research"
     "design-doc"
+    "diagram"
     "make-envrc"
     "update-readme"
   ];
