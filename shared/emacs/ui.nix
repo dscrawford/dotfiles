@@ -28,25 +28,35 @@
           (file-name-nondirectory (directory-file-name (project-root project)))
         (file-name-nondirectory (directory-file-name default-directory)))))
   (setq tab-bar-tab-name-function #'my/tab-bar-name)
-  (require 'ultra-scroll)
-  (ultra-scroll-mode 1)
+  (my/guard "ultra-scroll"
+    (require 'ultra-scroll)
+    (ultra-scroll-mode 1))
 
-  ;; PDF support
-  (pdf-tools-install :no-query)
+  ;; PDF support, deferred until a PDF is actually opened — loading pdf-tools
+  ;; eagerly cost ~150ms and 34 features per start, and we run one Emacs per
+  ;; tmux pane. pdf-loader-install is autoloaded, so this needs no require.
+  ;; Args are (no-query-p skip-dependencies-p no-error-p): don't prompt, and
+  ;; don't signal. Nix pre-builds epdfinfo but ships no C sources, so
+  ;; pdf-tools' verify-or-rebuild fallback can only fail — deferring means it
+  ;; fails when opening a PDF rather than taking out the rest of init.
+  (my/guard "pdf-tools" (pdf-loader-install t nil t))
 
-  (require 'doom-modeline)
-  (doom-modeline-mode 1)
-  (setq doom-modeline-icon t)
+  (my/guard "doom-modeline"
+    (require 'doom-modeline)
+    (doom-modeline-mode 1)
+    (setq doom-modeline-icon t))
 
-  (require 'which-key)
-  (which-key-mode 1)
-  (setq which-key-idle-delay 0.5)
+  (my/guard "which-key"
+    (require 'which-key)
+    (which-key-mode 1)
+    (setq which-key-idle-delay 0.5))
 
-  (require 'envrc)
-  (envrc-global-mode 1)
-  ;; envrc: debounce re-exports when switching buffers rapidly
-  (setq envrc-none-lighter nil   ; hide "none" in modeline for non-direnv buffers
-        envrc-show-summary-in-minibuffer nil) ; reduce minibuffer noise
+  (my/guard "envrc"
+    (require 'envrc)
+    (envrc-global-mode 1)
+    ;; envrc: debounce re-exports when switching buffers rapidly
+    (setq envrc-none-lighter nil   ; hide "none" in modeline for non-direnv buffers
+          envrc-show-summary-in-minibuffer nil)) ; reduce minibuffer noise
 
   ;; Performance optimizations
   (setq gc-cons-threshold (* 100 1024 1024)   ; 100MB - reduce GC pauses

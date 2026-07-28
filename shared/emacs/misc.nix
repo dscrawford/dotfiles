@@ -58,13 +58,14 @@
 
   ;; On macOS GUI, inherit PATH from login shell (GUI apps don't get shell PATH)
   (when (and (eq system-type 'darwin) (display-graphic-p))
-    (require 'exec-path-from-shell)
-    (setq exec-path-from-shell-shell-name "${bashPath}")
-    (exec-path-from-shell-initialize))
+    (my/guard "exec-path-from-shell"
+      (require 'exec-path-from-shell)
+      (setq exec-path-from-shell-shell-name "${bashPath}")
+      (exec-path-from-shell-initialize)))
 
   ;; Eat terminal (pure elisp, fast, less flicker than vterm)
   ;; C-c t spawns a new eat terminal, C-c r lists existing eat sessions
-  (require 'eat)
+  (my/guard "eat" (require 'eat))
   (setq eat-shell "${bashPath}")
 
   (advice-add 'eat-emacs-mode :after (lambda (&rest _) (setq-local cursor-type 'box)))
@@ -77,12 +78,6 @@
           (switch-to-buffer (completing-read "Select eat session: "
                                              (mapcar #'buffer-name eat-buffers) nil t))
         (message "No eat sessions open")))))
-  ;; Send modifier+arrow keys to the terminal in eat semi-char mode.
-  ;; By default these fall through to global-map (left-word etc.),
-  ;; but eat resets cursor to match terminal state, causing visual glitch.
-  (dolist (key '("M-<left>" "M-<right>" "M-<up>" "M-<down>"
-                 "C-<left>" "C-<right>" "C-<up>" "C-<down>"))
-    (define-key eat-semi-char-mode-map (kbd key) #'eat-self-input))
   ;; Bracketed paste for eat — wrap yanked text so shell treats it as one input
   (defun my/eat-yank-with-bracketed-paste ()
     "Yank into eat using bracketed paste so multiline text isn't executed line-by-line."
@@ -91,21 +86,30 @@
       (eat-term-send-string eat-terminal "\e[200~")
       (eat-term-send-string eat-terminal text)
       (eat-term-send-string eat-terminal "\e[201~")))
+  ;; All eat-semi-char-mode-map tweaks, applied whenever eat loads.
   (with-eval-after-load 'eat
-    (define-key eat-semi-char-mode-map (kbd "C-c C-y") #'my/eat-yank-with-bracketed-paste))
+    (define-key eat-semi-char-mode-map (kbd "C-c C-y") #'my/eat-yank-with-bracketed-paste)
+    ;; Send modifier+arrow keys to the terminal rather than letting them fall
+    ;; through to global-map (left-word etc.) — eat resets the cursor to match
+    ;; terminal state, causing a visual glitch.
+    (dolist (key '("M-<left>" "M-<right>" "M-<up>" "M-<down>"
+                   "C-<left>" "C-<right>" "C-<up>" "C-<down>"))
+      (define-key eat-semi-char-mode-map (kbd key) #'eat-self-input)))
 
   (add-hook 'eshell-load-hook #'eat-eshell-mode)
   (add-hook 'eshell-load-hook #'eat-eshell-visual-command-mode)
 
-  (require 'magit)
-  (global-set-key (kbd "C-c g") 'magit-status)
-  ;; Open magit in the current window instead of splitting; diffs still get
-  ;; their own window so they can be viewed alongside the status buffer.
-  (setq magit-display-buffer-function
-        #'magit-display-buffer-same-window-except-diff-v1)
+  (my/guard "magit"
+    (require 'magit)
+    (global-set-key (kbd "C-c g") 'magit-status)
+    ;; Open magit in the current window instead of splitting; diffs still get
+    ;; their own window so they can be viewed alongside the status buffer.
+    (setq magit-display-buffer-function
+          #'magit-display-buffer-same-window-except-diff-v1))
 
-  (setq xclip-method (if (eq system-type 'darwin) 'pbpaste 'wl-copy))
-  (xclip-mode 1)
+  (my/guard "xclip"
+    (setq xclip-method (if (eq system-type 'darwin) 'pbpaste 'wl-copy))
+    (xclip-mode 1))
   (setq select-enable-clipboard t)
   (unless (eq system-type 'darwin)
     (setq select-enable-primary t))

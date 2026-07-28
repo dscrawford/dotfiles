@@ -23,37 +23,39 @@
     (add-to-list 'eglot-server-programs '(rust-mode . ("rust-analyzer")))
     (add-to-list 'eglot-server-programs '((c-mode c++-mode) . ("clangd"))))
 
-  (require 'dap-mode)
-  (require 'dap-python)
-  (setq dap-python-debugger 'debugpy
-        dap-python-executable "python3")
-  (dap-auto-configure-mode 1)
+  (my/guard "dap-mode"
+    (require 'dap-mode)
+    (require 'dap-python)
+    (setq dap-python-debugger 'debugpy
+          dap-python-executable "python3")
+    (dap-auto-configure-mode 1)
 
-  ;; Debug keybindings — C-c d prefix
-  (dolist (bind '(("d" . dap-debug)
-                 ("b" . dap-breakpoint-toggle)
-                 ("n" . dap-next)
-                 ("i" . dap-step-in)
-                 ("o" . dap-step-out)
-                 ("c" . dap-continue)
-                 ("r" . dap-ui-repl)
-                 ("q" . dap-disconnect)
-                 ("e" . dap-eval-thing-at-point)))
-    (global-set-key (kbd (format "C-c d %s" (car bind))) (cdr bind)))
+    ;; Debug keybindings — C-c d prefix
+    (dolist (bind '(("d" . dap-debug)
+                   ("b" . dap-breakpoint-toggle)
+                   ("n" . dap-next)
+                   ("i" . dap-step-in)
+                   ("o" . dap-step-out)
+                   ("c" . dap-continue)
+                   ("r" . dap-ui-repl)
+                   ("q" . dap-disconnect)
+                   ("e" . dap-eval-thing-at-point)))
+      (global-set-key (kbd (format "C-c d %s" (car bind))) (cdr bind)))
 
-  ;; Default debug template for Python files
-  (dap-register-debug-template "Python :: Run Current File"
-    (list :type "python"
-          :args ""
-          :cwd nil
-          :program nil
-          :request "launch"
-          :name "Python :: Run Current File"))
+    ;; Default debug template for Python files
+    (dap-register-debug-template "Python :: Run Current File"
+      (list :type "python"
+            :args ""
+            :cwd nil
+            :program nil
+            :request "launch"
+            :name "Python :: Run Current File")))
 
-  (setq corfu-auto t
-        corfu-auto-delay 0.2
-        corfu-auto-prefix 2)
-  (global-corfu-mode)
+  (my/guard "corfu"
+    (setq corfu-auto t
+          corfu-auto-delay 0.2
+          corfu-auto-prefix 2)
+    (global-corfu-mode))
 
   (with-eval-after-load 'flycheck
     (setq flycheck-checker-error-threshold 400))

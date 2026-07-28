@@ -16,6 +16,11 @@ let
   # matching the original single-string layout byte-for-byte.
   chunk = s: lib.removeSuffix "\n" s;
 
+  # Emitted ahead of every section: defines the my/guard macro the sections use.
+  # A macro is only expanded for forms that follow its definition in the same
+  # file, so this cannot be an ordinary (reorderable) entry in `sections'.
+  prologue = chunk (import ./emacs/guard.nix { inherit pkgs lib config; });
+
   # Empty string entries reproduce the blank lines that separated sections in
   # the original file; sections that were directly adjacent have no "" between.
   sections = [
@@ -49,6 +54,6 @@ in
     };
     extraPackages = epkgs: import ./emacs/packages.nix { inherit pkgs epkgs; };
     # Trailing newline matches the original ''...'' block, which ended with one.
-    extraConfig = (lib.concatStringsSep "\n" sections) + "\n";
+    extraConfig = prologue + "\n\n" + (lib.concatStringsSep "\n" sections) + "\n";
   };
 }
