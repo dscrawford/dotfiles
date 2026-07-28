@@ -22,7 +22,7 @@ let
     (chunk (import ./emacs/ui.nix { inherit pkgs lib config; }))
     ""
     (chunk agentShell.copilotCcide)
-    (chunk (import ./emacs/jupyter.nix { inherit pkgs lib config; }))
+    (chunk (import ./emacs/python.nix { inherit pkgs lib config; }))
     ""
     (chunk agentShell.agentShell)
     ""

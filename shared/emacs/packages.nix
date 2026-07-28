@@ -41,7 +41,6 @@ with epkgs; [
   eat
   exec-path-from-shell
   dap-mode
-  ein
   copilot
   custom.claude-code-ide
   custom.acp
