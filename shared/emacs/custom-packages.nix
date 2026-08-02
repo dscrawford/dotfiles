@@ -67,14 +67,16 @@ in
   #   - agents in one project all render the same short name, so the sidebar
   #     now shows agent-shell's `(:session :title)' under each row
   #   - the sidebar groups agents under collapsible project headers
+  #   - the 2s refresh restored point by character offset and never restored
+  #     window point, so the cursor wandered and appeared to vanish
   #   - README binds into `agent-shell-command-map', which has never existed
   agent-shell-workspace = mkEmacsPackage {
     pname = "agent-shell-workspace";
     version = "0.1.0-unstable-2026-08-02";
     owner = "dscrawford";
     repo = "agent-shell-workspace";
-    rev = "9fc4ad08e08f5b127dc5faf93e5b6feb32f11536";
-    hash = "sha256-oZoMKcDq75epYLVXnDq7KdL2w03FROvdM1YR2qPjwKM=";
+    rev = "1e07062b9442791b0033350ebb716317faa1b106";
+    hash = "sha256-ohxS5mleogMDWxVhSUYODUvMZ93rdXm5FOTeK/rdB/Y=";
     packageRequires = [ agent-shell ];
   };
 }
