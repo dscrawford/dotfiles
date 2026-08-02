@@ -72,14 +72,17 @@ in
   #   - the sidebar crashed on any tty frame: a terminal reports its
   #     background as the string "unspecified-bg", which is non-nil but
   #     `color-values' cannot resolve, so the colour blend signalled
+  #   - collapsing a project group killed sidebar navigation: only agent
+  #     rows were navigation stops, so a folded header could not be
+  #     reached, and folding every group left n/p with nowhere to go
   #   - README binds into `agent-shell-command-map', which has never existed
   agent-shell-workspace = mkEmacsPackage {
     pname = "agent-shell-workspace";
     version = "0.1.0-unstable-2026-08-02";
     owner = "dscrawford";
     repo = "agent-shell-workspace";
-    rev = "c8de8a7f63c0eb928aa6a53e911eb05263a30271";
-    hash = "sha256-BmCcvDD6guwMeEAvhFNhNBBXBYIXHqoj+VKwaywoJt4=";
+    rev = "42e75a067acc1da3ffd561a39f8ed2987dcce4db";
+    hash = "sha256-cA/GfnU9S8rbEpZEfEtHY75mZ4mT3G7UK6kvaN7pG3g=";
     packageRequires = [ agent-shell ];
   };
 }
