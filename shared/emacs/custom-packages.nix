@@ -69,14 +69,17 @@ in
   #   - the sidebar groups agents under collapsible project headers
   #   - the 2s refresh restored point by character offset and never restored
   #     window point, so the cursor wandered and appeared to vanish
+  #   - the sidebar crashed on any tty frame: a terminal reports its
+  #     background as the string "unspecified-bg", which is non-nil but
+  #     `color-values' cannot resolve, so the colour blend signalled
   #   - README binds into `agent-shell-command-map', which has never existed
   agent-shell-workspace = mkEmacsPackage {
     pname = "agent-shell-workspace";
     version = "0.1.0-unstable-2026-08-02";
     owner = "dscrawford";
     repo = "agent-shell-workspace";
-    rev = "e755e7c9f9b855965aa611abd7cbd70252519d6d";
-    hash = "sha256-ZkK/R9GHTyZaL/of1AaSAtunWZj6zoz6EAu/7TdW6JU=";
+    rev = "d3a183fc38b6119707c34172393e9829f16280a5";
+    hash = "sha256-0xE+neFFURJ94Re10KCti+5KUYUARDV+V9HP8DhXX1o=";
     packageRequires = [ agent-shell ];
   };
 }
