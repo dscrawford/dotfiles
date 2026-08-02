@@ -78,8 +78,8 @@ in
     version = "0.1.0-unstable-2026-08-02";
     owner = "dscrawford";
     repo = "agent-shell-workspace";
-    rev = "d3a183fc38b6119707c34172393e9829f16280a5";
-    hash = "sha256-0xE+neFFURJ94Re10KCti+5KUYUARDV+V9HP8DhXX1o=";
+    rev = "c8de8a7f63c0eb928aa6a53e911eb05263a30271";
+    hash = "sha256-BmCcvDD6guwMeEAvhFNhNBBXBYIXHqoj+VKwaywoJt4=";
     packageRequires = [ agent-shell ];
   };
 }
