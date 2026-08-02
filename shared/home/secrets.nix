@@ -13,7 +13,6 @@ let
   # Secrets with empty values in sops YAML are silently skipped at shell init.
   secretEnvVars = [
     # AI / IDE
-    # { secret = "anthropic_api_key"; env = "ANTHROPIC_API_KEY"; desc = "Anthropic API key for Claude Code and Claude API access"; }
     { secret = "gemini_api_key";    env = "GEMINI_API_KEY";    desc = "Google Gemini API key for Gemini CLI"; }
     # GitHub — gh CLI and API access. Exported under both names on purpose:
     # gh reads GH_TOKEN first and falls back to GITHUB_TOKEN, but most other
