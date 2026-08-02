@@ -49,6 +49,13 @@
       (setq agent-shell-preferred-agent-config 'anthropic-claude)
       ;; Show color-coded context window usage in the header
       (setq agent-shell-show-context-usage-indicator t)
+      ;; Dedicated tab-bar workspace for agent-shell buffers: "Agents" tab with
+      ;; a status sidebar, grid tiling, and buffer isolation (non-agent buffers
+      ;; bounce back to the editing tab). Upstream's README binds the toggle via
+      ;; `agent-shell-command-map', which does not exist in agent-shell 0.63.6,
+      ;; so bind globally next to C-c s instead. C-c w is taken by windresize.
+      (my/guard "agent-shell-workspace" (require 'agent-shell-workspace))
+      (global-set-key (kbd "C-c S") 'agent-shell-workspace-toggle)
       ;; MCP servers passed to claude via ACP. agent-shell sessions do NOT read
       ;; ~/.claude/.mcp.json or `claude mcp` user scope — this list is the only
       ;; source, so keep it in sync with shared/home/mcp-servers.nix.

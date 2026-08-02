@@ -28,9 +28,21 @@ let
     rev = "v0.93.5";
     hash = "sha256-G7hU6tm4nFau9/f8I9kn7gQBjS80XymvYdHI8OAocK0=";
   };
+
+  # In the let block (not the output set) so agent-shell-workspace can depend
+  # on it — attribute sets are not self-referential.
+  agent-shell = mkEmacsPackage {
+    pname = "agent-shell";
+    version = "0.63.6";
+    owner = "xenodium";
+    repo = "agent-shell";
+    rev = "v0.63.6";
+    hash = "sha256-TiTPiOPgRRCh9o+sc9s2pWwuAwsSyPn/rAEY1MCN9jM=";
+    packageRequires = [ shell-maker acp ];
+  };
 in
 {
-  inherit mkEmacsPackage acp shell-maker;
+  inherit mkEmacsPackage acp shell-maker agent-shell;
 
   claude-code-ide = mkEmacsPackage {
     pname = "claude-code-ide";
@@ -42,13 +54,15 @@ in
     packageRequires = with epkgs; [ websocket transient web-server ];
   };
 
-  agent-shell = mkEmacsPackage {
-    pname = "agent-shell";
-    version = "0.63.6";
-    owner = "xenodium";
-    repo = "agent-shell";
-    rev = "v0.63.6";
-    hash = "sha256-TiTPiOPgRRCh9o+sc9s2pWwuAwsSyPn/rAEY1MCN9jM=";
-    packageRequires = [ shell-maker acp ];
+  # Tab-bar workspace for agent-shell: sidebar, tiling, buffer isolation.
+  # Untagged upstream, so pinned to a commit.
+  agent-shell-workspace = mkEmacsPackage {
+    pname = "agent-shell-workspace";
+    version = "0.1.0-unstable-2026-03-19";
+    owner = "gveres";
+    repo = "agent-shell-workspace";
+    rev = "b72ccdb0b602d9a8ecd94f16aa3456155ba0b2e9";
+    hash = "sha256-GwqsVSIrd9hksPOl6+O2N9BBXZvMp/E14YK1UJHwjcQ=";
+    packageRequires = [ agent-shell ];
   };
 }

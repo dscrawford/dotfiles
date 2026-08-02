@@ -46,4 +46,5 @@ with epkgs; [
   custom.acp
   custom.shell-maker
   custom.agent-shell
+  custom.agent-shell-workspace
 ]
