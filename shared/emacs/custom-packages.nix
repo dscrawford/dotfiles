@@ -56,13 +56,20 @@ in
 
   # Tab-bar workspace for agent-shell: sidebar, tiling, buffer isolation.
   # Untagged upstream, so pinned to a commit.
+  #
+  # Points at our fork, not gveres/agent-shell-workspace. Upstream reads
+  # `agent-shell-agent-configs' entries as plain alists, but agent-shell now
+  # defaults to maker *functions*, so every sidebar render died on `map-elt'
+  # and the sidebar stayed empty. The fork carries that fix plus a README
+  # correction, both offered upstream on fix/resolve-maker-agent-configs;
+  # repoint at gveres and drop the branch if they land.
   agent-shell-workspace = mkEmacsPackage {
     pname = "agent-shell-workspace";
-    version = "0.1.0-unstable-2026-03-19";
-    owner = "gveres";
+    version = "0.1.0-unstable-2026-08-02";
+    owner = "dscrawford";
     repo = "agent-shell-workspace";
-    rev = "b72ccdb0b602d9a8ecd94f16aa3456155ba0b2e9";
-    hash = "sha256-GwqsVSIrd9hksPOl6+O2N9BBXZvMp/E14YK1UJHwjcQ=";
+    rev = "69b59613f295a81d558f73c18ea7c2cee6a17895";
+    hash = "sha256-xDUNYykzLBrCZaPFCz29k5ud7cmhvIpai5HaNkgzR74=";
     packageRequires = [ agent-shell ];
   };
 }
