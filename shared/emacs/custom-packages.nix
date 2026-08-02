@@ -64,14 +64,16 @@ in
   #     now defaults to maker *functions* -- the sidebar stayed empty
   #   - `agent-shell-workspace-selected' was defined but never applied, and
   #     `cursor-type' is nil, so nothing showed which agent was current
+  #   - agents in one project all render the same short name, so the sidebar
+  #     now shows agent-shell's `(:session :title)' under each row
   #   - README binds into `agent-shell-command-map', which has never existed
   agent-shell-workspace = mkEmacsPackage {
     pname = "agent-shell-workspace";
     version = "0.1.0-unstable-2026-08-02";
     owner = "dscrawford";
     repo = "agent-shell-workspace";
-    rev = "e414772873ea76d70628462bbd3b9c35f39d8474";
-    hash = "sha256-YFx8Up4Y6w1dWIe4knUIeS7WmegyJWd+boRo1ofCLLA=";
+    rev = "0e93f786b29221346ebee8d145aca606a2194fb2";
+    hash = "sha256-YodEba3Z5pjpMiSZnYTWt/xffqHCNUqZLRKUBEMQYBs=";
     packageRequires = [ agent-shell ];
   };
 }
