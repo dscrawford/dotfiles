@@ -57,19 +57,21 @@ in
   # Tab-bar workspace for agent-shell: sidebar, tiling, buffer isolation.
   # Untagged upstream, so pinned to a commit.
   #
-  # Points at our fork, not gveres/agent-shell-workspace. Upstream reads
-  # `agent-shell-agent-configs' entries as plain alists, but agent-shell now
-  # defaults to maker *functions*, so every sidebar render died on `map-elt'
-  # and the sidebar stayed empty. The fork carries that fix plus a README
-  # correction, both offered upstream on fix/resolve-maker-agent-configs;
-  # repoint at gveres and drop the branch if they land.
+  # Points at our fork, not gveres/agent-shell-workspace, which carries three
+  # fixes on fix/resolve-maker-agent-configs:
+  #   - sidebar render died on `map-elt' because upstream reads
+  #     `agent-shell-agent-configs' entries as plain alists, but agent-shell
+  #     now defaults to maker *functions* -- the sidebar stayed empty
+  #   - `agent-shell-workspace-selected' was defined but never applied, and
+  #     `cursor-type' is nil, so nothing showed which agent was current
+  #   - README binds into `agent-shell-command-map', which has never existed
   agent-shell-workspace = mkEmacsPackage {
     pname = "agent-shell-workspace";
     version = "0.1.0-unstable-2026-08-02";
     owner = "dscrawford";
     repo = "agent-shell-workspace";
-    rev = "69b59613f295a81d558f73c18ea7c2cee6a17895";
-    hash = "sha256-xDUNYykzLBrCZaPFCz29k5ud7cmhvIpai5HaNkgzR74=";
+    rev = "e414772873ea76d70628462bbd3b9c35f39d8474";
+    hash = "sha256-YFx8Up4Y6w1dWIe4knUIeS7WmegyJWd+boRo1ofCLLA=";
     packageRequires = [ agent-shell ];
   };
 }
