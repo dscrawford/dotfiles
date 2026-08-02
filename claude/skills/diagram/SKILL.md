@@ -11,7 +11,9 @@ Produce diagrams via local CLIs, then **look at the rendered image and fix what'
 handing it over. A diagram that compiles is not a diagram that reads well — the render/read-back
 loop is the point of this skill, not an optional extra.
 
-Not this skill: full LaTeX/TikZ design documents → use `design-doc`.
+Not this skill: a full system design document → use `design-doc`. It drives this toolchain for every
+figure it embeds, so the rules below apply there too; it adds only the print-specific parts (PDF
+export, page sizing, a shared palette).
 
 ## Step 1 — Pick the tool
 
@@ -92,6 +94,13 @@ mmdc -i docs/diagrams/arch.mmd -o /tmp/arch.png -s 2 -b white
 
 # Mermaid → SVG artifact for docs
 mmdc -i docs/diagrams/arch.mmd -o docs/diagrams/arch.svg -b transparent
+
+# Mermaid → PDF (for LaTeX embedding). --pdfFit crops to the diagram instead of
+# padding to US Letter. Always let mmdc export raster/PDF itself: a Mermaid SVG
+# put through rsvg-convert loses every node label, because Mermaid draws labels
+# in <foreignObject> HTML and librsvg does not implement it. `htmlLabels: false`
+# is not a fix — node labels still vanish and label spaces collapse.
+mmdc -i docs/diagrams/arch.mmd -o docs/diagrams/arch.pdf --pdfFit -b white
 
 # D2 → SVG artifact, then rasterize for self-review.
 # Do NOT use `d2 in.d2 out.png` — PNG export is broken in this nixpkgs build
