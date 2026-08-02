@@ -15,6 +15,11 @@ let
     # AI / IDE
     # { secret = "anthropic_api_key"; env = "ANTHROPIC_API_KEY"; desc = "Anthropic API key for Claude Code and Claude API access"; }
     { secret = "gemini_api_key";    env = "GEMINI_API_KEY";    desc = "Google Gemini API key for Gemini CLI"; }
+    # GitHub — gh CLI and API access. Exported under both names on purpose:
+    # gh reads GH_TOKEN first and falls back to GITHUB_TOKEN, but most other
+    # tooling only looks at GITHUB_TOKEN. Same secret, two entries.
+    { secret = "github_token";      env = "GH_TOKEN";          desc = "GitHub PAT for the gh CLI (repo/fork/PR operations)"; }
+    { secret = "github_token";      env = "GITHUB_TOKEN";      desc = "GitHub PAT for tooling that only reads GITHUB_TOKEN"; }
     # Jira — issue tracking and project management (jira-cli-go)
     { secret = "jira_api_token";    env = "JIRA_API_TOKEN";    desc = "Atlassian API token for jira-cli (issue create/view/search)"; }
     # Confluence — wiki and documentation (confluence-cli)
