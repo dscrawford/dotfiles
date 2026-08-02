@@ -56,6 +56,36 @@
       ;; so bind globally next to C-c s instead. C-c w is taken by windresize.
       (my/guard "agent-shell-workspace" (require 'agent-shell-workspace))
       (global-set-key (kbd "C-c S") 'agent-shell-workspace-toggle)
+      ;; Compat shim. agent-shell-workspace targets agent-shell 0.24.2, where
+      ;; `agent-shell-agent-configs' held configuration alists. Since then
+      ;; entries are maker *functions* (symbols like
+      ;; `agent-shell-auggie-make-agent-config'), realized on access. Upstream
+      ;; calls `map-elt' on a raw entry, which signals cl-no-applicable-method
+      ;; on the symbol -- that aborts every sidebar render, so the sidebar
+      ;; stays empty and the refresh timer errors on each tick.
+      ;;
+      ;; agent-shell has a private normalizer for this
+      ;; (`agent-shell--resolved-agent-configs'), but the entry contract is
+      ;; documented on the `agent-shell-agent-configs' defcustom itself, so
+      ;; resolve inline and depend only on the public variable.
+      (with-eval-after-load 'agent-shell-workspace
+        (my/guard "agent-shell-workspace-config"
+          (defun my/agent-shell-workspace--buffer-config (buffer)
+            "Return the agent-shell config for BUFFER, or nil.
+Like the upstream function, but realizes maker-function entries in
+`agent-shell-agent-configs' before matching on `:buffer-name'."
+            (with-current-buffer buffer
+              (when (derived-mode-p 'agent-shell-mode)
+                (let ((prefix (replace-regexp-in-string
+                               " Agent @ .*$" "" (buffer-name))))
+                  (seq-find
+                   (lambda (config)
+                     (string= prefix (map-elt config :buffer-name)))
+                   (mapcar (lambda (entry)
+                             (if (functionp entry) (funcall entry) entry))
+                           agent-shell-agent-configs))))))
+          (advice-add 'agent-shell-workspace--buffer-config :override
+                      #'my/agent-shell-workspace--buffer-config)))
       ;; MCP servers passed to claude via ACP. agent-shell sessions do NOT read
       ;; ~/.claude/.mcp.json or `claude mcp` user scope — this list is the only
       ;; source, so keep it in sync with shared/home/mcp-servers.nix.
