@@ -66,14 +66,15 @@ in
   #     `cursor-type' is nil, so nothing showed which agent was current
   #   - agents in one project all render the same short name, so the sidebar
   #     now shows agent-shell's `(:session :title)' under each row
+  #   - the sidebar groups agents under collapsible project headers
   #   - README binds into `agent-shell-command-map', which has never existed
   agent-shell-workspace = mkEmacsPackage {
     pname = "agent-shell-workspace";
     version = "0.1.0-unstable-2026-08-02";
     owner = "dscrawford";
     repo = "agent-shell-workspace";
-    rev = "0e93f786b29221346ebee8d145aca606a2194fb2";
-    hash = "sha256-YodEba3Z5pjpMiSZnYTWt/xffqHCNUqZLRKUBEMQYBs=";
+    rev = "9fc4ad08e08f5b127dc5faf93e5b6feb32f11536";
+    hash = "sha256-oZoMKcDq75epYLVXnDq7KdL2w03FROvdM1YR2qPjwKM=";
     packageRequires = [ agent-shell ];
   };
 }
