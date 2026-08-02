@@ -51,6 +51,7 @@
           ./hosts/node1/boot.nix
           ./shared/kubernetes.nix
           ./shared/kube-cert-renew.nix
+          ./shared/kube-stale-mount-recovery.nix
           ./shared/iscsi.nix
         ];
       };
@@ -62,6 +63,7 @@
           ./hosts/node2/boot.nix
           ./shared/kubernetes.nix
           ./shared/kube-cert-renew.nix
+          ./shared/kube-stale-mount-recovery.nix
           ./shared/iscsi.nix
         ];
       };
@@ -76,6 +78,7 @@
           ./hosts/node3/storage.nix
           ./shared/kubernetes.nix
           ./shared/kube-cert-renew.nix
+          ./shared/kube-stale-mount-recovery.nix
           ./shared/iscsi.nix
         ];
       };
