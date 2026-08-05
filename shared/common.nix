@@ -16,7 +16,6 @@
     coreutils
   ];
 
-  # SSH with secure defaults (can be overridden per-system)
   services.openssh = {
     enable = true;
     settings = {
@@ -28,7 +27,6 @@
     };
   };
 
-  # Basic firewall (allow SSH only)
   networking.firewall = {
     enable = true;
     allowedTCPPorts = [ 22 ];

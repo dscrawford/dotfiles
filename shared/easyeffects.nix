@@ -1,48 +1,12 @@
 # shared/easyeffects.nix
-# EasyEffects input denoising for the desktop.
+# Mic denoising chain: high-pass -> echo canceller -> DeepFilterNet -> soft gate.
 #
-# Replaces the old system-level PipeWire filter-chain, which altered mic
-# levels on sources other than the one it filtered. EasyEffects instead
-# exposes a processed "EasyEffects Source" virtual mic and leaves other
-# sources untouched.
-#
-# Chain: high-pass -> echo canceller -> DeepFilterNet -> soft gate.
-#   - The high-pass drops desk-conducted key thump before the model sees it.
-#   - The echo canceller (WebRTC AEC3) subtracts what the speakers are playing
-#     so it doesn't feed back into the mic. It must run BEFORE DeepFilterNet:
-#     AEC works by correlating the mic signal against a reference tap, and
-#     DFN's non-linear processing destroys that correlation. Its own noise
-#     suppression and AGC are off — DFN denoises far better, and AGC would
-#     move mic levels, which is the behaviour we left the filter-chain over.
-#   - DeepFilterNet ("Deep Noise Remover") is the only stage that can remove a
-#     keystroke landing mid-word; RNNoise's one-gain-per-band design handles
-#     steady noise but not transients. nixpkgs wraps easyeffects with
-#     LADSPA_PATH pointing at deepfilternet, so the plugin is available.
-#   - The gate is deliberately soft (-18 dB, slow release): it only acts
-#     between phrases, and a hard gate after the model clips word tails.
-#
-# Paths: EasyEffects 8.x reads presets from AppDataLocation
-# (~/.local/share/easyeffects), NOT AppConfigLocation. Writing to the old
-# ~/.config/easyeffects path makes EE's xdg_migration() copy the files out and
-# move the originals to the trash, which destroys these symlinks and silently
-# decouples the config from what EE actually loads.
-#
-# Output passthrough: EasyEffects' processAllOutputs defaults to TRUE, so it
-# moves every playback stream onto its virtual sink even with an empty output
-# chain — three extra nodes (easyeffects_sink, ee_soe_output_level,
-# ee_soe_spectrum) on the playback path, for no effects at all. Combined with
-# DeepFilterNet's ~8ms compute block, that pushed the playback graph from 18us
-# to 2.9ms of wait against a 5.33ms quantum and produced audible static
-# (thousands of xruns on the ee_soe_* nodes). We only ever wanted mic
-# processing, so outputs are switched off and inputs left on.
-#
-# Those two knobs live in EasyEffects' own KConfig INI, not in the presets, and
-# not in dconf — 8.x moved from GTK/GSettings to Qt/KConfig, so any leftover
-# ~/.config/dconf entries under com/github/wwmm/easyeffects are dead 7.x state.
-# EasyEffects rewrites this file at runtime (window geometry, preset usage
-# counts), so it cannot be a read-only home.file symlink; set just our keys on
-# activation and leave the rest of the file alone.
-#
+# AEC must stay BEFORE DeepFilterNet: it correlates the mic against a reference
+# tap, and DFN's non-linear processing destroys that correlation.
+# DFN, not RNNoise: only DFN removes a keystroke landing mid-word — RNNoise's
+# one-gain-per-band design handles steady noise but not transients.
+# Presets must live under ~/.local/share (EE 8.x AppDataLocation); writing the
+# old ~/.config/easyeffects path makes EE's xdg_migration() trash these symlinks.
 # Autostarted from the sway config via exec (systemd user services on
 # graphical-session.target never start under raw greetd).
 { pkgs, lib, ... }:
@@ -53,7 +17,6 @@ let
       blocklist = [ ];
       plugins_order = [ "filter#0" "echo_canceller#0" "deepfilternet#0" "gate#0" ];
 
-      # High-pass: remove low-frequency thump conducted through the desk.
       # Enum fields serialize as their label strings, not indices.
       "filter#0" = {
         bypass = false;
@@ -71,25 +34,19 @@ let
         decramp = "Off";
       };
 
-      # Echo canceller. EasyEffects links the reference ("probe") straight from
-      # the physical output device's monitor, not from its own virtual sink —
-      # see stream_input_effects.cpp, which links DbStreamOutputs::outputDevice
-      # to the plugin's probe ports. So this keeps working with the playback
-      # passthrough set below, and useDefaultOutputDevice (default true) makes
-      # the probe follow the active sink if you switch to headphones/Bluetooth.
+      # The probe is tapped from the physical output device's monitor, not EE's
+      # own virtual sink, so this survives processAllOutputs being off below.
       "echo_canceller#0" = {
         bypass = false;
         input-gain = 0.0;
         output-gain = 0.0;
         echo-canceller = {
           enable = true;
-          # Full AEC3, not the cut-down AECM intended for embedded devices.
           mobile-mode = false;
           enforce-high-pass = true;
           automatic-gain-control = false;
         };
-        # DeepFilterNet handles denoising; a second suppressor here would fight
-        # it. Level is still serialized (enums save as their label string).
+        # DFN does the denoising; a second suppressor here would fight it.
         noise-suppression = {
           enable = false;
           level = "Moderate";
@@ -100,10 +57,8 @@ let
         };
       };
 
-      # DeepFilterNet. attenuation-limit 80 is the top of the range upstream
-      # calls balanced; raise toward 100 if clicks still get through.
-      # min-processing-threshold is the knob to A/B first — upstream docs
-      # describe its direction ambiguously, so this leaves it at the default.
+      # attenuation-limit 80 is the top of upstream's "balanced" range; raise
+      # toward 100 if keystrokes still get through.
       "deepfilternet#0" = {
         bypass = false;
         input-gain = 0.0;
@@ -116,8 +71,7 @@ let
         post-filter-beta = 0.05;
       };
 
-      # Soft gate, after the model. Hysteresis stops it chattering on clicks
-      # sitting near the threshold.
+      # Deliberately soft: a hard gate after the model clips word tails.
       "gate#0" = {
         bypass = false;
         input-gain = 0.0;
@@ -171,10 +125,10 @@ in
     force = true;
   };
 
-  # Process microphones, leave playback alone. See the header for why this is an
-  # activation script rather than a managed file. kwriteconfig6 resolves the
-  # relative --file against XDG_CONFIG_HOME and rewrites only the named key, so
-  # EasyEffects' other state in this file survives.
+  # processAllOutputs defaults to true, which routes playback through EE's sink
+  # and, with DFN's ~8ms block, produced thousands of xruns and audible static.
+  # These knobs live in EE's KConfig INI (not the presets, not dconf), and EE
+  # rewrites that file at runtime — so set only our keys instead of symlinking.
   home.activation.easyeffectsPipelines =
     lib.hm.dag.entryAfter [ "writeBoundary" ] (
       let

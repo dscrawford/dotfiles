@@ -1,11 +1,6 @@
-# hosts/local/sway.nix
-# Sway window manager configuration for Home Manager
-# Migrated from ~/.config/i3/config
-#
-# Thin aggregator: the focused modules under shared/sway/ supply the script
-# derivations, the waybar settings/stylesheet, and the main sway config string.
-# This file owns the single-valued home.file/home.packages assignments so the
-# generated text is byte-identical to the pre-split configuration.
+# shared/sway.nix
+# Aggregates the modules under shared/sway/ (scripts, waybar, config string)
+# and owns the home.file/home.packages assignments.
 { pkgs, ... }:
 
 let

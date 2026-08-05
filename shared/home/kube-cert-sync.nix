@@ -1,5 +1,6 @@
 # shared/home/kube-cert-sync.nix
-# Sync cluster-admin certs from the Kubernetes master (Linux only).
+# Pulls CFSSL-issued cluster-admin certs from the master into ~/.kube/certs so
+# kubectl works from the desktop. Linux only.
 { lib, pkgs, username, ... }:
 
 let
@@ -8,9 +9,6 @@ let
   homeDir = if isDarwin then "/Users/${username}" else "/home/${username}";
 in
 {
-  # Sync cluster-admin certs from the Kubernetes master (Linux only).
-  # Certs are issued by CFSSL with easyCerts; this pulls them to ~/.kube/certs
-  # so kubectl works from the local desktop.
   systemd.user.services.kube-cert-sync = lib.mkIf isLinux {
     Unit.Description = "Sync kubectl certs from Kubernetes master";
     Service = {

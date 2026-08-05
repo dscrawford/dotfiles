@@ -1,5 +1,4 @@
-# Claude Code skill sources — add new repos here
-# Each entry: { src, skillsDir } where skillsDir is a function from src to the skills directory
+# Claude Code skill sources — add new repos here.
 { everything-claude-code, cli-anything, ... }:
 {
   everything-claude-code = {

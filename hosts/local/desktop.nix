@@ -6,27 +6,25 @@
     enable = true;
     wrapperFeatures.gtk = true;
     extraPackages = with pkgs; [
-      swaylock       # screen locker (replaces i3lock)
-      swayidle       # idle management
-      wmenu          # Wayland-native launcher (replaces dmenu)
-      waybar         # status bar
-      foot           # Wayland-native terminal
-      nwg-displays   # GUI monitor configuration
-      wl-clipboard   # Wayland clipboard (replaces xclip)
-      slurp          # Region/output selector for screen sharing
-      grim           # Screenshot tool for Wayland
-      wf-recorder    # Screen recording for Wayland
-      mako           # Notification daemon for Wayland
-      libnotify      # notify-send command
+      swaylock
+      swayidle
+      wmenu
+      waybar
+      foot
+      nwg-displays
+      wl-clipboard
+      slurp
+      grim
+      wf-recorder
+      mako
+      libnotify
     ];
   };
 
-  # The xdg.portal.wlr module hardcodes pkgs.xdg-desktop-portal-wlr (no package
-  # option), so the duplicate-frame patch must be applied via overlay.
-  # Pinned to 0.8.2: the 0.8.3 release stalls screencasts after the first frame
-  # (upstream release notes warn about this; PR #380 was closed unmerged).
-  # TODO: Unpin and drop patch once a fixed release (> 0.8.3) lands.
-  # PR: https://github.com/emersion/xdg-desktop-portal-wlr/pull/380
+  # Overlay because xdg.portal.wlr hardcodes the package (no package option).
+  # Pinned to 0.8.2: 0.8.3 stalls screencasts after the first frame.
+  # TODO: unpin and drop the patch once a release past 0.8.3 fixes it
+  # (https://github.com/emersion/xdg-desktop-portal-wlr/pull/380).
   nixpkgs.overlays = [
     (final: prev: {
       xdg-desktop-portal-wlr = prev.xdg-desktop-portal-wlr.overrideAttrs (old: {
@@ -45,10 +43,9 @@
   ];
   xdg.portal = {
     enable = true;
-    # nixpkgs' programs.sway module force-enables xdg.portal.wlr, which runs the
-    # portal with an explicit --config that OVERRIDES ~/.config/xdg-desktop-portal-wlr.
-    # Without these settings the generated config is empty: no screencast chooser
-    # is found and screen sharing silently fails.
+    # programs.sway runs the portal with an explicit --config that overrides
+    # ~/.config/xdg-desktop-portal-wlr; without these, screen sharing silently
+    # fails for want of a chooser.
     wlr.settings.screencast = {
       max_fps = 60;
       chooser_type = "simple";

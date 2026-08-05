@@ -28,7 +28,6 @@
       ]; }
     ../shared/darwin-common.nix
 
-    # Home Manager integration
     home-manager.darwinModules.home-manager
     {
       home-manager.useGlobalPkgs = true;

@@ -17,8 +17,7 @@ in
     easyCerts = true;
     pki.cfsslAPIExtraSANs = lib.mkIf isMaster [ kubeMasterIP ];
 
-    # Override CFSSL cert lifetime from upstream 720h (30 days) to 8760h (1 year).
-    # Renewal is handled by certmgr + kube-cert-renew.nix safety-net timer.
+    # Upstream default is 720h; renewal runs via certmgr + kube-cert-renew.nix.
   };
 
   services.cfssl.configFile = lib.mkIf isMaster (lib.mkForce (toString (pkgs.writeText "cfssl-config.json" (builtins.toJSON {

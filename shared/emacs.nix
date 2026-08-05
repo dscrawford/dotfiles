@@ -1,8 +1,6 @@
 # shared/emacs.nix
-# Emacs configuration for Home Manager.
-# The configuration is split into focused modules under ./emacs/; this file
-# assembles them into a single programs.emacs block, preserving package list
-# order and elisp evaluation order (both are significant).
+# Assembles the modules under ./emacs/ into one programs.emacs block.
+# Package-list order and elisp evaluation order are both significant.
 { config, pkgs, lib, ... }:
 
 let
@@ -11,18 +9,14 @@ let
 
   agentShell = import ./emacs/agent-shell.nix { inherit pkgs; };
 
-  # Each elisp module is a multiline string that carries a trailing newline.
-  # Strip it so the assembled config controls blank-line separators exactly,
-  # matching the original single-string layout byte-for-byte.
+  # Strip each module's trailing newline so blank-line separators are controlled
+  # here, by the "" entries in `sections'.
   chunk = s: lib.removeSuffix "\n" s;
 
-  # Emitted ahead of every section: defines the my/guard macro the sections use.
-  # A macro is only expanded for forms that follow its definition in the same
-  # file, so this cannot be an ordinary (reorderable) entry in `sections'.
+  # Must stay ahead of every section, not be a reorderable entry in `sections':
+  # my/guard only expands for forms following its definition in the same file.
   prologue = chunk (import ./emacs/guard.nix { inherit pkgs lib config; });
 
-  # Empty string entries reproduce the blank lines that separated sections in
-  # the original file; sections that were directly adjacent have no "" between.
   sections = [
     (chunk (import ./emacs/ui.nix { inherit pkgs lib config; }))
     ""
@@ -53,7 +47,6 @@ in
       });
     };
     extraPackages = epkgs: import ./emacs/packages.nix { inherit pkgs epkgs; };
-    # Trailing newline matches the original ''...'' block, which ended with one.
     extraConfig = prologue + "\n\n" + (lib.concatStringsSep "\n" sections) + "\n";
   };
 }

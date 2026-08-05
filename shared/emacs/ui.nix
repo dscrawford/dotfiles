@@ -7,7 +7,6 @@
   (scroll-bar-mode -1)
   (load-theme 'modus-vivendi t)
 
-  ;; Org-mode: inline images and presentations
   (setq org-startup-with-inline-images t)
   (add-hook 'org-present-mode-hook
     (lambda ()
@@ -32,13 +31,9 @@
     (require 'ultra-scroll)
     (ultra-scroll-mode 1))
 
-  ;; PDF support, deferred until a PDF is actually opened — loading pdf-tools
-  ;; eagerly cost ~150ms and 34 features per start, and we run one Emacs per
-  ;; tmux pane. pdf-loader-install is autoloaded, so this needs no require.
-  ;; Args are (no-query-p skip-dependencies-p no-error-p): don't prompt, and
-  ;; don't signal. Nix pre-builds epdfinfo but ships no C sources, so
-  ;; pdf-tools' verify-or-rebuild fallback can only fail — deferring means it
-  ;; fails when opening a PDF rather than taking out the rest of init.
+  ;; Deferred: eager pdf-tools cost ~150ms per start, and we run one Emacs per
+  ;; tmux pane. Args (no-query-p skip-dependencies-p no-error-p) keep it quiet —
+  ;; Nix ships epdfinfo without C sources, so the rebuild fallback can only fail.
   (my/guard "pdf-tools" (pdf-loader-install t nil t))
 
   (my/guard "doom-modeline"
@@ -58,7 +53,6 @@
     (setq envrc-none-lighter nil   ; hide "none" in modeline for non-direnv buffers
           envrc-show-summary-in-minibuffer nil)) ; reduce minibuffer noise
 
-  ;; Performance optimizations
   (setq gc-cons-threshold (* 100 1024 1024)   ; 100MB - reduce GC pauses
         read-process-output-max (* 1024 1024)  ; 1MB - faster subprocess communication
         inhibit-compacting-font-caches t
@@ -67,14 +61,12 @@
         process-adaptive-read-buffering nil)    ; don't delay reading subprocess output
   (setq-default bidi-display-reordering nil    ; Disable bidirectional text
                 bidi-paragraph-direction 'left-to-right)
-  ;; so-long-mode: gracefully handle files with very long lines (AI-generated, minified, etc.)
+  ;; so-long-mode: survive minified/AI-generated long-line files.
   (global-so-long-mode 1)
 
-  ;; Reset GC after startup
   (add-hook 'emacs-startup-hook
     (lambda () (setq gc-cons-threshold (* 50 1024 1024))))
 
-  ;; Run GC when idle
   (run-with-idle-timer 5 t #'garbage-collect)
 
   (setq backup-directory-alist `(("." . "~/.emacs.d/backups/"))
@@ -89,20 +81,17 @@
   (make-directory "~/.emacs.d/compile-history/" t)
   (make-directory "~/.emacs.d/lockfiles/" t)
 
-  ;; Persist minibuffer history (shell commands, M-x, etc.) across sessions
   (setq savehist-file "~/.emacs.d/savehist"
         savehist-additional-variables '(shell-command-history search-ring regexp-search-ring))
   (savehist-mode 1)
   (setq find-file-visit-truename t)
 
-  ;; Persist safe-variable declarations (press ! at the prompt to trust permanently)
+  ;; Persist safe-variable declarations (! at the prompt trusts permanently).
   (setq custom-file "~/.emacs.d/custom.el")
   (when (file-exists-p custom-file) (load custom-file))
 
-  ;; Ediff: use single frame (no separate control window)
   (setq ediff-window-setup-function 'ediff-setup-windows-plain)
 
-  ;; macOS modifier keys
   (when (eq system-type 'darwin)
     (setq mac-option-modifier 'meta
           mac-command-modifier 'super

@@ -2,9 +2,7 @@
 # eglot/LSP, dap-mode debugging, corfu, and language file associations.
 { ... }:
 ''
-  ;; LSP (eglot is built-in to Emacs 29+)
-  ;; Automatically start eglot and flymake for supported modes
-  ;; gdscript-mode omitted from flymake — diagnostics via Godot LSP connection
+  ;; gdscript-mode is omitted from flymake — diagnostics come over the Godot LSP.
   (dolist (hook '(nix-mode-hook python-mode-hook gdscript-mode-hook
                   js-mode-hook typescript-mode-hook web-mode-hook
                   rust-mode-hook c-mode-hook c++-mode-hook))
@@ -13,8 +11,6 @@
                   js-mode-hook typescript-mode-hook web-mode-hook
                   rust-mode-hook c-mode-hook c++-mode-hook))
     (add-hook hook 'flymake-mode))
-  ;; Language servers: nil (Nix), pyright (Python), typescript-language-server (JS/TS),
-  ;; rust-analyzer (Rust), clangd (C/C++)
   (with-eval-after-load 'eglot
     (add-to-list 'eglot-server-programs '(nix-mode . ("nil")))
     (add-to-list 'eglot-server-programs '(python-mode . ("pyright-langserver" "--stdio")))
@@ -30,7 +26,6 @@
           dap-python-executable "python3")
     (dap-auto-configure-mode 1)
 
-    ;; Debug keybindings — C-c d prefix
     (dolist (bind '(("d" . dap-debug)
                    ("b" . dap-breakpoint-toggle)
                    ("n" . dap-next)
@@ -42,7 +37,6 @@
                    ("e" . dap-eval-thing-at-point)))
       (global-set-key (kbd (format "C-c d %s" (car bind))) (cdr bind)))
 
-    ;; Default debug template for Python files
     (dap-register-debug-template "Python :: Run Current File"
       (list :type "python"
             :args ""
@@ -63,19 +57,16 @@
   ;; Jenkinsfile syntax
   (add-to-list 'auto-mode-alist '("Jenkinsfile\\'" . groovy-mode))
 
-  ;; JavaScript/TypeScript file associations (.js uses built-in js-mode)
   (add-to-list 'auto-mode-alist '("\\.tsx\\'" . web-mode))
   (add-to-list 'auto-mode-alist '("\\.jsx\\'" . web-mode))
   (add-to-list 'auto-mode-alist '("\\.ts\\'" . typescript-mode))
   (with-eval-after-load 'web-mode
-    ;; JSX content type for proper React syntax in .tsx/.jsx
     (add-to-list 'web-mode-content-types-alist '("jsx" . "\\.tsx\\'"))
     (add-to-list 'web-mode-content-types-alist '("jsx" . "\\.jsx\\'"))
     (setq web-mode-markup-indent-offset 2
           web-mode-code-indent-offset 2
           web-mode-css-indent-offset 2))
 
-  ;; Godot file type associations
   (add-to-list 'auto-mode-alist '("\\.gd\\'" . gdscript-mode))
   (dolist (ext '("\\.tscn\\'" "\\.tres\\'" "\\.godot\\'" "\\.import\\'"))
     (add-to-list 'auto-mode-alist (cons ext 'conf-mode)))

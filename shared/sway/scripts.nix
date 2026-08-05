@@ -1,6 +1,5 @@
 # shared/sway/scripts.nix
-# Sway helper scripts (writeShellApplication derivations).
-# Imported as a plain function returning an attrset of script derivations.
+# Sway helper scripts; imported as a function returning an attrset of derivations.
 { pkgs }:
 
 {
@@ -10,13 +9,11 @@
     text = ''
       PREFIXES=(A B C D E F G H I J)
 
-      # Get sorted list of active outputs
       mapfile -t OUTPUTS < <(swaymsg -t get_outputs | jq -r '.[] | select(.active) | .name' | sort)
 
       case "$1" in
         switch|move)
           FOCUSED=$(swaymsg -t get_outputs | jq -r '.[] | select(.focused) | .name')
-          # Map focused output to its prefix
           PREFIX="A"
           for i in "''${!OUTPUTS[@]}"; do
             if [ "''${OUTPUTS[$i]}" = "$FOCUSED" ]; then
@@ -32,21 +29,18 @@
           fi
           ;;
         focus)
-          # Focus the Nth output (1-indexed)
           IDX=$(($2 - 1))
           if [ "$IDX" -lt ''${#OUTPUTS[@]} ]; then
             swaymsg focus output "''${OUTPUTS[$IDX]}"
           fi
           ;;
         move-to)
-          # Move container to the Nth output (1-indexed)
           IDX=$(($2 - 1))
           if [ "$IDX" -lt ''${#OUTPUTS[@]} ]; then
             swaymsg move container to output "''${OUTPUTS[$IDX]}"
           fi
           ;;
         init)
-          # Bind all workspaces to their outputs and switch each to X01
           for i in "''${!OUTPUTS[@]}"; do
             P="''${PREFIXES[$i]}"
             O="''${OUTPUTS[$i]}"

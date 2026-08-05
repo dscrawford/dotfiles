@@ -29,7 +29,7 @@ let
     hash = "sha256-G7hU6tm4nFau9/f8I9kn7gQBjS80XymvYdHI8OAocK0=";
   };
 
-  # In the let block (not the output set) so agent-shell-workspace can depend
+  # In the let block, not the output set, so agent-shell-workspace can depend
   # on it — attribute sets are not self-referential.
   agent-shell = mkEmacsPackage {
     pname = "agent-shell";
@@ -54,28 +54,11 @@ in
     packageRequires = with epkgs; [ websocket transient web-server ];
   };
 
-  # Tab-bar workspace for agent-shell: sidebar, tiling, buffer isolation.
-  # Untagged upstream, so pinned to a commit.
-  #
-  # Points at our fork, not gveres/agent-shell-workspace, which carries three
-  # fixes on fix/resolve-maker-agent-configs:
-  #   - sidebar render died on `map-elt' because upstream reads
-  #     `agent-shell-agent-configs' entries as plain alists, but agent-shell
-  #     now defaults to maker *functions* -- the sidebar stayed empty
-  #   - `agent-shell-workspace-selected' was defined but never applied, and
-  #     `cursor-type' is nil, so nothing showed which agent was current
-  #   - agents in one project all render the same short name, so the sidebar
-  #     now shows agent-shell's `(:session :title)' under each row
-  #   - the sidebar groups agents under collapsible project headers
-  #   - the 2s refresh restored point by character offset and never restored
-  #     window point, so the cursor wandered and appeared to vanish
-  #   - the sidebar crashed on any tty frame: a terminal reports its
-  #     background as the string "unspecified-bg", which is non-nil but
-  #     `color-values' cannot resolve, so the colour blend signalled
-  #   - collapsing a project group killed sidebar navigation: only agent
-  #     rows were navigation stops, so a folded header could not be
-  #     reached, and folding every group left n/p with nowhere to go
-  #   - README binds into `agent-shell-command-map', which has never existed
+  # Tab-bar workspace for agent-shell. Our fork of gveres/agent-shell-workspace,
+  # carrying unmerged sidebar fixes: maker-function agent configs, selection
+  # face, per-agent session titles, collapsible project groups, point stability
+  # across refreshes, and crashes on tty frames. Untagged upstream and unmerged
+  # here, so `git log` the pinned rev below for the individual fixes.
   agent-shell-workspace = mkEmacsPackage {
     pname = "agent-shell-workspace";
     version = "0.1.0-unstable-2026-08-02";

@@ -3,7 +3,7 @@
 # clipboard (xclip) elisp.
 { pkgs, bashPath, ... }:
 ''
-  ;; Auto-revert: pick up external edits (AI tools, git, etc.) quickly
+  ;; Pick up external edits (AI tools, git) quickly.
   (setq auto-revert-interval 1                ; check every 1s instead of 5s
         auto-revert-avoid-polling t            ; use inotify/kqueue instead of polling
         auto-revert-check-vc-info nil          ; don't re-check VC on every revert (faster)
@@ -45,26 +45,24 @@
   (global-set-key (kbd "M-o") 'ace-window)
   (global-set-key (kbd "C-c w") 'windresize)
 
-  ;; Use Home Manager bash for all shell operations
   (setq shell-file-name "${bashPath}"
         explicit-shell-file-name "${bashPath}")
   (add-to-list 'exec-path "${pkgs.bash}/bin")
   (setenv "SHELL" "${bashPath}")
 
-  ;; Ensure /run/wrappers/bin (setuid wrappers: sudo, ping, etc.) is first in PATH
+  ;; /run/wrappers/bin holds the setuid wrappers (sudo, ping), so it goes first.
   (when (eq system-type 'gnu/linux)
     (add-to-list 'exec-path "/run/wrappers/bin")
     (setenv "PATH" (concat "/run/wrappers/bin:" (getenv "PATH"))))
 
-  ;; On macOS GUI, inherit PATH from login shell (GUI apps don't get shell PATH)
+  ;; macOS GUI apps don't inherit the login shell's PATH.
   (when (and (eq system-type 'darwin) (display-graphic-p))
     (my/guard "exec-path-from-shell"
       (require 'exec-path-from-shell)
       (setq exec-path-from-shell-shell-name "${bashPath}")
       (exec-path-from-shell-initialize)))
 
-  ;; Eat terminal (pure elisp, fast, less flicker than vterm)
-  ;; C-c t spawns a new eat terminal, C-c r lists existing eat sessions
+  ;; C-c t spawns a new eat terminal, C-c r lists existing sessions.
   (my/guard "eat" (require 'eat))
   (setq eat-shell "${bashPath}")
 
@@ -78,7 +76,7 @@
           (switch-to-buffer (completing-read "Select eat session: "
                                              (mapcar #'buffer-name eat-buffers) nil t))
         (message "No eat sessions open")))))
-  ;; Bracketed paste for eat — wrap yanked text so shell treats it as one input
+  ;; Wrap yanked text so the shell treats it as one input.
   (defun my/eat-yank-with-bracketed-paste ()
     "Yank into eat using bracketed paste so multiline text isn't executed line-by-line."
     (interactive)
@@ -86,12 +84,10 @@
       (eat-term-send-string eat-terminal "\e[200~")
       (eat-term-send-string eat-terminal text)
       (eat-term-send-string eat-terminal "\e[201~")))
-  ;; All eat-semi-char-mode-map tweaks, applied whenever eat loads.
   (with-eval-after-load 'eat
     (define-key eat-semi-char-mode-map (kbd "C-c C-y") #'my/eat-yank-with-bracketed-paste)
-    ;; Send modifier+arrow keys to the terminal rather than letting them fall
-    ;; through to global-map (left-word etc.) — eat resets the cursor to match
-    ;; terminal state, causing a visual glitch.
+    ;; Send modifier+arrows to the terminal; falling through to global-map makes
+    ;; eat resync the cursor and glitch visually.
     (dolist (key '("M-<left>" "M-<right>" "M-<up>" "M-<down>"
                    "C-<left>" "C-<right>" "C-<up>" "C-<down>"))
       (define-key eat-semi-char-mode-map (kbd key) #'eat-self-input)))

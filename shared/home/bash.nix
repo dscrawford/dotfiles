@@ -1,6 +1,5 @@
 # shared/home/bash.nix
-# Bash configuration (bashrcExtra/initExtra). Secrets export lines come from
-# the secrets module via the internal `my.secretExportLines` option.
+# Secret export lines come from secrets.nix via `my.secretExportLines`.
 { config, lib, pkgs, username, enableSecrets ? false, ... }:
 
 let
@@ -19,17 +18,16 @@ in
       export SHELL="/run/current-system/sw/bin/bash"
     '' + lib.optionalString enableSecrets ''
 
-      # Load secrets as environment variables (skip empty/unconfigured ones)
       ${secretExportLines}
     '' + ''
 
-      # Set emacsclient socket name to match the current tmux pane's server
+      # One Emacs server per tmux pane.
       if [ -n "$TMUX_PANE" ]; then
         export EMACS_SERVER="emacs-$(echo $TMUX_PANE | tr -d %)"
         export EDITOR="emacsclient -s $EMACS_SERVER"
       fi
 
-      # Inside Emacs (eat), open files in a new Emacs window instead of nested instance
+      # Inside eat, open files in a new window instead of a nested instance.
       if [ -n "$INSIDE_EMACS" ]; then
         emacs() {
           emacsclient -s "$EMACS_SERVER" -n --eval "(progn (split-window-right) (other-window 1) (find-file \"$(realpath "$1")\"))"
@@ -38,10 +36,9 @@ in
         alias emacs="emacs -nw"
       fi
 
-      # Force xterm-256color for SSH (eat-truecolor rarely available on remote hosts)
+      # eat-truecolor is rarely available on remote hosts.
       alias ssh='TERM=xterm-256color command ssh'
 
-      # Eat shell integration (directory tracking, etc.)
       [ -n "$EAT_SHELL_INTEGRATION_DIR" ] && source "$EAT_SHELL_INTEGRATION_DIR/bash"
     '';
     initExtra = ''
@@ -49,7 +46,7 @@ in
          exec tmux -f ${homeDir}/.config/tmux/tmux.conf
       fi
 
-      # Hook direnv into interactive bash (disabled auto-integration to keep it after the interactive guard)
+      # Hooked manually so it lands after the interactive/tmux guard above.
       eval "$(direnv hook bash)"
     '';
   };

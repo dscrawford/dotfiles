@@ -1,14 +1,7 @@
 # pkgs/proton-cachyos/default.nix
-# CachyOS Proton, pinned to a specific dated build.
-#
-# Pinned to the 20260520 (x86_64_v3) release because the 20260521 build is
-# known-broken with NVIDIA driver 610.43.02 (illegal-instruction / vkd3d crash
-# loop). See Forza Horizon 6 (app 2483190) troubleshooting.
-#
-# Intended for use with `programs.steam.extraCompatPackages` ONLY — it exposes a
-# `steamcompattool` output and refuses to be added to a normal environment.
-# The binaries are unpatched and run inside the Steam Linux Runtime container,
-# so no patchelf/strip fixup is applied.
+# CachyOS Proton pinned to 20260520: the 20260521 build crash-loops on NVIDIA
+# 610.43.02. For `programs.steam.extraCompatPackages` only — it exposes a
+# `steamcompattool` output and refuses to install into a normal environment.
 {
   lib,
   stdenvNoCC,
@@ -25,8 +18,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
 
   dontConfigure = true;
   dontBuild = true;
-  # Proton ships prebuilt Wine/DXVK/vkd3d binaries meant to run inside the
-  # Steam Linux Runtime (pressure-vessel) sandbox. Patching them breaks that.
+  # These binaries run inside the Steam Linux Runtime; patching them breaks that.
   dontFixup = true;
 
   outputs = [
@@ -34,13 +26,15 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     "steamcompattool"
   ];
 
+  # $out is a refusal message, so this can't land in an environment by accident.
+  # The cp source is the tarball's single top-level dir, which unpackPhase cd'd
+  # into. Comments stay out of the phase body: it is a derivation input, and
+  # editing one re-copies the whole multi-GB unpacked release.
   installPhase = ''
     runHook preInstall
 
-    # Block accidental inclusion in a user/system environment.
     echo "${finalAttrs.pname} should not be installed into environments. Please use programs.steam.extraCompatPackages instead." > $out
 
-    # The tarball unpacks to a single top-level dir; unpackPhase cd's us into it.
     mkdir -p "$steamcompattool"
     cp -a . "$steamcompattool/"
 

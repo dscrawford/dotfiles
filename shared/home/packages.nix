@@ -27,7 +27,7 @@ in
     cacert
     sops
     lynx
-    pandoc  # Markdown/document conversion (markdown-mode preview, ox-pandoc)
+    pandoc
 
     # Python
     (python3.withPackages (ps: with ps; [
@@ -49,17 +49,17 @@ in
     poetry
 
     # Linting tools
-    ruff           # Python linter
-    pyright        # Python language server
-    statix         # Nix linter
-    nil            # Nix language server
-    nixfmt         # Nix formatter
+    ruff
+    pyright
+    statix
+    nil
+    nixfmt
 
     # Rust
     rust-analyzer
 
     # C/C++
-    clang-tools  # clangd language server
+    clang-tools
 
     # JavaScript/TypeScript
     typescript
@@ -70,11 +70,11 @@ in
     curl
     gcc
     redis
-    ripgrep    # rg — fast search (used by Claude Code)
-    fd         # fd — fast find (used by Claude Code)
-    dnsutils   # dig, nslookup, nsupdate
-    jq         # JSON processing
-    gh         # GitHub CLI (PRs, issues, gh api)
+    ripgrep
+    fd
+    dnsutils
+    jq
+    gh
 
     # Cloud & Kubernetes
     kubectl
@@ -92,20 +92,19 @@ in
     claude-agent-acp
     gemini-cli
     github-copilot-cli
-    nodejs  # Provides npx for keegancsmith/emacs-mcp-server and copilot.el
+    nodejs  # npx, for emacs-mcp-server and copilot.el
 
     # Business / Productivity CLIs
-    jira-cli-go                                        # Jira CLI (Go)
-    (pkgs.callPackage ../../pkgs/cli-microsoft365 {})     # Microsoft 365 CLI (Outlook, Teams, SharePoint)
-    (pkgs.callPackage ../../pkgs/confluence-cli {})        # Confluence CLI
-    (pkgs.callPackage ../../pkgs/slack-cli {})             # Slack CLI
+    jira-cli-go
+    (pkgs.callPackage ../../pkgs/cli-microsoft365 {})
+    (pkgs.callPackage ../../pkgs/confluence-cli {})
+    (pkgs.callPackage ../../pkgs/slack-cli {})
 
-    # Other
     # goose-cli  # disabled: broken in nixpkgs-unstable (Rust recursion limit)
   ] ++ lib.optionals isDarwin [
     docker
     docker-buildx
-    pngpaste  # Clipboard image paste for agent-shell (macOS equivalent of wl-paste)
+    pngpaste  # clipboard image paste for agent-shell (macOS wl-paste)
 
   ] ++ lib.optionals isLinux [
     xclip
@@ -128,7 +127,7 @@ in
     gimp
     vlc
     mpv
-    pwvucontrol # PipeWire-native mixer with per-app volume (pavucontrol successor)
+    pwvucontrol
     alacritty
     discord
     fastfetch

@@ -4,7 +4,6 @@
 
 {
   home.packages = with pkgs; [
-    # Gaming tools
     protontricks
     python311Packages.protonup-ng
     wine
@@ -16,13 +15,10 @@
     ferium
     cemu
 
-    # Wayland game display management
     gamescope
 
-    # Game dev
     godot_4
 
-    # Game streaming
     # sunshine  # disabled: broken in nixpkgs (boost build failure)
   ];
 }

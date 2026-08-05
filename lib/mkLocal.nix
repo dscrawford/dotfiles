@@ -17,7 +17,6 @@
     ../hosts/local/local.nix
     ../hosts/local/hardware-configuration.nix
 
-    # Home Manager integration
     home-manager.nixosModules.home-manager
     {
       home-manager.useGlobalPkgs = true;

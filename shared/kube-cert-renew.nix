@@ -22,7 +22,6 @@ let
       fi
 
     '' + lib.optionalString (!isMaster) ''
-      # Sync API token from master
       echo "kube-cert-renew: syncing API token from master"
       TOKEN_FILE="$SECRETS/apitoken.secret"
       if ssh -i /home/host/.ssh/id_ed25519 -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new \
@@ -60,7 +59,6 @@ let
         echo "kube-cert-renew: removed $RENEWED expired/expiring cert(s), restarting certmgr"
         systemctl restart certmgr.service
 
-        # Wait for certmgr to re-issue (up to 90s)
         TIMEOUT=90
         i=0
         while [ $i -lt $TIMEOUT ]; do
@@ -80,7 +78,6 @@ let
           echo "kube-cert-renew: WARNING: timed out waiting for certmgr to re-issue certs"
         fi
 
-        # Update kubeconfig cert copies so kubectl keeps working
         KUBE_CERTS="/home/host/.kube/certs"
         if [ -d "$KUBE_CERTS" ]; then
           echo "kube-cert-renew: updating kubeconfig cert copies in $KUBE_CERTS"

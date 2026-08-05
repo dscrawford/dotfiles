@@ -1,24 +1,12 @@
 # Recover Longhorn RWX consumers left with stale NFS mounts after an outage.
 #
-# Longhorn serves RWX volumes through a per-volume NFS share-manager pod. If
-# that share manager is recreated *after* a consumer pod has already mounted the
-# export -- which is what happens when a node returns from a power outage -- the
-# consumer's file handles are invalidated. Reads fail with ESTALE forever: these
-# volumes mount with softerr/fatal_neterrors=none, so the client errors instead
-# of blocking and retrying.
-#
-# The consumer keeps reporting Running the whole time, because its probes don't
-# touch the mount. Jellyfin surfaces this as "FFmpeg exited with code 140" on
-# every title. A pod cannot recover a stale mount; it has to be recreated.
-#
-# We repair out-of-band from here rather than with a livenessProbe, because
-# jellyfin/config.yaml in the Kubernetes repo documents "no livenessProbe: a
-# heavy transcode must never trigger a restart". This keeps that guardrail.
-#
-# Runs on the master only (one sweep per cluster, not one per node).
-# Manual/ad-hoc equivalent for a workstation with a kubeconfig, plus the full
-# outage runbook: Kubernetes repo, scripts/check-stale-nfs-mounts.sh and
-# docs/power-outage-recovery.md.
+# A share-manager pod recreated after a consumer mounted its export invalidates
+# the consumer's file handles; the pod stays Running (its probes don't touch the
+# mount) but every read fails ESTALE. Only recreating the pod fixes it.
+# Repaired out-of-band rather than via livenessProbe, so Jellyfin keeps its
+# documented "a heavy transcode must never trigger a restart" guarantee.
+# Master-only, so one sweep per cluster. Full runbook: Kubernetes repo,
+# docs/power-outage-recovery.md and scripts/check-stale-nfs-mounts.sh.
 { config, pkgs, lib, ... }:
 
 let
@@ -26,21 +14,17 @@ let
 
   kubeconfig = "/etc/kubernetes/cluster-admin.kubeconfig";
 
-  # How long to wait for the API server to answer after boot.
   apiTimeoutSec = 600;
-  # Share managers must be Running and unchanged for this long before we judge
-  # any consumer stale, so we don't act in the middle of Longhorn's own churn.
+  # Share managers must be Running and unchanged this long before we judge any
+  # consumer stale, so we don't act mid-churn.
   settleSec = 90;
-  # Upper bound on waiting for that settle condition.
   settleTimeoutSec = 900;
 
   recoverScript = pkgs.writeShellApplication {
     name = "kube-stale-mount-recovery";
     runtimeInputs = [ pkgs.kubectl pkgs.python3 pkgs.coreutils pkgs.gnugrep ];
     text = ''
-      # systemd sets no KUBECONFIG, so the master's cluster-admin config is the
-      # default; an inherited one wins, which makes this runnable by hand from a
-      # workstation for testing.
+      # An inherited KUBECONFIG wins, so this stays runnable by hand.
       export KUBECONFIG="''${KUBECONFIG:-${kubeconfig}}"
       log() { echo "kube-stale-mount-recovery: $*"; }
 
@@ -61,8 +45,7 @@ let
       log "API server ready"
 
       # --- Wait for share managers to settle --------------------------------
-      # Acting while Longhorn is still recreating share managers would restart
-      # consumers that are about to be invalidated again.
+      # Acting mid-recreation would restart consumers about to go stale again.
       deadline=$(( $(date +%s) + ${toString settleTimeoutSec} ))
       while :; do
         not_running=$(kubectl -n longhorn-system get pods \
@@ -91,7 +74,6 @@ let
 
       # --- Build the consumer list ------------------------------------------
       # volume -> PV (claimRef) -> PVC -> pod -> container -> mountPath.
-      # Only share-manager-backed volumes can go stale.
       plan=$(python3 - <<'PYEOF'
 import json, subprocess, sys
 
@@ -132,7 +114,7 @@ for pod in kget("get", "pods", "-A").get("items", []):
         continue
     for c in spec.get("containers", []):
         for m in c.get("volumeMounts", []):
-            # subPath mounts resolve inside the export; skip to avoid false
+            # subPath mounts resolve inside the export; skipped to avoid false
             # positives on a path that legitimately may not exist.
             if m["name"] in local and not m.get("subPath"):
                 print("\t".join([ns, meta["name"], c["name"], m["mountPath"]]))
@@ -153,7 +135,6 @@ PYEOF
         [ -n "$ns" ] || continue
         checked=$(( checked + 1 ))
 
-        # A stale handle fails fast on these mount options.
         out=$(kubectl -n "$ns" exec "$pod" -c "$container" --request-timeout=20s \
                 -- ls "$path" 2>&1 >/dev/null) || true
 
@@ -166,16 +147,14 @@ PYEOF
           stale=$(( stale + 1 ))
           rs=$(kubectl -n "$ns" get pod "$pod" \
                  -o jsonpath='{.metadata.ownerReferences[0].name}' 2>/dev/null || true)
-          # ownerReferences points at the ReplicaSet; strip its suffix for the
-          # Deployment name.
+          # ownerReferences names the ReplicaSet; strip the suffix for the Deployment.
           if [ -n "$rs" ]; then
             owners="$owners$ns ''${rs%-*}
 "
           fi
         else
-          # Unprobeable container (minimal image, no shell). Report only: the
-          # timestamp heuristic that would guess here is not safe to act on
-          # unattended. Use the repo script interactively for those.
+          # Minimal image, no shell. Report only — the timestamp heuristic that
+          # would guess here isn't safe unattended; use the repo script by hand.
           log "UNPROBEABLE $ns/$pod [$container] $path"
         fi
       done <<EOF
@@ -208,9 +187,7 @@ EOF
   };
 in
 {
-  # Root-usable kubeconfig for the sweep. The file itself is a world-readable
-  # store path, but the client certs it points at under
-  # services.kubernetes.secretsPath stay root-only, so this grants nothing new.
+  # World-readable store path, but the certs it points at stay root-only.
   services.kubernetes.pki.etcClusterAdminKubeconfig =
     lib.mkIf isMaster "kubernetes/cluster-admin.kubeconfig";
 
@@ -228,8 +205,7 @@ in
     description = "Periodic stale Longhorn RWX mount check";
     wantedBy = [ "timers.target" ];
     timerConfig = {
-      # Catches the post-outage race, then keeps checking: a share manager can
-      # be rescheduled at any time, not just at boot.
+      # Keeps checking after boot: a share manager can be rescheduled any time.
       OnBootSec = "3min";
       OnUnitActiveSec = "15min";
     };

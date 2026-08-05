@@ -45,12 +45,9 @@ stdenv.mkDerivation rec {
 
   dontBuild = true;
   dontConfigure = true;
-  # The Linux binary is a Bun-compiled single-file executable: its JS payload is
-  # appended after the ELF. Stripping (or a manual `patchelf --set-rpath`, which
-  # rewrites/relocates and moves the payload) corrupts it and it segfaults on
-  # startup. autoPatchelfHook patches the interpreter/libs without disturbing the
-  # payload; dontStrip keeps the appended bundle intact. Darwin is self-contained
-  # Mach-O and needs neither.
+  # The Linux binary is Bun-compiled with its JS payload appended after the ELF.
+  # Stripping or `patchelf --set-rpath` relocates and corrupts that payload;
+  # autoPatchelfHook + dontStrip leave it intact. Darwin needs neither.
   dontStrip = true;
 
   installPhase = ''

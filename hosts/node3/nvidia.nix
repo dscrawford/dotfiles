@@ -19,29 +19,26 @@
       modesetting.enable = true;
       open = false;  # GTX 1080 Ti is not supported by the open driver
       package = config.boot.kernelPackages.nvidiaPackages.legacy_580;
-      # Keep GPU initialized — prevents containers from losing GPU access
-      # over time (FFmpeg exit code 187 / "Failed to initialize NVML")
+      # Without this, containers lose GPU access over time
+      # (FFmpeg exit 187 / "Failed to initialize NVML").
       nvidiaPersistenced = true;
       powerManagement.enable = true;
     };
-    # Expose GPU to containers via CDI (Container Device Interface)
-    # NixOS generates CDI specs at /var/run/cdi/ via nvidia-container-toolkit.
-    # Use generic-cdi-plugin (not NVIDIA's k8s-device-plugin) since it reads
-    # CDI specs directly without needing FHS paths or /etc/ld.so.cache.
+    # Generates CDI specs at /var/run/cdi/. Pair with generic-cdi-plugin, not
+    # NVIDIA's k8s-device-plugin, which needs FHS paths and /etc/ld.so.cache.
     nvidia-container-toolkit.enable = true;
   };
 
   virtualisation.docker.enable = true;
 
-  # Enable CDI in containerd so kubelet can schedule GPU pods
+  # So kubelet can schedule GPU pods.
   virtualisation.containerd.settings.plugins."io.containerd.grpc.v1.cri" = {
     enable_cdi = lib.mkForce true;
     cdi_spec_dirs = lib.mkForce [ "/var/run/cdi" "/etc/cdi" ];
   };
 
-  # Fonts for Jellyfin subtitle burn-in (ASS/SSA).
-  # Mounted into the Jellyfin pod via hostPath at /usr/share/fonts.
-  # Set Jellyfin Dashboard > Playback > Fallback Font to /usr/share/fonts/custom/.
+  # Jellyfin subtitle burn-in: hostPath-mounted into the pod at /usr/share/fonts,
+  # with Dashboard > Playback > Fallback Font set to /usr/share/fonts/custom/.
   fonts.packages = with pkgs; [
     noto-fonts
     noto-fonts-cjk-sans

@@ -87,12 +87,10 @@
         username = "daniel";
         homeModules = [ ./shared/home.nix ./shared/sway.nix ./shared/gaming.nix ./shared/easyeffects.nix ];
         extraModules = [
-          # VR streaming for Quest 3 (WiVRn + ALVR)
           ./shared/vr.nix
 
-          # Lossless Scaling Frame Generation (Vulkan layer).
-          # Requires Lossless Scaling installed via Steam; activate per-game
-          # with `ENABLE_LSFG=1 %command%` in Steam launch options.
+          # Needs Lossless Scaling installed via Steam; activate per-game with
+          # `ENABLE_LSFG=1 %command%` in the launch options.
           lsfg-vk-flake.nixosModules.default
           { services.lsfg-vk = { enable = true; ui.enable = true; }; }
         ];

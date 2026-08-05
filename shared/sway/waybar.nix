@@ -6,25 +6,24 @@
 let
   inherit (pkgs) lib;
 
-  # 11-step unicode load bar: ░░░░░░░░░░ .. ██████████.
-  # Used as format-icons so waybar picks the step matching the percentage.
+  # 11-step unicode load bar, used as format-icons so waybar picks the step
+  # matching the percentage.
   barWidth = 10;
   bars = builtins.genList
     (i: lib.concatStrings (builtins.genList (_: "█") i)
       + lib.concatStrings (builtins.genList (_: "░") (barWidth - i)))
     (barWidth + 1);
 
-  # disk and the GPU exec lack format-icons support, so these scripts emit
-  # JSON with a percentage for the custom module's {icon} substitution.
+  # custom modules lack format-icons support, so these emit JSON carrying a
+  # percentage for {icon} substitution.
   disk-status = pkgs.writeShellScript "waybar-disk" ''
     pct=$(${pkgs.coreutils}/bin/df --output=pcent / | ${pkgs.gnused}/bin/sed -n '2s/[ %]//gp')
     used=$(${pkgs.coreutils}/bin/df -h --output=used,size / | ${pkgs.gnused}/bin/sed -n '2s/^ *//p' | ${pkgs.coreutils}/bin/tr -s ' ')
     echo "{\"percentage\": $pct, \"tooltip\": \"/ ''${used/ / of }\"}"
   '';
 
-  # Dropdown-style volume mixer: toggle pwvucontrol anchored to the top-right
-  # of the focused workspace, just under the bar. Size must match the
-  # for_window rule for app_id com.saivert.pwvucontrol in sway/config.nix.
+  # Toggles pwvucontrol anchored under the bar. Size must match the for_window
+  # rule for com.saivert.pwvucontrol in sway/config.nix.
   volume-dropdown = pkgs.writeShellScript "waybar-volume-dropdown" ''
     app_id="com.saivert.pwvucontrol"
     has_window() {
@@ -37,8 +36,7 @@ let
       exit 0
     fi
     ${pkgs.pwvucontrol}/bin/pwvucontrol &
-    # Wait for the window and grab the width of the workspace it landed on
-    # (not the focused one — they can differ on multi-monitor)
+    # The workspace it landed on, not the focused one — they differ on multi-monitor.
     for _ in $(seq 50); do
       ww=$(swaymsg -t get_tree | ${pkgs.jq}/bin/jq --arg a "$app_id" '
         [recurse(.nodes[]?) | select(.type? == "workspace")
@@ -49,8 +47,7 @@ let
       sleep 0.1
     done
     [ -n "$ww" ] || exit 1
-    # move position is workspace-relative, and the workspace rect already
-    # excludes the bar — so anchor to the top-right with a small margin
+    # move position is workspace-relative and that rect already excludes the bar
     swaymsg "[app_id=$app_id] move position $((ww - 528)) 4"
   '';
 
@@ -114,8 +111,7 @@ in
       tooltip-format = "{desc} {volume}%";
       on-click = volume-dropdown;
     };
-    # Only rendered on machines with a battery; waybar skips the module
-    # at startup when none is present.
+    # waybar skips this module at startup on machines without a battery.
     battery = {
       format = "BAT {icon}";
       format-charging = "CHR {icon}";

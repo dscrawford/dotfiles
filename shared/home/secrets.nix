@@ -8,26 +8,18 @@ let
   isDarwin = pkgs.stdenv.isDarwin;
   homeDir = if isDarwin then "/Users/${username}" else "/home/${username}";
 
-  # Secret-to-environment-variable mapping for sops-nix
-  # Each entry: { secret = "sops_key"; env = "ENV_VAR_NAME"; }
-  # Secrets with empty values in sops YAML are silently skipped at shell init.
+  # `desc` becomes a comment above each generated export line. Secrets with
+  # empty values in the sops YAML are silently skipped at shell init.
   secretEnvVars = [
-    # AI / IDE
     { secret = "gemini_api_key";    env = "GEMINI_API_KEY";    desc = "Google Gemini API key for Gemini CLI"; }
-    # GitHub — gh CLI and API access. Exported under both names on purpose:
-    # gh reads GH_TOKEN first and falls back to GITHUB_TOKEN, but most other
-    # tooling only looks at GITHUB_TOKEN. Same secret, two entries.
+    # Two entries, one secret: gh prefers GH_TOKEN, everything else reads GITHUB_TOKEN.
     { secret = "github_token";      env = "GH_TOKEN";          desc = "GitHub PAT for the gh CLI (repo/fork/PR operations)"; }
     { secret = "github_token";      env = "GITHUB_TOKEN";      desc = "GitHub PAT for tooling that only reads GITHUB_TOKEN"; }
-    # Jira — issue tracking and project management (jira-cli-go)
     { secret = "jira_api_token";    env = "JIRA_API_TOKEN";    desc = "Atlassian API token for jira-cli (issue create/view/search)"; }
-    # Confluence — wiki and documentation (confluence-cli)
     { secret = "confluence_domain";    env = "CONFLUENCE_DOMAIN";    desc = "Atlassian domain (e.g. myorg.atlassian.net) for confluence-cli"; }
     { secret = "confluence_email";     env = "CONFLUENCE_EMAIL";     desc = "Atlassian account email for confluence-cli basic auth"; }
     { secret = "confluence_api_token"; env = "CONFLUENCE_API_TOKEN"; desc = "Atlassian API token for confluence-cli (page read/create/search)"; }
-    # Slack — team messaging (slack-cli)
     { secret = "slack_bot_token";   env = "SLACK_BOT_TOKEN";   desc = "Slack bot token (xoxb-...) for sending messages and reading channels"; }
-    # Microsoft 365 — Outlook, Teams, SharePoint, OneDrive (m365 CLI)
     { secret = "m365_tenant_id";     env = "M365_TENANT_ID";     desc = "Azure AD tenant ID for Microsoft 365 CLI authentication"; }
     { secret = "m365_client_id";     env = "M365_CLIENT_ID";     desc = "Azure app registration client ID for Microsoft 365 CLI"; }
     { secret = "m365_client_secret"; env = "M365_CLIENT_SECRET"; desc = "Azure app registration client secret for Microsoft 365 CLI"; }

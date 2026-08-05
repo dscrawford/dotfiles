@@ -1,11 +1,9 @@
 # shared/home/skills.nix
-# Claude Code skill scanning and provisioning
-# Only whitelisted skills are installed to keep the system prompt small (~130K+ tokens saved).
-# To re-enable a skill, add its name to the appropriate whitelist below.
+# Installs only whitelisted Claude Code skills; the full set costs ~130K tokens
+# of system prompt. Add a name to a whitelist below to re-enable it.
 { lib, pkgs, claudeSkills ? {}, ... }:
 
 let
-  # Whitelist of skills to install (all others are ignored)
   enabledLocalSkills = [
     "agentize"
     "deep-research"
@@ -40,7 +38,6 @@ let
 
   isEnabled = whitelist: name: builtins.elem name whitelist;
 
-  # Scan claude/skills/ (local) and build home.file entries for each skill directory
   skillsDir = ../../claude/skills;
   skillNames = builtins.filter (isEnabled enabledLocalSkills)
     (builtins.attrNames (lib.filterAttrs (_: type: type == "directory") (builtins.readDir skillsDir)));
@@ -54,10 +51,9 @@ let
     ) files
   ) skillNames);
 
-  # Scan external Claude skill sources (from flake inputs)
-  # Supports two layouts:
-  #   1. .agents/skills/<name>/SKILL.md  (everything-claude-code)
-  #   2. <app>/agent-harness/cli_anything/<app>/skills/SKILL.md  (cli-anything)
+  # External sources (flake inputs) come in two layouts:
+  #   1. .agents/skills/<name>/SKILL.md                          (everything-claude-code)
+  #   2. <app>/agent-harness/cli_anything/<app>/skills/SKILL.md   (cli-anything)
   mkSkillEntries = prefix: dir: skillDirs:
     lib.listToAttrs (builtins.concatMap (skill:
       let

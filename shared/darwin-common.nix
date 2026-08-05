@@ -21,13 +21,10 @@
   system = {
     stateVersion = 5;
     primaryUser = username;
-    # Emacs.app launcher in /Applications/Nix Apps is created manually (not managed by nix).
-    # It's a thin wrapper that runs ~/.nix-profile/bin/emacs so it always picks up
-    # the Home Manager wrapped version with all extraPackages.
-    # Ensure user is a trusted Nix user (macOS doesn't resolve group membership correctly)
-    # See: https://github.com/NixOS/nix/issues/5885
-    # See: https://gerrit.lix.systems/c/lix/+/2566 (proper daemon fix, not yet shipped)
-    # Determinate Nix overwrites /etc/nix/nix.conf — use nix.custom.conf instead
+    # macOS doesn't resolve group membership for trusted users (NixOS/nix#5885),
+    # so name the user explicitly. Determinate Nix overwrites /etc/nix/nix.conf,
+    # hence nix.custom.conf.
+    # Note: /Applications/Nix Apps/Emacs.app is hand-made, not managed here.
     activationScripts.postActivation.text = ''
       if ! grep -q "trusted-users.*${username}" /etc/nix/nix.custom.conf 2>/dev/null; then
         echo "trusted-users = root ${username}" >> /etc/nix/nix.custom.conf
@@ -37,7 +34,7 @@
     '';
   };
 
-  # Export system PATH to launchd so GUI Emacs can find Nix binaries
+  # So GUI Emacs can find Nix binaries.
   launchd.agents.set-environment-path = {
     serviceConfig = {
       Label = "set-environment-path";
@@ -49,16 +46,15 @@
     };
   };
 
-  # Shell setup — keep zsh enabled (macOS requires it) but add bash to allowed shells
+  # zsh stays enabled because macOS requires it; bash is the actual shell.
   programs.zsh.enable = true;
   programs.bash.enable = true;
   environment.shells = [ pkgs.bash ];
 
   security.pam.services.sudo_local.touchIdAuth = true;
 
-  # Disable nix-daemon management (using Determinate Nix)
+  # Determinate Nix manages the daemon.
   nix.enable = false;
 
-  # Allow unfree packages (e.g., claude-code)
   nixpkgs.config.allowUnfree = true;
 }

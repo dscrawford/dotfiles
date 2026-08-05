@@ -210,7 +210,8 @@ Patches to remove once upstream fixes land:
 - **xdg-desktop-portal-wlr duplicate frame crash** (`patches/xdg-desktop-portal-wlr-fix-duplicate-frame.patch`)
   - Fixes `ext_image_copy_capture_session_v1: session already has a frame object` crash during screen sharing
   - PR: https://github.com/emersion/xdg-desktop-portal-wlr/pull/380
-  - Remove when: `xdg-desktop-portal-wlr` > 0.8.1 is released with the fix
+  - Pinned to 0.8.2: 0.8.3 stalls screencasts after the first frame
+  - Remove when: a release past 0.8.3 ships the fix
 
 ## References
 
