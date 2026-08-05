@@ -10,34 +10,35 @@ let
       src = pkgs.fetchFromGitHub { inherit owner repo rev hash; };
     };
 
-  # agent-shell v0.63.6 requires exactly acp 0.13.1, which is untagged HEAD
+  # agent-shell requires exactly acp 0.13.1, which is untagged; pinned past the
+  # 0.13.1 tag point to pick up "Clear out subscriptions when shutting down".
   acp = mkEmacsPackage {
     pname = "acp";
     version = "0.13.1";
     owner = "xenodium";
     repo = "acp.el";
-    rev = "a29cb161ac95f1819f34481a98666707661c5cf8";
-    hash = "sha256-6uicPFgKdlFIjpuVrVOgBObnLHoMVrWGktxta4fKcFU=";
+    rev = "7d5c16ebcf2af86aa0f14ad9ae0ce45df4e8c8a5";
+    hash = "sha256-fjQwxSim8nfD76xcknErYVqPQqjXqI3b9amEV0GOfKU=";
   };
 
   shell-maker = mkEmacsPackage {
     pname = "shell-maker";
-    version = "0.93.5";
+    version = "0.95.3";
     owner = "xenodium";
     repo = "shell-maker";
-    rev = "v0.93.5";
-    hash = "sha256-G7hU6tm4nFau9/f8I9kn7gQBjS80XymvYdHI8OAocK0=";
+    rev = "v0.95.3";
+    hash = "sha256-KC/dE35hdQPJ6fgmp5nVlDtRjACzTnTIeh7rluORVYA=";
   };
 
   # In the let block, not the output set, so agent-shell-workspace can depend
   # on it — attribute sets are not self-referential.
   agent-shell = mkEmacsPackage {
     pname = "agent-shell";
-    version = "0.63.6";
+    version = "0.69.2";
     owner = "xenodium";
     repo = "agent-shell";
-    rev = "v0.63.6";
-    hash = "sha256-TiTPiOPgRRCh9o+sc9s2pWwuAwsSyPn/rAEY1MCN9jM=";
+    rev = "v0.69.2";
+    hash = "sha256-b3JiSCZSV9DyYSRfqtIQ1CZ3JRgWjNYEerfUQF6C414=";
     packageRequires = [ shell-maker acp ];
   };
 in
