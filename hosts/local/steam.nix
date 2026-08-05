@@ -1,22 +1,15 @@
-# Gaming: Steam, Proton, gamescope, gamemode, and dconf
+# Gaming: Steam, Proton, gamescope, gamemode, and dconf.
+# Why these knobs: docs/steam-ui-performance-research.md.
 { config, lib, pkgs, ... }:
 
 {
-  # The 2026 ("Triton") Steam Controller needs hidapi in the Steam env so the
-  # client can talk to the controller (otherwise repeated "failed firmware
-  # update" errors). See https://wiki.nixos.org/wiki/Steam
-  # NOTE: permanent requirement for that controller, not a temporary workaround.
+  # Permanent: the 2026 ("Triton") Steam Controller needs hidapi in the Steam
+  # env or the client loops on "failed firmware update".
   programs.steam.extraPackages = [ pkgs.hidapi ];
 
-  # --- TEMPORARY: new Steam Controller (Triton) support for Cemu ---------------
-  # Cemu's controller input runs on SDL2 → sdl2-compat → SDL3. Native support for
-  # the 2026 Steam Controller landed in SDL3 *after* the 3.4.8 release nixpkgs
-  # currently ships (Triton HIDAPI commits, 2026-05-27/28), so the stock Cemu can
-  # only see Steam Input's virtual pad — unreliable for non-Steam SDL apps. Pin
-  # ONLY Cemu's SDL3 to a main commit that includes Triton support.
-  # TODO: Remove this whole overlay once nixpkgs' sdl3 is past 3.4.8 with the new
-  #       Steam Controller support — check `nix eval nixpkgs#sdl3.version`. Then a
-  #       plain rebuild restores stock Cemu, which by then reads it natively.
+  # TEMPORARY: pin only Cemu's SDL3 to a main commit with Triton controller
+  # support, which landed after the 3.4.8 release nixpkgs ships.
+  # TODO: drop this overlay once `nix eval nixpkgs#sdl3.version` is past 3.4.8.
   nixpkgs.overlays = [
     (final: prev: {
       cemu = prev.cemu.override {
@@ -29,27 +22,32 @@
               rev = "49879ba0d6997709765caa53d9029b2c3551f1eb";
               hash = "sha256-NHWjFOfeHE0GpiknnwSQ6Kqk5mxUNeUcoB+YT8gdgpo=";
             };
-            # nixpkgs' sdl3 postPatch does a --replace-fail on a testrwlock line
-            # (NONINTERACTIVE_TIMEOUT 20) that this pinned main-branch source has
-            # since changed, breaking patchPhase. That substitution only runs under
-            # doCheck, and SDL's own test suite is irrelevant for this override, so
-            # skip checks to stay robust against upstream test/CMakeLists.txt drift.
+            # nixpkgs' sdl3 postPatch --replace-fail's a testrwlock line this
+            # pinned source has since changed; that patch only runs under doCheck.
             doCheck = false;
           });
         };
       };
     })
   ];
-  # --- END TEMPORARY ----------------------------------------------------------
 
   programs = {
     dconf.enable = true;
     gamemode.enable = true;
-    gamescope.enable = true;
+    gamescope = {
+      enable = true;
+      # Lets gamescope reach NVIDIA's Vulkan stack directly instead of via
+      # XWayland — what Big Picture needs. Inert unless ENABLE_GAMESCOPE_WSI=1.
+      # Deliberately NOT paired with capSysNice: on NVIDIA that fails
+      # vkCreateDevice outright (ValveSoftware/gamescope#521).
+      enableWsi = true;
+    };
     steam = {
       enable = true;
       gamescopeSession = {
         enable = true;
+        # Arms the WSI layer above; nothing else sets it.
+        env.ENABLE_GAMESCOPE_WSI = "1";
         args = [
           "--expose-wayland"
           "--force-grab-cursor"
@@ -58,8 +56,7 @@
       package = pkgs.steam.override {
         extraPkgs = pkgs: with pkgs; [ gamemode gamescope ];
       };
-      # CachyOS Proton, pinned to the 20260520 build (20260521 crashes with
-      # NVIDIA 610.43.02). Select per-game in Steam → Properties → Compatibility.
+      # Select per-game in Steam → Properties → Compatibility.
       extraCompatPackages = [ (pkgs.callPackage ../../pkgs/proton-cachyos { }) ];
     };
   };
