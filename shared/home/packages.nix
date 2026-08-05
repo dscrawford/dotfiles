@@ -129,7 +129,11 @@ in
     mpv
     pwvucontrol
     alacritty
-    discord
+    # Corrupted/garbled UI regions on NVIDIA+Wayland. settings.json's
+    # chromiumSwitches only accepts 13 Windows/macOS keys, so this override is
+    # the only way to pass a flag. Electron 37 also negotiates dmabuf v3 while
+    # sway offers v5, so it never gets modifier feedback.
+    (pkgs.discord.override { commandLineArgs = "--disable-gpu-rasterization"; })
     fastfetch
     jetbrains.pycharm-oss
   ];
