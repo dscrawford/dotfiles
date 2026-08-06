@@ -25,6 +25,8 @@ let
     ""
     (chunk agentShell.agentShell)
     ""
+    (chunk (import ./emacs/pair.nix { }))
+    ""
     (chunk (import ./emacs/misc.nix { inherit pkgs lib config bashPath; }))
     ""
     (chunk (import ./emacs/markdown.nix { inherit pkgs; }))
