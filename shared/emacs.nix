@@ -20,7 +20,7 @@ let
   sections = [
     (chunk (import ./emacs/ui.nix { inherit pkgs lib config; }))
     ""
-    (chunk agentShell.copilotCcide)
+    (chunk agentShell.claudeCodeIde)
     (chunk (import ./emacs/python.nix { inherit pkgs lib config; }))
     ""
     (chunk agentShell.agentShell)

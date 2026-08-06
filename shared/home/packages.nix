@@ -92,7 +92,7 @@ in
     claude-agent-acp
     gemini-cli
     github-copilot-cli
-    nodejs  # npx, for emacs-mcp-server and copilot.el
+    nodejs  # npx, for emacs-mcp-server
 
     # Business / Productivity CLIs
     jira-cli-go

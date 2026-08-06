@@ -1,19 +1,11 @@
 # shared/emacs/agent-shell.nix
-# copilot, claude-code-ide, and agent-shell elisp, as two ordered pieces that
+# claude-code-ide and agent-shell elisp, as two ordered pieces that
 # emacs.nix assembles in order.
 { pkgs, ... }:
 
 {
-  copilotCcide =
+  claudeCodeIde =
     ''
-      (my/guard "copilot"
-        (setq copilot-node-executable "${pkgs.nodejs}/bin/node")
-        (require 'copilot)
-        (global-set-key (kbd "C-c p") 'copilot-mode)
-        (with-eval-after-load 'copilot
-          (define-key copilot-completion-map (kbd "TAB") 'copilot-accept-completion)
-          (define-key copilot-completion-map (kbd "<tab>") 'copilot-accept-completion)))
-
       ;; No my/guard: use-package's :catch already demotes errors in its body.
       (use-package claude-code-ide
         :bind ("C-c a" . claude-code-ide-menu)
