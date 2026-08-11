@@ -57,6 +57,30 @@
                (env . (((name . "MODE") (value . "stdio"))
                        ((name . "DEFAULT_SEARCH_ENGINE") (value . "duckduckgo"))
                        ((name . "ALLOWED_SEARCH_ENGINES") (value . "duckduckgo,bing,brave,startpage")))))))
+      ;; agent-shell teardown SIGKILLs only the acp process (acp-shutdown
+      ;; uses delete-process); the claude + MCP-server children share its
+      ;; process group but get no signal and can leak, e.g. `ruflo mcp
+      ;; start' (RUFLO_BUG.md). TERM the whole group first; KILL survivors.
+      (defun my/acp--kill-group (pgid)
+        (signal-process pgid 'KILL))
+      (defun my/acp-shutdown--kill-group (&rest args)
+        (when-let* ((client (plist-get args :client))
+                    (proc (map-elt client :process))
+                    ((process-live-p proc))
+                    (pgid (- (process-id proc))))
+          (signal-process pgid 'TERM)
+          (run-at-time 5 nil #'my/acp--kill-group pgid)))
+      (with-eval-after-load 'acp
+        (advice-add 'acp-shutdown :before #'my/acp-shutdown--kill-group))
+      ;; kill-buffer-hook does not run for live buffers on Emacs exit, so
+      ;; sweep leftover acp process groups there too.
+      (defun my/acp--kill-all-groups ()
+        (dolist (proc (process-list))
+          (when (string-match-p "claude-agent-acp"
+                                (or (car-safe (process-command proc)) ""))
+            (when-let* ((pid (process-id proc)))
+              (signal-process (- pid) 'TERM)))))
+      (add-hook 'kill-emacs-hook #'my/acp--kill-all-groups)
       (defun my/ruflo--reap (proc)
         (when (process-live-p proc)
           (kill-process proc)))
