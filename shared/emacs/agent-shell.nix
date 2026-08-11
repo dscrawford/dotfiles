@@ -62,10 +62,13 @@
       (defun my/acp--kill-group (pgid)
         (signal-process pgid 'KILL))
       (defun my/acp-shutdown--kill-group (&rest args)
+        ;; pid bound before negation: a live process can have a nil pid
+        ;; (network process), and a :before-advice error aborts acp-shutdown.
         (when-let* ((client (plist-get args :client))
                     (proc (map-elt client :process))
                     ((process-live-p proc))
-                    (pgid (- (process-id proc))))
+                    (pid (process-id proc))
+                    (pgid (- pid)))
           (signal-process pgid 'TERM)
           (run-at-time 5 nil #'my/acp--kill-group pgid)))
       (with-eval-after-load 'acp
@@ -73,9 +76,10 @@
       ;; kill-buffer-hook skips live buffers on Emacs exit; sweep here too.
       (defun my/acp--kill-all-groups ()
         (dolist (proc (process-list))
-          (when (string-match-p "claude-agent-acp"
+          (when (string-match-p "/claude-agent-acp\\'"
                                 (or (car-safe (process-command proc)) ""))
-            (when-let* ((pid (process-id proc)))
+            (when-let* (((process-live-p proc))
+                        (pid (process-id proc)))
               (signal-process (- pid) 'TERM)))))
       (add-hook 'kill-emacs-hook #'my/acp--kill-all-groups)
       (defun my/ruflo--reap (proc)
@@ -96,7 +100,9 @@
                         :connection-type 'pipe
                         :noquery t
                         :sentinel #'ignore)))
-            (process-send-eof proc)
+            ;; Errors if the child already exited (e.g. broken ruflo shim);
+            ;; must not abort the mode hook.
+            (ignore-errors (process-send-eof proc))
             (run-at-time 30 nil #'my/ruflo--reap proc))))
       (add-hook 'agent-shell-mode-hook #'my/ruflo-register-session)
       ;; Clipboard image support (not upstream). MIME types are checked first so
