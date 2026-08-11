@@ -42,7 +42,7 @@ if [ -n "$prompt" ]; then
   fi
 
   if [ "$feature" = 1 ]; then
-    ctx="$ctx Feature task: launch the test-scout and security-scout agents in parallel (single message, both tool calls) as read-only advisors while you implement. You alone edit files — apply their test code and security fixes yourself when their reports arrive."
+    ctx="$ctx Feature task: launch the test-scout, security-scout, and performance-scout agents in parallel (single message, all three tool calls) as read-only advisors while you implement. You alone edit files — apply their test code, security fixes, and performance fixes yourself when their reports arrive."
   fi
 fi
 

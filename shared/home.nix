@@ -59,6 +59,10 @@ in
       source = ../claude/agents/security-scout.md;
       force = true;
     };
+    ".claude/agents/performance-scout.md" = {
+      source = ../claude/agents/performance-scout.md;
+      force = true;
+    };
     # Display-only .ipynb diffs. The nbstripout clean/smudge filter is NOT set
     # globally — it wipes local outputs on pull; opt in per-repo instead.
     ".config/git/attributes".text = "*.ipynb diff=ipynb\n";
