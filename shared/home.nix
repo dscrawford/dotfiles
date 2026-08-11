@@ -31,6 +31,8 @@ in
     # Steer agent-shell/Claude Code memory to the ruflo MCP server instead of
     # the built-in file-based memory (memory/*.md + MEMORY.md index).
     ".claude/rules/common/ruflo-memory.md".source = ../claude/rules/common/ruflo-memory.md;
+    # Rein in comment-heavy generated code across Claude Code and agent-shell.
+    ".claude/rules/common/comment-policy.md".source = ../claude/rules/common/comment-policy.md;
     # Display-only .ipynb diffs. The nbstripout clean/smudge filter is NOT set
     # globally — it wipes local outputs on pull; opt in per-repo instead.
     ".config/git/attributes".text = "*.ipynb diff=ipynb\n";
