@@ -41,14 +41,45 @@
           fi
           ;;
         init)
+          # Creation-time assignments. These only apply when a workspace is
+          # first created, so they are not enough on their own.
           for i in "''${!OUTPUTS[@]}"; do
             P="''${PREFIXES[$i]}"
             O="''${OUTPUTS[$i]}"
             for W in $(seq 1 10); do
               swaymsg workspace "''${P}$(printf '%02d' "$W")" output "$O"
             done
-            swaymsg workspace "''${P}01"
           done
+
+          # A workspace created before its monitor was up (or while the prefix
+          # order was different) lands on the wrong output and stays there,
+          # because the assignment above never relocates it. Move any strays
+          # to where they belong.
+          RESTORE=$(swaymsg -t get_workspaces | jq -r '.[] | select(.focused) | .name')
+          EXISTING=$(swaymsg -t get_workspaces | jq -r '.[] | "\(.name) \(.output)"')
+          for i in "''${!OUTPUTS[@]}"; do
+            P="''${PREFIXES[$i]}"
+            O="''${OUTPUTS[$i]}"
+            while read -r NAME OUT; do
+              case "$NAME" in "$P"[0-9][0-9]) ;; *) continue ;; esac
+              if [ "$OUT" != "$O" ]; then
+                swaymsg -- workspace --no-auto-back-and-forth "$NAME"
+                swaymsg move workspace to output "$O"
+              fi
+            done <<< "$EXISTING"
+          done
+
+          # Land every output on its first workspace. This also evicts sway's
+          # default "1" workspace, which is empty and destroyed once hidden.
+          for i in "''${!OUTPUTS[@]}"; do
+            swaymsg -- workspace --no-auto-back-and-forth "''${PREFIXES[$i]}01"
+          done
+
+          # Restore focus, but only to a managed workspace — restoring "1"
+          # would recreate the workspace we just evicted.
+          case "$RESTORE" in
+            [A-J][0-9][0-9]) swaymsg -- workspace --no-auto-back-and-forth "$RESTORE" ;;
+          esac
           ;;
       esac
     '';
