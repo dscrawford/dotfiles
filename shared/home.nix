@@ -63,13 +63,7 @@ in
       source = ../claude/agents/performance-scout.md;
       force = true;
     };
-    # Friendly named entry points for ruflo MCP tools; the mcp__ruflo__*
-    # tool IDs themselves come from the server and cannot be retitled here.
-    ".claude/commands/memory-search.md" = { source = ../claude/commands/memory-search.md; force = true; };
-    ".claude/commands/memory-save.md" = { source = ../claude/commands/memory-save.md; force = true; };
-    ".claude/commands/diff-risk.md" = { source = ../claude/commands/diff-risk.md; force = true; };
-    ".claude/commands/pii-scan.md" = { source = ../claude/commands/pii-scan.md; force = true; };
-    ".claude/commands/session-save.md" = { source = ../claude/commands/session-save.md; force = true; };
+    ".claude/rules/common/ruflo-tools.md".source = ../claude/rules/common/ruflo-tools.md;
     # Display-only .ipynb diffs. The nbstripout clean/smudge filter is NOT set
     # globally — it wipes local outputs on pull; opt in per-repo instead.
     ".config/git/attributes".text = "*.ipynb diff=ipynb\n";
