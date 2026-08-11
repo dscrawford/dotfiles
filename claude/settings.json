@@ -1,0 +1,29 @@
+{
+  "enabledPlugins": {
+    "pyright-lsp@claude-plugins-official": true,
+    "everything-claude-code@everything-claude-code": true,
+    "code-simplifier@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "everything-claude-code": {
+      "source": {
+        "source": "github",
+        "repo": "affaan-m/everything-claude-code"
+      }
+    }
+  },
+  "theme": "dark",
+  "tui": "fullscreen",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "c=$(cat ~/.claude/.comment-nudge 2>/dev/null || echo 0); c=$((c+1)); echo \"$c\" > ~/.claude/.comment-nudge; [ $((c % 5)) -eq 0 ] && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"Comment policy: minimal — comments only for non-obvious constraints; no narration, banners, or boilerplate docstrings.\"}}' || true"
+          }
+        ]
+      }
+    ]
+  }
+}

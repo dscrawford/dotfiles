@@ -33,6 +33,12 @@ in
     ".claude/rules/common/ruflo-memory.md".source = ../claude/rules/common/ruflo-memory.md;
     # Rein in comment-heavy generated code across Claude Code and agent-shell.
     ".claude/rules/common/comment-policy.md".source = ../claude/rules/common/comment-policy.md;
+    # Read-only under nix by design; /config and /hooks can no longer write it.
+    # force: replace the pre-existing hand-managed file on first activation.
+    ".claude/settings.json" = {
+      source = ../claude/settings.json;
+      force = true;
+    };
     # Display-only .ipynb diffs. The nbstripout clean/smudge filter is NOT set
     # globally — it wipes local outputs on pull; opt in per-repo instead.
     ".config/git/attributes".text = "*.ipynb diff=ipynb\n";
