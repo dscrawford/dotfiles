@@ -57,14 +57,29 @@
                (env . (((name . "MODE") (value . "stdio"))
                        ((name . "DEFAULT_SEARCH_ENGINE") (value . "duckduckgo"))
                        ((name . "ALLOWED_SEARCH_ENGINES") (value . "duckduckgo,bing,brave,startpage")))))))
+      (defun my/ruflo--reap (proc)
+        (when (process-live-p proc)
+          (kill-process proc)))
       (defun my/ruflo-register-session ()
         "Register the current agent-shell session with ruflo for coordination."
         (when (executable-find "ruflo")
           (let* ((cwd (agent-shell-cwd))
                  (project (file-name-nondirectory (directory-file-name cwd)))
-                 (buf-name (buffer-name)))
-            (start-process "ruflo-register" nil "ruflo" "session" "save"
-                           "-n" (format "agent-shell:%s:%s" project buf-name)))))
+                 (buf-name (buffer-name))
+                 ;; Pipe stdin + immediate EOF: under a pty launch the child
+                 ;; inherits the session pty and node's event loop never
+                 ;; drains, leaking one process per session (RUFLO_BUG.md).
+                 ;; The timer reaps any that still hang.
+                 (proc (make-process
+                        :name "ruflo-register"
+                        :command (list "ruflo" "session" "save"
+                                       "-n" (format "agent-shell:%s:%s" project buf-name))
+                        :buffer nil
+                        :connection-type 'pipe
+                        :noquery t
+                        :sentinel #'ignore)))
+            (process-send-eof proc)
+            (run-at-time 30 nil #'my/ruflo--reap proc))))
       (add-hook 'agent-shell-mode-hook #'my/ruflo-register-session)
       ;; Clipboard image support (not upstream). MIME types are checked first so
       ;; text clipboard falls through to yank. The guard sits INSIDE
