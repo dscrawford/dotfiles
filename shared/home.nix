@@ -49,6 +49,16 @@ in
       executable = true;
       force = true;
     };
+    # Read-only advisors spawned alongside feature work; no Edit/Write in
+    # their tools, so the main agent stays the single writer.
+    ".claude/agents/test-scout.md" = {
+      source = ../claude/agents/test-scout.md;
+      force = true;
+    };
+    ".claude/agents/security-scout.md" = {
+      source = ../claude/agents/security-scout.md;
+      force = true;
+    };
     # Display-only .ipynb diffs. The nbstripout clean/smudge filter is NOT set
     # globally — it wipes local outputs on pull; opt in per-repo instead.
     ".config/git/attributes".text = "*.ipynb diff=ipynb\n";
