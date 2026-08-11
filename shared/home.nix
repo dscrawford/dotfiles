@@ -44,6 +44,11 @@ in
       executable = true;
       force = true;
     };
+    ".claude/hooks/commit-guard.sh" = {
+      source = ../claude/hooks/commit-guard.sh;
+      executable = true;
+      force = true;
+    };
     # Display-only .ipynb diffs. The nbstripout clean/smudge filter is NOT set
     # globally — it wipes local outputs on pull; opt in per-repo instead.
     ".config/git/attributes".text = "*.ipynb diff=ipynb\n";
