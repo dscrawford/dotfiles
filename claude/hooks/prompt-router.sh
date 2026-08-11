@@ -22,7 +22,7 @@ fi
 if [ -n "$prompt" ]; then
   hard=0
   feature=0
-  feature_re='\b(implement|new feature|new product|add (a |an )?(feature|command|endpoint|api|module|service|skill)|build (a |an |out )|create (a |an )?(feature|command|endpoint|api|module|service|skill|tool|app))'
+  feature_re='\b(implement\b|new feature|new product|add (a |an )?(feature|command|endpoint|api|module|service|skill)|build (a |an |out )|create (a |an )?(feature|command|endpoint|api|module|service|skill|tool|app))'
   grep -qiE "$feature_re" <<<"$prompt" && feature=1 hard=1
   if [ "${COD_CLASSIFIER:-heuristic}" = "llm" ] && command -v claude >/dev/null; then
     cls=$(CLAUDE_PROMPT_ROUTER_NESTED=1 claude -p --model claude-haiku-4-5-20251001 \
