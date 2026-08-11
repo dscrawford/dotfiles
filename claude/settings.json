@@ -95,7 +95,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "c=$(cat ~/.claude/.comment-nudge 2>/dev/null || echo 0); c=$((c+1)); echo \"$c\" > ~/.claude/.comment-nudge; [ $((c % 5)) -eq 0 ] && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"Comment policy: minimal — comments only for non-obvious constraints; no narration, banners, or boilerplate docstrings.\"}}' || true"
+            "command": "~/.claude/hooks/prompt-router.sh"
           }
         ]
       }

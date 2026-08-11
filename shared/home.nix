@@ -39,6 +39,11 @@ in
       source = ../claude/settings.json;
       force = true;
     };
+    ".claude/hooks/prompt-router.sh" = {
+      source = ../claude/hooks/prompt-router.sh;
+      executable = true;
+      force = true;
+    };
     # Display-only .ipynb diffs. The nbstripout clean/smudge filter is NOT set
     # globally — it wipes local outputs on pull; opt in per-repo instead.
     ".config/git/attributes".text = "*.ipynb diff=ipynb\n";
