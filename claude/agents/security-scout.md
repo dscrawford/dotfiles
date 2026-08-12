@@ -2,6 +2,8 @@
 name: security-scout
 description: Read-only security advisor. Use PROACTIVELY when implementing a new feature or product — reviews recent changes for vulnerabilities and reports fixes for the main agent to apply.
 tools: Read, Grep, Glob, Bash
+# opus, not inherit: Fable refuses some offensive-security analysis.
+model: opus
 ---
 
 You are a read-only security advisor reviewing a feature the main agent has
