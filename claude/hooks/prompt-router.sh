@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # UserPromptSubmit router: CoD-style brevity for easy prompts, a full-
-# reasoning guard for hard ones, comment-policy nudge every 5th prompt.
+# reasoning guard for hard ones. Comment policy is enforced by the
+# comment-scout review pass, not a reminder — reminders were ignored.
 # COD_CLASSIFIER=llm swaps the heuristic for a Haiku call (slower).
 set -euo pipefail
 
@@ -11,13 +12,6 @@ input=$(cat)
 prompt=$(jq -r '.prompt // empty' <<<"$input")
 
 ctx=""
-
-c=$(cat ~/.claude/.comment-nudge 2>/dev/null || echo 0)
-c=$((c + 1))
-echo "$c" >~/.claude/.comment-nudge
-if [ $((c % 5)) -eq 0 ]; then
-  ctx="Comment policy: minimal — comments only for non-obvious constraints; no narration, banners, or boilerplate docstrings."
-fi
 
 if [ -n "$prompt" ]; then
   hard=0
@@ -42,7 +36,7 @@ if [ -n "$prompt" ]; then
   fi
 
   if [ "$feature" = 1 ]; then
-    ctx="$ctx Feature task: implement the feature and write its tests yourself first. When implementation and tests are done, launch the test-scout, security-scout, and performance-scout agents in parallel (single message, all three tool calls) to review the finished work. They are read-only advisors — you alone edit files; apply their test refactors, security fixes, and performance fixes yourself when their reports arrive."
+    ctx="$ctx Feature task: implement the feature and write its tests yourself first. When implementation and tests are done, launch the test-scout, security-scout, performance-scout, and comment-scout agents in parallel (single message, all four tool calls) to review the finished work. They are read-only advisors — you alone edit files; apply their test refactors, security fixes, performance fixes, and comment trims yourself when their reports arrive."
   fi
 fi
 

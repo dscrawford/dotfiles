@@ -63,6 +63,10 @@ in
       source = ../claude/agents/performance-scout.md;
       force = true;
     };
+    ".claude/agents/comment-scout.md" = {
+      source = ../claude/agents/comment-scout.md;
+      force = true;
+    };
     ".claude/rules/common/ruflo-tools.md".source = ../claude/rules/common/ruflo-tools.md;
     # Display-only .ipynb diffs. The nbstripout clean/smudge filter is NOT set
     # globally — it wipes local outputs on pull; opt in per-repo instead.
