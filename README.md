@@ -23,6 +23,26 @@ Daniel's NixOS configuration using flakes for multiple systems. Yes I used Claud
 - Configuration in `.sops.yaml`
 - Encrypted secrets stored in `secrets/secrets.yaml` (safe to commit — decryption requires age key)
 
+### Local LLM MCP Router (`pkgs/local-llm-mcp`)
+
+Self-hosted model routing for small subagent tasks (test/security/general
+review) using Ollama + MCP. The `local` host runs Ollama as a system service
+(CUDA-accelerated); `local-llm-mcp` is on PATH everywhere via Home Manager.
+
+```bash
+# Pull the default model once
+ollama pull qwen3:8b
+
+# agent-shell sessions get the server automatically (shared/emacs/agent-shell.nix).
+# The Claude Code CLI needs a one-time user-scope registration:
+claude mcp add --scope user local-llm-router -- local-llm-mcp
+```
+
+Sonnet-tier model hints (`sonnet`, `claude-sonnet-5`) are mapped to the local
+default model via `LOCAL_LLM_MODEL_OVERRIDES`; opus hints deliberately stay
+remote. See `claude/skills/local-llm-routing/` for the usage pattern and
+`tests/local-llm-mcp/run.sh` for the test suite.
+
 ## Usage
 
 ### NixOS Setup

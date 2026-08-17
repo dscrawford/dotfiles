@@ -90,6 +90,8 @@ in
     (pkgs.callPackage ../../pkgs/claude-code {})
     rufloPackage
     claude-agent-acp
+    (pkgs.callPackage ../../pkgs/local-llm-mcp {})
+    ollama  # client CLI; the desktop host runs the server via services.ollama
     gemini-cli
     github-copilot-cli
     nodejs  # npx, for emacs-mcp-server

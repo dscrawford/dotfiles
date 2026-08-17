@@ -9,6 +9,7 @@ let
     "deep-research"
     "design-doc"
     "diagram"
+    "local-llm-routing"
     "make-envrc"
     "update-readme"
   ];

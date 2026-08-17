@@ -14,6 +14,14 @@
         + " --cmd 'sway --unsupported-gpu'";
     };
     dbus.enable = true;
+    # Backs the local-llm-router MCP server (pkgs/local-llm-mcp).
+    ollama = {
+      enable = true;
+      package = pkgs.ollama-cuda;
+      # Explicit loopback pin so a future nixpkgs default change can't widen
+      # the unauthenticated API beyond localhost.
+      host = "127.0.0.1";
+    };
     printing.enable = true;
     blueman.enable = true;
     flatpak.enable = true;

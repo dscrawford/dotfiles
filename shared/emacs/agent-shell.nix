@@ -56,7 +56,15 @@
                (args . ("-y" "open-websearch@1.2.0"))
                (env . (((name . "MODE") (value . "stdio"))
                        ((name . "DEFAULT_SEARCH_ENGINE") (value . "duckduckgo"))
-                       ((name . "ALLOWED_SEARCH_ENGINES") (value . "duckduckgo,bing,brave,startpage")))))))
+                       ((name . "ALLOWED_SEARCH_ENGINES") (value . "duckduckgo,bing,brave,startpage")))))
+              ;; Ollama-backed task offload. Sonnet-tier hints map to the local
+              ;; model; opus stays remote — security-scout's pin (2bd9ee8) wants
+              ;; the top-tier model, not a local stand-in.
+              ((name . "local-llm-router")
+               (command . "${pkgs.callPackage ../../pkgs/local-llm-mcp {}}/bin/local-llm-mcp")
+               (env . (((name . "LOCAL_LLM_DEFAULT_MODEL") (value . "qwen3:8b"))
+                       ((name . "LOCAL_LLM_MODEL_OVERRIDES")
+                        (value . "{\"sonnet\":\"qwen3:8b\",\"claude-sonnet-5\":\"qwen3:8b\"}")))))))
       ;; acp-shutdown kills only the acp process; TERM its whole group or
       ;; the claude + MCP-server children leak (RUFLO_BUG.md).
       (defun my/acp--kill-group (pgid)
