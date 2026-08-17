@@ -136,6 +136,8 @@ in
     # sway offers v5, so it never gets modifier feedback.
     (pkgs.discord.override { commandLineArgs = "--disable-gpu-rasterization"; })
     fastfetch
-    jetbrains.pycharm-oss
+    # pycharm-oss dropped: unmaintained in nixpkgs and flagged insecure
+    # (NIXPKGS-2026-2269) after the 2026-08 channel bump.
+    jetbrains.pycharm
   ];
 }
