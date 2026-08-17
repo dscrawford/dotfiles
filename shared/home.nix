@@ -20,6 +20,7 @@ in
     ./home/secrets.nix
     # No mcp-servers.nix: Emacs gets them from agent-shell-mcp-servers
     # (emacs/agent-shell.nix), the CLI from ~/.claude.json user scope.
+    ./home/ollama.nix
     ./home/bash.nix
     ./home/tmux.nix
     ./home/git.nix

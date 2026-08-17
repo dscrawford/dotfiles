@@ -26,8 +26,11 @@ Daniel's NixOS configuration using flakes for multiple systems. Yes I used Claud
 ### Local LLM MCP Router (`pkgs/local-llm-mcp`)
 
 Self-hosted model routing for small subagent tasks (test/security/general
-review) using Ollama + MCP. The `local` host runs Ollama as a system service
-(CUDA-accelerated); `local-llm-mcp` is on PATH everywhere via Home Manager.
+review) using Ollama + MCP. One shared Home Manager module
+(`shared/home/ollama.nix`) runs the Ollama daemon on every system: a systemd
+user service on Linux, a launchd agent on macOS (Metal via unified memory).
+The desktop overrides the package to `ollama-cuda` in flake.nix;
+`local-llm-mcp` and the `ollama` CLI are on PATH everywhere.
 
 ```bash
 # Pull the default model once
