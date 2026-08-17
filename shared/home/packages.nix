@@ -112,7 +112,9 @@ in
     zsync
     appstream
     appimage-run
-    simplescreenrecorder
+    # ffmpeg_7: 0.4.4 still uses AVCodec.pix_fmts/sample_fmts, removed in
+    # ffmpeg 8+; drop the pin when upstream ports to avcodec_get_supported_config.
+    (simplescreenrecorder.override { ffmpeg = ffmpeg_7; })
     nghttp2
     libidn2
     rtmpdump
