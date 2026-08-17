@@ -50,6 +50,11 @@ in
       executable = true;
       force = true;
     };
+    ".claude/hooks/tool-output-filter.sh" = {
+      source = ../claude/hooks/tool-output-filter.sh;
+      executable = true;
+      force = true;
+    };
     # Read-only advisors spawned alongside feature work; no Edit/Write in
     # their tools, so the main agent stays the single writer.
     ".claude/agents/test-scout.md" = {

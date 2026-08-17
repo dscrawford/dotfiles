@@ -32,7 +32,11 @@ Requires the `local-llm-router` MCP server in the current session
   override map.
 - `local_model_provision` — pull a model (for example `qwen3:8b`).
 - `local_model_run` — run scoped prompts with profile tuning:
-  `general`, `test-review`, `security-review`.
+  - `general` — concise assistant for bounded analysis
+  - `test-review` / `security-review` — scoped review passes
+  - `summarize-log` — condense command/build logs, preserving exact errors
+  - `classify-diff` — type/scope/risk triage of a diff
+  - `commit-message` — draft a conventional-commit message from a diff
 
 ## Recommended workflow
 

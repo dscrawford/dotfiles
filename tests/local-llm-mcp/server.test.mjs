@@ -339,8 +339,13 @@ test("stdio protocol", async (t) => {
     const cases = [
       ["test-review", /test-focused reviewer/],
       ["security-review", /security-focused reviewer/],
+      ["summarize-log", /summarize command and build logs/],
+      ["classify-diff", /classify code diffs/],
+      ["commit-message", /git commit messages/],
       ["general", /concise engineering assistant/],
       ["not-a-real-profile", /concise engineering assistant/],
+      ["__proto__", /concise engineering assistant/],
+      ["constructor", /concise engineering assistant/],
     ];
     for (const [profile, wantSystem] of cases) {
       const task = `profile-task-${profile}`;

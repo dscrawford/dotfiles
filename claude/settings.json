@@ -97,6 +97,10 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/commit-guard.sh"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/tool-output-filter.sh"
           }
         ]
       }

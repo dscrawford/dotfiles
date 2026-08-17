@@ -1,8 +1,6 @@
 # shared/home/ollama.nix
-# One declaration covers both platforms: home-manager renders it as a systemd
-# user service on Linux and a launchd agent on macOS (Metal needs no flag).
-# Backs the local-llm-router MCP server (pkgs/local-llm-mcp); also puts the
-# ollama CLI on PATH. The desktop overrides package to ollama-cuda in flake.nix.
+# Renders as a systemd user service on Linux, launchd agent on macOS (Metal
+# needs no flag); backs local-llm-router. Desktop overrides package in flake.nix.
 { ... }:
 
 {

@@ -95,22 +95,41 @@ export function resolveModel({ requestedModel, availableModels, config }) {
   return { selectedModel: null, resolution: "none-available", requestedModel: requested || null };
 }
 
+// Null prototype + typeof check: profile is caller-controlled, and a lookup
+// like "__proto__" or "constructor" must fall back, not resolve.
+const PROFILE_PROMPTS = Object.assign(Object.create(null), {
+  "test-review": [
+    "You are a test-focused reviewer.",
+    "Identify test gaps, flaky risks, and concise concrete fixes.",
+    "Prioritize high-signal findings only.",
+  ].join(" "),
+  "security-review": [
+    "You are a security-focused reviewer.",
+    "Identify exploitable issues first (authz/authn, injection, secrets, deserialization, SSRF, RCE).",
+    "Return concise, actionable remediation guidance.",
+  ].join(" "),
+  "summarize-log": [
+    "You summarize command and build logs.",
+    "Report: overall outcome, each distinct error or failure with its location, and the last action before failure.",
+    "Preserve exact error messages, file paths, and exit codes verbatim. Omit passing noise. Be brief.",
+  ].join(" "),
+  "classify-diff": [
+    "You classify code diffs.",
+    "Output exactly: type (feat|fix|refactor|docs|test|chore|perf|ci|build|style), scope (subsystem touched),",
+    "risk (low|medium|high) with a one-line reason, and a one-sentence summary of the change.",
+  ].join(" "),
+  "commit-message": [
+    "You write git commit messages from diffs.",
+    "Output only the message: a conventional-commit subject line '<type>: <description>' under 72 characters,",
+    "then a blank line and a short body only when the why is not obvious from the subject.",
+    "No markdown, no code fences, no commentary.",
+  ].join(" "),
+  general: "You are a concise engineering assistant. Focus on concrete, actionable output.",
+});
+
 function profilePrompt(profile) {
-  if (profile === "test-review") {
-    return [
-      "You are a test-focused reviewer.",
-      "Identify test gaps, flaky risks, and concise concrete fixes.",
-      "Prioritize high-signal findings only.",
-    ].join(" ");
-  }
-  if (profile === "security-review") {
-    return [
-      "You are a security-focused reviewer.",
-      "Identify exploitable issues first (authz/authn, injection, secrets, deserialization, SSRF, RCE).",
-      "Return concise, actionable remediation guidance.",
-    ].join(" ");
-  }
-  return "You are a concise engineering assistant. Focus on concrete, actionable output.";
+  const prompt = PROFILE_PROMPTS[profile];
+  return typeof prompt === "string" ? prompt : PROFILE_PROMPTS.general;
 }
 
 function formatToolResult(text, structuredContent, isError = false) {
@@ -232,7 +251,14 @@ const TOOL_DEFS = [
         },
         profile: {
           type: "string",
-          enum: ["general", "test-review", "security-review"],
+          enum: [
+            "general",
+            "test-review",
+            "security-review",
+            "summarize-log",
+            "classify-diff",
+            "commit-message",
+          ],
           default: "general",
         },
         temperature: { type: "number", minimum: 0, maximum: 2, default: 0.2 },
