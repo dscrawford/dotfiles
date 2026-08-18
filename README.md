@@ -25,6 +25,11 @@ Daniel's NixOS configuration using flakes for multiple systems. Yes I used Claud
 
 ### Local LLM MCP Router (`pkgs/local-llm-mcp`)
 
+![The local-llm-router MCP server drafting a conventional commit message from a diff summary on the local GPU](docs/demos/local-llm-router.gif)
+
+*The router drafting a commit message locally — regenerate with
+`nix run nixpkgs#vhs -- docs/demos/local-llm-router.tape` (see `claude/skills/readme-demo/`).*
+
 Self-hosted model routing for small subagent tasks (test/security/general
 review) using Ollama + MCP. One shared Home Manager module
 (`shared/home/ollama.nix`) runs the Ollama daemon on every system: a systemd

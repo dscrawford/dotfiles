@@ -11,6 +11,7 @@ let
     "diagram"
     "local-llm-routing"
     "make-envrc"
+    "readme-demo"
     "update-readme"
   ];
 
