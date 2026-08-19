@@ -58,15 +58,17 @@ in
   # Tab-bar workspace for agent-shell. Our fork of gveres/agent-shell-workspace,
   # carrying unmerged sidebar fixes: maker-function agent configs, selection
   # face, per-agent session titles, collapsible project groups, point stability
-  # across refreshes, and crashes on tty frames. Untagged upstream and unmerged
-  # here, so `git log` the pinned rev below for the individual fixes.
+  # across refreshes, and crashes on tty frames -- plus the one-shot picker
+  # (sidebar-toggle default), working-agent spinner, and live tool-call
+  # summaries. Untagged upstream and unmerged here, so `git log` the pinned
+  # rev below for the individual fixes.
   agent-shell-workspace = mkEmacsPackage {
     pname = "agent-shell-workspace";
-    version = "0.1.0-unstable-2026-08-02";
+    version = "0.1.0-unstable-2026-08-19";
     owner = "dscrawford";
     repo = "agent-shell-workspace";
-    rev = "42e75a067acc1da3ffd561a39f8ed2987dcce4db";
-    hash = "sha256-cA/GfnU9S8rbEpZEfEtHY75mZ4mT3G7UK6kvaN7pG3g=";
+    rev = "e2ab5a44295c975699c15f8101d0a125f00241b0";
+    hash = "sha256-w2bD0iegRhGxJugESRBvWF7tCiomLoFJ4hXGjBQFYEM=";
     packageRequires = [ agent-shell ];
   };
 }
