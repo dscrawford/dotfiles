@@ -1,11 +1,13 @@
 # shared/home/bash.nix
-# Secret export lines come from secrets.nix via `my.secretExportLines`.
-{ config, lib, pkgs, username, enableSecrets ? false, ... }:
+# Secrets load via the hook from secrets.nix (`my.secretEnvHook`, empty when
+# secrets are disabled); interactive shells source it here, non-interactive
+# ones get it through BASH_ENV.
+{ config, lib, pkgs, username, ... }:
 
 let
   isDarwin = pkgs.stdenv.isDarwin;
   homeDir = if isDarwin then "/Users/${username}" else "/home/${username}";
-  secretExportLines = config.my.secretExportLines;
+  secretEnvHook = config.my.secretEnvHook;
 in
 {
   programs.bash = {
@@ -16,9 +18,9 @@ in
       export EDITOR="emacs -nw"
     '' + lib.optionalString isDarwin ''
       export SHELL="/run/current-system/sw/bin/bash"
-    '' + lib.optionalString enableSecrets ''
+    '' + lib.optionalString (secretEnvHook != "") ''
 
-      ${secretExportLines}
+      . ${secretEnvHook}
     '' + ''
 
       # One Emacs server per tmux pane.
