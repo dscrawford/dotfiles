@@ -66,8 +66,9 @@ Desktop (`local`) adds `sway.nix` and `gaming.nix` as extra Home Manager modules
 
 ### Secrets (sops-nix)
 
-- Encryption: age keys defined in `.sops.yaml`
-- Encrypted secrets: `secrets/secrets.yaml`
+- `secrets/` is a git submodule ([dotfiles-secrets](https://github.com/dscrawford/dotfiles-secrets)); clone with `--recurse-submodules` or run `git submodule update --init`
+- Encryption: age recipients defined in `secrets/.sops.yaml`; downstream users point the submodule at their own repo
+- Encrypted secrets: `secrets/secrets.yaml` — every non-empty top-level scalar is exported as an env var named after its uppercased key (via `secret-env-refresh` + BASH_ENV hook)
 - User key location: `~/.config/sops/age/keys.txt`
 - Gated by `enableSecrets` flag — disabled for Darwin and terminal-only builds
 
