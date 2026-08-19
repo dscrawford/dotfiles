@@ -21,28 +21,10 @@
     ];
   };
 
-  # Overlay because xdg.portal.wlr hardcodes the package (no package option).
-  # Pinned to 0.8.2: 0.8.3 stalls screencasts after the first frame.
-  # TODO: unpin and drop the patch once a release past 0.8.3 fixes it
-  # (https://github.com/emersion/xdg-desktop-portal-wlr/pull/380).
-  nixpkgs.overlays = [
-    (final: prev: {
-      xdg-desktop-portal-wlr = prev.xdg-desktop-portal-wlr.overrideAttrs (old: {
-        version = "0.8.2";
-        src = prev.fetchFromGitHub {
-          owner = "emersion";
-          repo = "xdg-desktop-portal-wlr";
-          rev = "v0.8.2";
-          hash = "sha256-HITf/hgiASWvn/z49mzS8IS1vuyXwdk1JiAOOHRSQMo=";
-        };
-        patches = (old.patches or []) ++ [
-          ../../patches/xdg-desktop-portal-wlr-fix-duplicate-frame.patch
-        ];
-      });
-    })
-  ];
   xdg.portal = {
     enable = true;
+    wlr.enable = true;
+    extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
     # programs.sway runs the portal with an explicit --config that overrides
     # ~/.config/xdg-desktop-portal-wlr; without these, screen sharing silently
     # fails for want of a chooser.
@@ -51,9 +33,12 @@
       chooser_type = "simple";
       chooser_cmd = "${pkgs.slurp}/bin/slurp -f %o -or";
     };
+    # wlr implements ScreenCast only; gtk must stay as the fallback or
+    # FileChooser/Settings/Notification are left with no backend at all.
     config = lib.mkForce {
       sway = {
-        default = [ "wlr" ];
+        default = [ "wlr" "gtk" ];
+        "org.freedesktop.impl.portal.ScreenCast" = [ "wlr" ];
       };
     };
   };
