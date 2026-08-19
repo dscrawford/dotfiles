@@ -21,6 +21,7 @@ in
     # No mcp-servers.nix: Emacs gets them from agent-shell-mcp-servers
     # (emacs/agent-shell.nix), the CLI from ~/.claude.json user scope.
     ./home/ollama.nix
+    ./home/llm-routing.nix
     ./home/copilot.nix
     ./home/bash.nix
     ./home/tmux.nix

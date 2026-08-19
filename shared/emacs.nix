@@ -7,7 +7,7 @@ let
   isDarwin = pkgs.stdenv.hostPlatform.isDarwin;
   bashPath = "${pkgs.bash}/bin/bash";
 
-  agentShell = import ./emacs/agent-shell.nix { inherit pkgs; };
+  agentShell = import ./emacs/agent-shell.nix { inherit pkgs lib config; };
 
   # Strip each module's trailing newline so blank-line separators are controlled
   # here, by the "" entries in `sections'.

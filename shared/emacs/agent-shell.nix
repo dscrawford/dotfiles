@@ -1,8 +1,15 @@
 # shared/emacs/agent-shell.nix
 # claude-code-ide and agent-shell elisp, as two ordered pieces that
 # emacs.nix assembles in order.
-{ pkgs, ... }:
+{ pkgs, lib, config, ... }:
 
+let
+  # builtins.toJSON on a string yields a quoted, escaped literal that elisp
+  # reads correctly — including the JSON overrides value's inner quotes.
+  llmEnvAlist = lib.concatMapStringsSep "\n                       "
+    (name: ''((name . "${name}") (value . ${builtins.toJSON config.my.llmRouting.env.${name}}))'')
+    (builtins.attrNames config.my.llmRouting.env);
+in
 {
   claudeCodeIde =
     ''
@@ -57,14 +64,13 @@
                (env . (((name . "MODE") (value . "stdio"))
                        ((name . "DEFAULT_SEARCH_ENGINE") (value . "duckduckgo"))
                        ((name . "ALLOWED_SEARCH_ENGINES") (value . "duckduckgo,bing,brave,startpage")))))
-              ;; Ollama-backed task offload. Sonnet-tier hints map to the local
-              ;; model; opus stays remote — security-scout's pin (2bd9ee8) wants
-              ;; the top-tier model, not a local stand-in.
+              ;; Ollama-backed task offload; routing map comes from
+              ;; my.llmRouting (shared/home/llm-routing.nix). Opus stays remote
+              ;; — security-scout's pin (2bd9ee8) wants the top-tier model, not
+              ;; a local stand-in.
               ((name . "local-llm-router")
                (command . "${pkgs.callPackage ../../pkgs/local-llm-mcp {}}/bin/local-llm-mcp")
-               (env . (((name . "LOCAL_LLM_DEFAULT_MODEL") (value . "qwen3:8b"))
-                       ((name . "LOCAL_LLM_MODEL_OVERRIDES")
-                        (value . "{\"sonnet\":\"qwen3:8b\",\"claude-sonnet-5\":\"qwen3:8b\"}")))))))
+               (env . (${llmEnvAlist})))))
       ;; acp-shutdown kills only the acp process; TERM its whole group or
       ;; the claude + MCP-server children leak (RUFLO_BUG.md).
       (defun my/acp--kill-group (pgid)
