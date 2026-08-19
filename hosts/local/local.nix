@@ -23,6 +23,10 @@
   };
 
   nixpkgs.config.allowUnfree = true;
+  # gemini-cli carries a removal notice (replaced by Antigravity CLI), but
+  # pair.nix drives it over ACP with GEMINI_API_KEY and agent-shell has no
+  # antigravity support; revisit when it does or nixpkgs drops the package.
+  nixpkgs.config.problems.handlers."gemini-cli".removal = "ignore";
 
   environment = {
     systemPackages = with pkgs; [

@@ -57,4 +57,6 @@
   nix.enable = false;
 
   nixpkgs.config.allowUnfree = true;
+  # Same rationale as hosts/local/local.nix: pair.nix needs gemini's ACP.
+  nixpkgs.config.problems.handlers."gemini-cli".removal = "ignore";
 }
