@@ -3,8 +3,8 @@
 { lib, pkgs, ... }:
 
 let
-  isDarwin = pkgs.stdenv.isDarwin;
-  isLinux = pkgs.stdenv.isLinux;
+  isDarwin = pkgs.stdenv.hostPlatform.isDarwin;
+  isLinux = pkgs.stdenv.hostPlatform.isLinux;
 
   claude-agent-acp = pkgs.callPackage ../../pkgs/claude-agent-acp {};
   rufloPackage = pkgs.callPackage ../../pkgs/ruflo {};

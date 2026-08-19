@@ -5,7 +5,7 @@
 { config, lib, pkgs, username, ... }:
 
 let
-  isDarwin = pkgs.stdenv.isDarwin;
+  isDarwin = pkgs.stdenv.hostPlatform.isDarwin;
   homeDir = if isDarwin then "/Users/${username}" else "/home/${username}";
   secretEnvHook = config.my.secretEnvHook;
 in

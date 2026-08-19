@@ -59,7 +59,7 @@ Desktop (`local`) adds `sway.nix` and `gaming.nix` as extra Home Manager modules
 
 ### Cross-Platform Patterns
 
-- `pkgs.stdenv.isDarwin` / `pkgs.stdenv.isLinux` for conditional logic in Home Manager modules
+- `pkgs.stdenv.hostPlatform.isDarwin` / `pkgs.stdenv.hostPlatform.isLinux` for conditional logic in Home Manager modules
 - `lib.optionals` / `lib.optionalString` / `lib.mkIf` for conditional includes
 - `gitUser ? null` — optional parameter with fallback default
 - `enableSecrets ? true` for NixOS, `? false` for Darwin

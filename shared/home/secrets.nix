@@ -7,7 +7,7 @@
 { config, lib, pkgs, username, enableSecrets ? false, ... }:
 
 let
-  isDarwin = pkgs.stdenv.isDarwin;
+  isDarwin = pkgs.stdenv.hostPlatform.isDarwin;
   homeDir = if isDarwin then "/Users/${username}" else "/home/${username}";
   secretsFile = "${homeDir}/.local/dotfiles/secrets/secrets.yaml";
 

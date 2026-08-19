@@ -4,7 +4,7 @@
 { config, pkgs, lib, ... }:
 
 let
-  isDarwin = pkgs.stdenv.isDarwin;
+  isDarwin = pkgs.stdenv.hostPlatform.isDarwin;
   bashPath = "${pkgs.bash}/bin/bash";
 
   agentShell = import ./emacs/agent-shell.nix { inherit pkgs; };
