@@ -11,10 +11,20 @@ let
   homeDir = if isDarwin then "/Users/${username}" else "/home/${username}";
   secretsFile = "${homeDir}/.local/dotfiles/secrets/secrets.yaml";
 
+  # macOS has no /run/user/<uid> tmpfs; fall back to the per-user $TMPDIR
+  # (drwx------, APFS). Linux keeps the private /run/user tmpfs.
+  runtimeDir =
+    if isDarwin then "\${XDG_RUNTIME_DIR:-\${TMPDIR:-/tmp}}"
+    else "\${XDG_RUNTIME_DIR:-/run/user/$(id -u)}";
+
   refresh = pkgs.writeShellScriptBin "secret-env-refresh" ''
     set -o pipefail
     umask 077
-    f="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/secret-env.sh"
+    # sops finds the age key via $XDG_CONFIG_HOME on Linux, but on macOS it
+    # looks under ~/Library/Application Support; pin the actual path so both
+    # decrypt. Respect an explicit override if the caller set one.
+    export SOPS_AGE_KEY_FILE="''${SOPS_AGE_KEY_FILE:-${homeDir}/.config/sops/age/keys.txt}"
+    f="${runtimeDir}/secret-env.sh"
     tmp="$(mktemp "$f.XXXXXX")" || exit 1
     if ${pkgs.sops}/bin/sops -d "${secretsFile}" 2>/dev/null \
         | ${pkgs.yq}/bin/yq -r '
@@ -37,7 +47,7 @@ let
   hook = pkgs.writeText "secret-env-hook.sh" ''
     [ -n "$_SECRET_ENV" ] && return 0
     export _SECRET_ENV=1
-    _f="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/secret-env.sh"
+    _f="${runtimeDir}/secret-env.sh"
     { [ -f "$_f" ] || ${refresh}/bin/secret-env-refresh; } 2>/dev/null || return 0
     . "$_f"
     unset _f
