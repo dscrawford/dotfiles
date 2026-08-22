@@ -150,6 +150,7 @@ function startMockOllama({
   chatStatus = 200,
   chatRawBody = null,
   chatDelayMs = 0,
+  chatThinkUnsupported = false,
   tagsRawBody = null,
   pullStatus = 200,
   pullBody = { status: "success" },
@@ -165,6 +166,11 @@ function startMockOllama({
         res.end(tagsRawBody ?? JSON.stringify({ models: models.map((name) => ({ name })) }));
       } else if (req.url === "/api/chat") {
         const send = () => {
+          if (chatThinkUnsupported && JSON.parse(body).think !== undefined) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ error: '"qwen2" does not support thinking' }));
+            return;
+          }
           res.statusCode = chatStatus;
           res.end(
             chatRawBody ?? JSON.stringify({ message: { role: "assistant", content: chatContent } }),
@@ -633,6 +639,93 @@ test("no models pulled is a tool error with guidance", async () => {
     assert.equal(reply.result.isError, true);
     assert.match(reply.result.content[0].text, /local_model_provision/);
     assert.equal(reply.result.structuredContent.resolution, "none-available");
+  } finally {
+    await mcp.close();
+    await ollama.close();
+  }
+});
+
+// Clients that render structuredContent in place of the text block would
+// otherwise drop the model's answer entirely and show only routing metadata.
+test("model output is mirrored into structuredContent", async () => {
+  const ollama = await startMockOllama({ models: ["qwen3:8b"], chatContent: "the answer" });
+  const mcp = startMcp({ OLLAMA_HOST: ollama.host });
+  try {
+    const run = await mcp.request("tools/call", {
+      name: "local_model_run",
+      arguments: { task: "t" },
+    });
+    assert.equal(run.result.isError, false);
+    assert.equal(run.result.content[0].text, "the answer");
+    assert.equal(run.result.structuredContent.output, "the answer");
+
+    const status = await mcp.request("tools/call", { name: "local_model_status", arguments: {} });
+    assert.match(status.result.structuredContent.output, /Ollama host:/);
+
+    const provision = await mcp.request("tools/call", {
+      name: "local_model_provision",
+      arguments: { model: "qwen3:8b" },
+    });
+    assert.match(provision.result.structuredContent.output, /Provisioned model/);
+  } finally {
+    await mcp.close();
+    await ollama.close();
+  }
+});
+
+test("thinking is disabled so reasoning tokens cannot eat the output budget", async () => {
+  const ollama = await startMockOllama({ models: ["qwen3:8b"] });
+  const mcp = startMcp({ OLLAMA_HOST: ollama.host });
+  try {
+    await mcp.request("tools/call", { name: "local_model_run", arguments: { task: "t" } });
+    const chat = ollama.requests.find((r) => r.url === "/api/chat");
+    assert.equal(JSON.parse(chat.body).think, false);
+  } finally {
+    await mcp.close();
+    await ollama.close();
+  }
+});
+
+test("a model that rejects the think field is retried without it", async () => {
+  const ollama = await startMockOllama({
+    models: ["qwen3:8b"],
+    chatThinkUnsupported: true,
+    chatContent: "retried reply",
+  });
+  const mcp = startMcp({ OLLAMA_HOST: ollama.host });
+  try {
+    const reply = await mcp.request("tools/call", {
+      name: "local_model_run",
+      arguments: { task: "t" },
+    });
+    assert.equal(reply.result.isError, false);
+    assert.equal(reply.result.content[0].text, "retried reply");
+    const chats = ollama.requests.filter((r) => r.url === "/api/chat");
+    assert.equal(chats.length, 2);
+    assert.equal(JSON.parse(chats[1].body).think, undefined);
+  } finally {
+    await mcp.close();
+    await ollama.close();
+  }
+});
+
+test("empty content caused by reasoning tokens names the token budget", async () => {
+  const ollama = await startMockOllama({
+    models: ["qwen3:8b"],
+    chatRawBody: JSON.stringify({
+      message: { role: "assistant", content: "", thinking: "let me think..." },
+      done_reason: "length",
+    }),
+  });
+  const mcp = startMcp({ OLLAMA_HOST: ollama.host });
+  try {
+    const reply = await mcp.request("tools/call", {
+      name: "local_model_run",
+      arguments: { task: "t", maxTokens: 64 },
+    });
+    assert.equal(reply.result.isError, true);
+    assert.match(reply.result.content[0].text, /reasoning tokens/i);
+    assert.match(reply.result.content[0].text, /maxTokens/);
   } finally {
     await mcp.close();
     await ollama.close();

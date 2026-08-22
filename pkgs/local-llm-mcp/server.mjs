@@ -7,7 +7,7 @@ import { createInterface } from "node:readline";
 import { pathToFileURL } from "node:url";
 
 const SERVER_NAME = "local-llm-router";
-const SERVER_VERSION = "0.2.0";
+const SERVER_VERSION = "0.3.0";
 const SUPPORTED_PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const LATEST_PROTOCOL_VERSION = "2025-06-18";
 
@@ -132,10 +132,12 @@ function profilePrompt(profile) {
   return typeof prompt === "string" ? prompt : PROFILE_PROMPTS.general;
 }
 
+// `output` mirrors the text block: clients that render structuredContent in
+// its place would otherwise show routing metadata and drop the model's answer.
 function formatToolResult(text, structuredContent, isError = false) {
   return {
     content: [{ type: "text", text }],
-    structuredContent,
+    structuredContent: { ...structuredContent, output: text },
     isError,
   };
 }
@@ -170,28 +172,51 @@ async function listLocalModels(config) {
     .filter((name) => typeof name === "string" && name.length > 0);
 }
 
-async function runChat(config, { model, task, system, temperature, maxTokens }) {
-  const json = await fetchJsonWithTimeout(
+async function postChat(config, body) {
+  return fetchJsonWithTimeout(
     `${config.ollamaHost}/api/chat`,
     {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        model,
-        stream: false,
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: task },
-        ],
-        options: { temperature, num_predict: maxTokens },
-      }),
+      body: JSON.stringify(body),
     },
     CHAT_TIMEOUT_MS,
     "Ollama chat",
   );
+}
+
+async function runChat(config, { model, task, system, temperature, maxTokens }) {
+  const body = {
+    model,
+    stream: false,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: task },
+    ],
+    options: { temperature, num_predict: maxTokens },
+  };
+
+  // Reasoning models spend num_predict on thinking before emitting any
+  // content, so a modest maxTokens yields an empty answer. Older Ollama
+  // builds reject the field outright, hence the retry without it.
+  let json;
+  try {
+    json = await postChat(config, { ...body, think: false });
+  } catch (error) {
+    if (!/think/i.test(error.message)) {
+      throw error;
+    }
+    json = await postChat(config, body);
+  }
 
   const content = json?.message?.content;
   if (typeof content !== "string" || content.length === 0) {
+    const thinking = json?.message?.thinking;
+    if (typeof thinking === "string" && thinking.length > 0) {
+      throw new Error(
+        `Ollama returned only reasoning tokens and no answer; raise maxTokens above ${maxTokens} or use a non-reasoning model`,
+      );
+    }
     throw new Error("Ollama returned an empty response");
   }
   return content;
