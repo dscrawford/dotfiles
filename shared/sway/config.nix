@@ -23,6 +23,7 @@
     exec mako
     exec blueman-applet
     exec easyeffects --hide-window
+    exec easyeffects-watchdog
 
     # Monitor layout (managed by nwg-displays)
     include ~/.config/sway/outputs
@@ -152,6 +153,8 @@
     bindsym Control+Shift+Mod1+r exec ${recordBin}
 
     bindsym Control+Shift+Mod1+f exec firefox
+
+    bindsym Control+Shift+Mod1+e exec easyeffects-aec-reset
 
     # Size must match the anchor math in the waybar volume-dropdown script.
     for_window [app_id="com.saivert.pwvucontrol"] floating enable, resize set 520 400
