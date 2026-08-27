@@ -1,5 +1,5 @@
 { home-manager, sops-nix, nix-darwin, darwin-emacs, lib, claudeSkills, ... }:
-{ hostname, username, system, gitUser ? null, enableSecrets ? false, homeModules ? [ ../shared/home.nix ], extraModules ? [] }: nix-darwin.lib.darwinSystem {
+{ hostname, username, system, gitUser ? null, enableSecrets ? false, homeModules ? [ ../shared/home ], extraModules ? [] }: nix-darwin.lib.darwinSystem {
   inherit system;
   specialArgs = {
     inherit hostname username;

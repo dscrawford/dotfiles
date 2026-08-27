@@ -1,5 +1,5 @@
-# shared/emacs.nix
-# Assembles the modules under ./emacs/ into one programs.emacs block.
+# shared/emacs/default.nix
+# Assembles the sibling modules into one programs.emacs block.
 # Package-list order and elisp evaluation order are both significant.
 { config, pkgs, lib, ... }:
 
@@ -7,7 +7,7 @@ let
   isDarwin = pkgs.stdenv.hostPlatform.isDarwin;
   bashPath = "${pkgs.bash}/bin/bash";
 
-  agentShell = import ./emacs/agent-shell.nix { inherit pkgs lib config; };
+  agentShell = import ./agent-shell.nix { inherit pkgs lib config; };
 
   # Strip each module's trailing newline so blank-line separators are controlled
   # here, by the "" entries in `sections'.
@@ -15,23 +15,23 @@ let
 
   # Must stay ahead of every section, not be a reorderable entry in `sections':
   # my/guard only expands for forms following its definition in the same file.
-  prologue = chunk (import ./emacs/guard.nix { inherit pkgs lib config; });
+  prologue = chunk (import ./guard.nix { inherit pkgs lib config; });
 
   sections = [
-    (chunk (import ./emacs/ui.nix { inherit pkgs lib config; }))
+    (chunk (import ./ui.nix { inherit pkgs lib config; }))
     ""
     (chunk agentShell.claudeCodeIde)
-    (chunk (import ./emacs/python.nix { inherit pkgs lib config; }))
+    (chunk (import ./python.nix { inherit pkgs lib config; }))
     ""
     (chunk agentShell.agentShell)
     ""
-    (chunk (import ./emacs/pair.nix { }))
+    (chunk (import ./pair.nix { }))
     ""
-    (chunk (import ./emacs/misc.nix { inherit pkgs lib config bashPath; }))
+    (chunk (import ./misc.nix { inherit pkgs lib config bashPath; }))
     ""
-    (chunk (import ./emacs/markdown.nix { inherit pkgs; }))
+    (chunk (import ./markdown.nix { inherit pkgs; }))
     ""
-    (chunk (import ./emacs/lsp.nix { inherit pkgs lib config; }))
+    (chunk (import ./lsp.nix { inherit pkgs lib config; }))
   ];
 in
 {
@@ -48,7 +48,7 @@ in
         };
       });
     };
-    extraPackages = epkgs: import ./emacs/packages.nix { inherit pkgs epkgs; };
+    extraPackages = epkgs: import ./packages.nix { inherit pkgs epkgs; };
     extraConfig = prologue + "\n\n" + (lib.concatStringsSep "\n" sections) + "\n";
   };
 }

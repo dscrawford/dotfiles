@@ -1,10 +1,10 @@
-# shared/sway.nix
-# Aggregates the modules under shared/sway/ (scripts, waybar, config string)
+# shared/sway/default.nix
+# Aggregates the sibling modules (scripts, waybar, config string)
 # and owns the home.file/home.packages assignments.
 { pkgs, ... }:
 
 let
-  scripts = import ./sway/scripts.nix { inherit pkgs; };
+  scripts = import ./scripts.nix { inherit pkgs; };
   inherit (scripts)
     workspace-script
     wallpaper-script
@@ -18,9 +18,9 @@ let
   volumeBin = "${volume-script}/bin/volume.sh";
   recordBin = "${record-script}/bin/record.sh";
 
-  waybar = import ./sway/waybar.nix { inherit pkgs; };
+  waybar = import ./waybar.nix { inherit pkgs; };
 
-  swayConfig = import ./sway/config.nix {
+  swayConfig = import ./config.nix {
     inherit pkgs workspaceBin wallpaperBin lockBin volumeBin recordBin;
   };
 in

@@ -66,7 +66,7 @@
         hostname = "nixos";
         username = "daniel";
         homeModules = [
-          ./shared/home.nix ./shared/sway.nix ./shared/gaming.nix ./shared/easyeffects.nix
+          ./shared/home ./shared/sway ./shared/gaming.nix ./shared/easyeffects.nix
           # Ollama daemon itself comes from shared/home/ollama.nix; only the
           # GPU package choice is desktop-specific.
           ({ pkgs, ... }: { services.ollama.package = pkgs.ollama-cuda; })

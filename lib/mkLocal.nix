@@ -1,5 +1,5 @@
 { nixpkgs, home-manager, sops-nix, lib, claudeSkills, ... }:
-{ hostname, username, system ? "x86_64-linux", gitUser ? null, enableSecrets ? true, homeModules ? [ ../shared/home.nix ], extraModules ? [] }: nixpkgs.lib.nixosSystem {
+{ hostname, username, system ? "x86_64-linux", gitUser ? null, enableSecrets ? true, homeModules ? [ ../shared/home ], extraModules ? [] }: nixpkgs.lib.nixosSystem {
   inherit system;
   specialArgs = {
     inherit hostname username;
