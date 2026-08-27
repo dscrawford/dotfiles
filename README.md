@@ -9,7 +9,7 @@ Daniel's NixOS configuration using flakes for multiple systems. Yes I used Claud
 - **terminal-arm** — NixOS terminal-only (aarch64)
 - **terminal-darwin-arm** — macOS Apple Silicon
 - **terminal-darwin-x86** — macOS Intel
-- **node1**, **node2** — Kubernetes cluster nodes with iSCSI
+- **node1**, **node2**, **node3** — Kubernetes cluster nodes with iSCSI
 
 ## Features
 
@@ -55,23 +55,12 @@ remote. See `claude/skills/local-llm-routing/` for the usage pattern and
 
 ### NixOS Setup
 
-1. Clone this repository to `~/.local/dotfiles`
+1. Clone this repository to `~/.local/dotfiles` (use `--recurse-submodules` for secrets)
 2. Set up your age key for secrets (see `secrets/README.md`)
-3. Build:
+3. Build — the full per-system command list lives in [CLAUDE.md](CLAUDE.md):
 
 ```bash
-# Desktop (Sway + Emacs + gaming)
-sudo nixos-rebuild switch --flake .#local
-
-# Terminal-only
-sudo nixos-rebuild switch --flake .#terminal
-
-# Servers
-sudo nixos-rebuild switch --flake .#node1
-sudo nixos-rebuild switch --flake .#node2
-
-# Test without activating
-sudo nixos-rebuild test --flake .#local
+sudo nixos-rebuild switch --flake .#local   # desktop; .#terminal / .#node1-3 likewise
 ```
 
 ### macOS (Darwin) Setup
@@ -116,7 +105,7 @@ The key in `darwinConfigurations` must match your machine's hostname so that `--
 |-----------|---------|-------------|
 | `gitUser` | `null` | Git identity attrset `{ name, email }` (uses repo default if null) |
 | `enableSecrets` | `false` | Enable sops-nix secret management |
-| `homeModules` | `[ ./shared/home.nix ]` | Home Manager modules to import |
+| `homeModules` | `[ ./shared/home ]` | Home Manager modules to import |
 | `extraModules` | `[]` | Additional nix-darwin modules (certificates, custom services, etc.) |
 
 Use `extraModules` to add machine-specific nix-darwin config — for example, corporate certificates or extra services:
@@ -161,25 +150,29 @@ nix flake update nixpkgs
 
 ```
 .
-├── flake.nix                # Builder functions (mkServer, mkLocal, mkDarwin)
+├── flake.nix                # Inputs and all system configurations
+├── lib/                     # Builder functions (mkServer, mkLocal, mkDarwin)
 ├── shared/
-│   ├── common.nix           # Common config for all NixOS systems
-│   ├── home.nix             # Cross-platform Home Manager (Linux + macOS)
-│   ├── emacs.nix            # Emacs config (pgtk on Linux, emacs-30 on macOS)
-│   ├── sway.nix             # Sway window manager (Home Manager module)
-│   ├── gaming.nix           # Gaming packages (gamescope, etc.)
+│   ├── common.nix           # Base config for all NixOS systems
+│   ├── local-common.nix     # Desktop/terminal overrides
+│   ├── server-common.nix    # Server config (static IP, fail2ban, tailscale)
 │   ├── darwin-common.nix    # macOS system config (nix-darwin)
-│   ├── local-common.nix     # NixOS desktop/terminal shared config
-│   ├── server-common.nix    # NixOS server shared config
-│   ├── boot-common.nix      # Boot and garbage collection
-│   ├── kubernetes.nix       # Kubernetes node config
-│   ├── users.nix            # User account definitions
-│   └── iscsi.nix            # iSCSI storage config
+│   ├── boot-common.nix      # Boot entry limits and garbage collection
+│   ├── kubernetes.nix       # + kube-*.nix, iscsi.nix: cluster node modules
+│   ├── users.nix            # Server user accounts
+│   ├── home/                # Cross-platform Home Manager (default.nix + per-tool modules)
+│   ├── emacs/               # Emacs config assembled from elisp modules (default.nix)
+│   ├── sway/                # Sway + Waybar config and scripts (default.nix)
+│   └── gaming.nix           # + easyeffects.nix, vr.nix: desktop extras
 ├── hosts/
-│   ├── local/               # NixOS desktop (NVIDIA, Sway, PipeWire)
-│   ├── node1/               # Kubernetes node 1
-│   └── node2/               # Kubernetes node 2
-└── secrets/                 # Encrypted secrets (sops-nix, gitignored)
+│   ├── local/               # NixOS desktop (NVIDIA, Sway, PipeWire, Steam)
+│   └── node1..3/            # Kubernetes cluster nodes
+├── pkgs/                    # Local packages (claude-code, ruflo, local-llm-mcp, ...)
+├── claude/                  # Claude Code settings, hooks, agents, skills
+├── docs/                    # Runbooks and research notes
+├── tests/                   # Hook, Emacs, and MCP-server tests
+├── patches/                 # Temporary upstream patches
+└── secrets/                 # Encrypted secrets (sops-nix git submodule)
 ```
 
 ## Important Notes
