@@ -2,6 +2,10 @@
 result
 result-*
 
+# Terminal/agent session captures
+transcript.txt
+*.transcript.txt
+
 # Secrets - NEVER commit encrypted secrets!
 *.age
 *.enc
