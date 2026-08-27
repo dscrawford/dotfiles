@@ -14,6 +14,22 @@ let
       + lib.concatStrings (builtins.genList (_: "░") (barWidth - i)))
     (barWidth + 1);
 
+  # Ordered pairs, not an attrset: keeps the stylesheet order stable.
+  moduleColors = [
+    [ "#pulseaudio" "#8be9fd" ]
+    [ "#custom-gpu" "#ffb86c" ]
+    [ "#cpu" "#ff79c6" ]
+    [ "#memory" "#bd93f9" ]
+    [ "#custom-disk" "#f1fa8c" ]
+    [ "#network" "#50fa7b" ]
+    [ "#battery" "#69ff94" ]
+    [ "#battery.warning" "#ffb86c" ]
+    [ "#battery.critical" "#ff5555" ]
+  ];
+  colorRules = lib.concatMapStringsSep "\n\n"
+    (p: "${lib.elemAt p 0} {\n  color: ${lib.elemAt p 1};\n}")
+    moduleColors;
+
   # custom modules lack format-icons support, so these emit JSON carrying a
   # percentage for {icon} substitution.
   disk-status = pkgs.writeShellScript "waybar-disk" ''
@@ -165,41 +181,7 @@ in
       padding: 0 12px;
     }
 
-    #pulseaudio {
-      color: #8be9fd;
-    }
-
-    #custom-gpu {
-      color: #ffb86c;
-    }
-
-    #cpu {
-      color: #ff79c6;
-    }
-
-    #memory {
-      color: #bd93f9;
-    }
-
-    #custom-disk {
-      color: #f1fa8c;
-    }
-
-    #network {
-      color: #50fa7b;
-    }
-
-    #battery {
-      color: #69ff94;
-    }
-
-    #battery.warning {
-      color: #ffb86c;
-    }
-
-    #battery.critical {
-      color: #ff5555;
-    }
+    ${colorRules}
 
     #clock {
       color: #ffffff;
