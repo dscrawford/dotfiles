@@ -39,48 +39,28 @@
         everything-claude-code cli-anything;
     };
     inherit (builders) mkServer mkLocal mkDarwin;
+    kubeNode = { hostname, ip, netInterface ? "eno1", extraModules ? [] }: mkServer {
+      inherit hostname ip netInterface;
+      extraModules = [
+        (./hosts + "/${hostname}/hardware-configuration.nix")
+        (./hosts + "/${hostname}/boot.nix")
+        ./shared/kubernetes.nix
+        ./shared/kube-cert-renew.nix
+        ./shared/kube-stale-mount-recovery.nix
+        ./shared/iscsi.nix
+      ] ++ extraModules;
+    };
   in {
     lib = { inherit mkServer mkLocal mkDarwin; };
 
     nixosConfigurations = {
-      node1 = mkServer {
-        hostname = "node1";
-        ip = "192.168.0.2";
-        extraModules = [
-          ./hosts/node1/hardware-configuration.nix
-          ./hosts/node1/boot.nix
-          ./shared/kubernetes.nix
-          ./shared/kube-cert-renew.nix
-          ./shared/kube-stale-mount-recovery.nix
-          ./shared/iscsi.nix
-        ];
-      };
-      node2 = mkServer {
-        hostname = "node2";
-        ip = "192.168.0.4";
-        extraModules = [
-          ./hosts/node2/hardware-configuration.nix
-          ./hosts/node2/boot.nix
-          ./shared/kubernetes.nix
-          ./shared/kube-cert-renew.nix
-          ./shared/kube-stale-mount-recovery.nix
-          ./shared/iscsi.nix
-        ];
-      };
-      node3 = mkServer {
+      node1 = kubeNode { hostname = "node1"; ip = "192.168.0.2"; };
+      node2 = kubeNode { hostname = "node2"; ip = "192.168.0.4"; };
+      node3 = kubeNode {
         hostname = "node3";
         ip = "192.168.0.6";
         netInterface = "enp5s0";
-        extraModules = [
-          ./hosts/node3/hardware-configuration.nix
-          ./hosts/node3/boot.nix
-          ./hosts/node3/nvidia.nix
-          ./hosts/node3/storage.nix
-          ./shared/kubernetes.nix
-          ./shared/kube-cert-renew.nix
-          ./shared/kube-stale-mount-recovery.nix
-          ./shared/iscsi.nix
-        ];
+        extraModules = [ ./hosts/node3/nvidia.nix ./hosts/node3/storage.nix ];
       };
       local = mkLocal {
         hostname = "nixos";
