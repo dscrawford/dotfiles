@@ -1,7 +1,7 @@
 # shared/sway/default.nix
 # Aggregates the sibling modules (scripts, waybar, config string)
 # and owns the home.file/home.packages assignments.
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
 
 let
   scripts = import ./scripts.nix { inherit pkgs; };
@@ -21,7 +21,7 @@ let
   waybar = import ./waybar.nix { inherit pkgs; };
 
   swayConfig = import ./config.nix {
-    inherit pkgs workspaceBin wallpaperBin lockBin volumeBin recordBin;
+    inherit pkgs lib workspaceBin wallpaperBin lockBin volumeBin recordBin;
   };
 in
 {

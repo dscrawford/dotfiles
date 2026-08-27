@@ -1,8 +1,20 @@
 # shared/sway/config.nix
 # Main Sway config string and the desktop home.packages list.
 # Imported as a plain function returning { packages, swayConfig }.
-{ pkgs, workspaceBin, wallpaperBin, lockBin, volumeBin, recordBin }:
+{ pkgs, lib, workspaceBin, wallpaperBin, lockBin, volumeBin, recordBin }:
 
+let
+  # keyOf maps 1-10 to a bindsym key; workspace 10 sits on the 0 key.
+  bindGroup = keyOf: cmd:
+    lib.concatMapStringsSep "\n"
+      (n: "bindsym ${keyOf n} exec ${workspaceBin} ${cmd} ${toString n}")
+      (lib.range 1 10);
+  numKey = n: toString (lib.mod n 10);
+
+  floatFor = attr: vals:
+    lib.concatMapStringsSep "\n"
+      (v: ''for_window [${attr}="${v}"] floating enable'') vals;
+in
 {
   packages = with pkgs; [
     thunar
@@ -92,52 +104,16 @@
     bindsym $mod+a focus parent
 
     # Desktop switching (focus output/monitor)
-    bindsym $mod+F1 exec ${workspaceBin} focus 1
-    bindsym $mod+F2 exec ${workspaceBin} focus 2
-    bindsym $mod+F3 exec ${workspaceBin} focus 3
-    bindsym $mod+F4 exec ${workspaceBin} focus 4
-    bindsym $mod+F5 exec ${workspaceBin} focus 5
-    bindsym $mod+F6 exec ${workspaceBin} focus 6
-    bindsym $mod+F7 exec ${workspaceBin} focus 7
-    bindsym $mod+F8 exec ${workspaceBin} focus 8
-    bindsym $mod+F9 exec ${workspaceBin} focus 9
-    bindsym $mod+F10 exec ${workspaceBin} focus 10
+    ${bindGroup (n: "$mod+F${toString n}") "focus"}
 
     # Move focused window to another desktop
-    bindsym $mod+Shift+F1 exec ${workspaceBin} move-to 1
-    bindsym $mod+Shift+F2 exec ${workspaceBin} move-to 2
-    bindsym $mod+Shift+F3 exec ${workspaceBin} move-to 3
-    bindsym $mod+Shift+F4 exec ${workspaceBin} move-to 4
-    bindsym $mod+Shift+F5 exec ${workspaceBin} move-to 5
-    bindsym $mod+Shift+F6 exec ${workspaceBin} move-to 6
-    bindsym $mod+Shift+F7 exec ${workspaceBin} move-to 7
-    bindsym $mod+Shift+F8 exec ${workspaceBin} move-to 8
-    bindsym $mod+Shift+F9 exec ${workspaceBin} move-to 9
-    bindsym $mod+Shift+F10 exec ${workspaceBin} move-to 10
+    ${bindGroup (n: "$mod+Shift+F${toString n}") "move-to"}
 
     # Switch workspace on focused desktop
-    bindsym $mod+1 exec ${workspaceBin} switch 1
-    bindsym $mod+2 exec ${workspaceBin} switch 2
-    bindsym $mod+3 exec ${workspaceBin} switch 3
-    bindsym $mod+4 exec ${workspaceBin} switch 4
-    bindsym $mod+5 exec ${workspaceBin} switch 5
-    bindsym $mod+6 exec ${workspaceBin} switch 6
-    bindsym $mod+7 exec ${workspaceBin} switch 7
-    bindsym $mod+8 exec ${workspaceBin} switch 8
-    bindsym $mod+9 exec ${workspaceBin} switch 9
-    bindsym $mod+0 exec ${workspaceBin} switch 10
+    ${bindGroup (n: "$mod+${numKey n}") "switch"}
 
     # Move window to workspace on focused desktop
-    bindsym $mod+Shift+1 exec ${workspaceBin} move 1
-    bindsym $mod+Shift+2 exec ${workspaceBin} move 2
-    bindsym $mod+Shift+3 exec ${workspaceBin} move 3
-    bindsym $mod+Shift+4 exec ${workspaceBin} move 4
-    bindsym $mod+Shift+5 exec ${workspaceBin} move 5
-    bindsym $mod+Shift+6 exec ${workspaceBin} move 6
-    bindsym $mod+Shift+7 exec ${workspaceBin} move 7
-    bindsym $mod+Shift+8 exec ${workspaceBin} move 8
-    bindsym $mod+Shift+9 exec ${workspaceBin} move 9
-    bindsym $mod+Shift+0 exec ${workspaceBin} move 10
+    ${bindGroup (n: "$mod+Shift+${numKey n}") "move"}
 
     bindsym $mod+Shift+slash reload
 
@@ -159,14 +135,8 @@
     # Size must match the anchor math in the waybar volume-dropdown script.
     for_window [app_id="com.saivert.pwvucontrol"] floating enable, resize set 520 400
 
-    for_window [window_role="pop-up"] floating enable
-    for_window [window_role="dialog"] floating enable
-    for_window [window_role="task_dialog"] floating enable
-    for_window [window_type="dialog"] floating enable
-    for_window [window_type="menu"] floating enable
-    for_window [window_type="splash"] floating enable
-    for_window [window_type="tooltip"] floating enable
-    for_window [window_type="utility"] floating enable
+    ${floatFor "window_role" [ "pop-up" "dialog" "task_dialog" ]}
+    ${floatFor "window_type" [ "dialog" "menu" "splash" "tooltip" "utility" ]}
 
     bar {
         swaybar_command waybar
