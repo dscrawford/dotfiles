@@ -1,6 +1,6 @@
 # common.nix
 # Shared configuration for all systems (servers and desktops)
-{ config, lib, pkgs, hostname, ... }:
+{ pkgs, hostname, ... }:
 {
   networking.hostName = hostname;
   networking.networkmanager.enable = true;

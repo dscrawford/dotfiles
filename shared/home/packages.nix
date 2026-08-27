@@ -5,9 +5,6 @@
 let
   isDarwin = pkgs.stdenv.hostPlatform.isDarwin;
   isLinux = pkgs.stdenv.hostPlatform.isLinux;
-
-  claude-agent-acp = pkgs.callPackage ../../pkgs/claude-agent-acp {};
-  rufloPackage = pkgs.callPackage ../../pkgs/ruflo {};
 in
 {
   home.packages = with pkgs; [
@@ -88,8 +85,8 @@ in
 
     # IDE
     (pkgs.callPackage ../../pkgs/claude-code {})
-    rufloPackage
-    claude-agent-acp
+    (pkgs.callPackage ../../pkgs/ruflo {})
+    (pkgs.callPackage ../../pkgs/claude-agent-acp {})
     (pkgs.callPackage ../../pkgs/local-llm-mcp {})
     gemini-cli
     github-copilot-cli
@@ -100,8 +97,6 @@ in
     (pkgs.callPackage ../../pkgs/cli-microsoft365 {})
     (pkgs.callPackage ../../pkgs/confluence-cli {})
     (pkgs.callPackage ../../pkgs/slack-cli {})
-
-    # goose-cli  # disabled: broken in nixpkgs-unstable (Rust recursion limit)
   ] ++ lib.optionals isDarwin [
     docker
     docker-buildx

@@ -15,23 +15,23 @@ let
 
   # Must stay ahead of every section, not be a reorderable entry in `sections':
   # my/guard only expands for forms following its definition in the same file.
-  prologue = chunk (import ./guard.nix { inherit pkgs lib config; });
+  prologue = chunk (import ./guard.nix { });
 
   sections = [
-    (chunk (import ./ui.nix { inherit pkgs lib config; }))
+    (chunk (import ./ui.nix { }))
     ""
     (chunk agentShell.claudeCodeIde)
-    (chunk (import ./python.nix { inherit pkgs lib config; }))
+    (chunk (import ./python.nix { }))
     ""
     (chunk agentShell.agentShell)
     ""
     (chunk (import ./pair.nix { }))
     ""
-    (chunk (import ./misc.nix { inherit pkgs lib config bashPath; }))
+    (chunk (import ./misc.nix { inherit pkgs bashPath; }))
     ""
     (chunk (import ./markdown.nix { inherit pkgs; }))
     ""
-    (chunk (import ./lsp.nix { inherit pkgs lib config; }))
+    (chunk (import ./lsp.nix { }))
   ];
 in
 {

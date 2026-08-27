@@ -1,5 +1,5 @@
 # Configuration specific to server systems (not desktops)
-{ config, lib, pkgs, hostname, ip, netInterface ? "eno1", isMaster, kubeMasterIP, kubeMasterHostname, ... }:
+{ pkgs, hostname, ip, netInterface ? "eno1", kubeMasterIP, kubeMasterHostname, ... }:
 
 {
   services = {
@@ -34,7 +34,6 @@
   '';
 
   networking = {
-    hostName = hostname;
     useDHCP = false;
     
     interfaces.${netInterface} = {

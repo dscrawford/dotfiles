@@ -1,6 +1,6 @@
 # local-common.nix
 # Desktop-specific configuration overrides
-{ config, lib, pkgs, ... }:
+{ lib, ... }:
 
 {
   services.openssh.settings = {

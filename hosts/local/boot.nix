@@ -16,7 +16,6 @@
         gfxmodeEfi = "1280x720";
       };
     };
-    supportedFilesystems = [ "ntfs" ];
     kernelModules = [ "uinput" "v4l2loopback" ];
     extraModulePackages = [ config.boot.kernelPackages.v4l2loopback ];
     extraModprobeConfig = ''
