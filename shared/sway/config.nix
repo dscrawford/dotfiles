@@ -4,12 +4,11 @@
 { pkgs, lib, workspaceBin, wallpaperBin, lockBin, volumeBin, recordBin }:
 
 let
-  # keyOf maps 1-10 to a bindsym key; workspace 10 sits on the 0 key.
   bindGroup = keyOf: cmd:
     lib.concatMapStringsSep "\n"
       (n: "bindsym ${keyOf n} exec ${workspaceBin} ${cmd} ${toString n}")
       (lib.range 1 10);
-  numKey = n: toString (lib.mod n 10);
+  numKey = n: toString (lib.mod n 10); # workspace 10 sits on the 0 key
 
   floatFor = attr: vals:
     lib.concatMapStringsSep "\n"
