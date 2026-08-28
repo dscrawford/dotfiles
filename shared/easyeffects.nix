@@ -227,6 +227,9 @@ let
   # Resets are only free while nothing holds the mic, so the watchdog banks a
   # trigger and spends it at the first idle moment; mid-call it still fires,
   # just rate-limited, since a ~1s blip beats a dead canceller.
+  # Every trigger and every reset goes to the journal under `ee-watchdog`: a
+  # reset is audible, so a version of this that fired invisibly was impossible
+  # to tell apart from the dropouts it was meant to fix.
   aecWatchdog = pkgs.writeShellApplication {
     name = "easyeffects-watchdog";
     runtimeInputs = [
@@ -235,16 +238,22 @@ let
       pkgs.jq
       pkgs.gawk
       pkgs.coreutils
+      pkgs.util-linux
     ];
     text = ''
       INTERVAL="''${EE_WATCHDOG_INTERVAL:-15}"
-      XRUN_THRESHOLD="''${EE_WATCHDOG_XRUNS:-3}"
+      # 3 fires on any scheduling hiccup. Resets are not free — each one is an
+      # audible chain rebuild — so this wants to catch sustained starvation
+      # only.
+      XRUN_THRESHOLD="''${EE_WATCHDOG_XRUNS:-50}"
       COOLDOWN="''${EE_WATCHDOG_COOLDOWN:-120}"
 
       # Tab-separated "ec-node-id probe-node-name probe-node-state
-      # consumer-link-count", or "none" fields when the canceller is not in the
-      # graph. Tabs, not spaces: PipeWire does not sanitize node.name and real
-      # ones contain spaces (e.g. "WEBRTC VoiceEngine").
+      # consumer-link-count source-present mic-present"; the first four are
+      # "none"/"0" when the canceller is not in the graph, the last two are
+      # yes/no regardless, which is what tells an empty chain apart from
+      # EasyEffects being down. Tabs, not spaces: PipeWire does not sanitize
+      # node.name and real ones contain spaces (e.g. "WEBRTC VoiceEngine").
       ee_state() {
         pw-dump 2>/dev/null | jq -r '
           . as $all
@@ -253,7 +262,12 @@ let
           | ($all | map(select(.type == "PipeWire:Interface:Link"))) as $links
           | ($nodes | map(select(.info.props["node.name"] == "ee_sie_echo_canceller")) | first) as $ec
           | ($nodes | map(select(.info.props["node.name"] == "easyeffects_source")) | first) as $src
-          | if $ec == null or $src == null then "none\tnone\tnone\t0" else
+          | ($nodes | map(select(.info.props["node.name"] == "${snowballDevice}")) | first) as $mic
+          | (if $src == null then "no" else "yes" end) as $srcp
+          | (if $mic == null then "no" else "yes" end) as $micp
+          | if $ec == null or $src == null then
+              ["none", "none", "none", "0", $srcp, $micp] | join("\t")
+            else
               ( $ports
                 | map(select(.info.props["node.id"] == $ec.id
                              and ((.info.props["port.name"] // "") | startswith("probe_"))))
@@ -266,7 +280,9 @@ let
               | [ ($ec.id | tostring),
                   ($pnode.info.props["node.name"] // "none"),
                   ($pnode.info.state // "none"),
-                  ($consumers | tostring) ] | join("\t")
+                  ($consumers | tostring),
+                  $srcp,
+                  $micp ] | join("\t")
             end' 2>/dev/null
       }
 
@@ -280,52 +296,86 @@ let
       }
 
       prev_xruns=""
-      prev_probe=""
       prev_probe_state=""
+      prev_empty=0
       pending=""
       last_reset=0
 
       while true; do
         sleep "$INTERVAL"
 
-        IFS=$'\t' read -r ec probe probe_state consumers <<< "$(ee_state)" || true
+        IFS=$'\t' read -r ec probe probe_state consumers src mic <<< "$(ee_state)" || true
 
-        if [ -z "''${ec:-}" ] || [ "$ec" = none ]; then
-          prev_xruns=""; prev_probe=""; prev_probe_state=""; pending=""
-          continue
-        fi
+        # A failed sample is not evidence of anything.
+        if [ -z "''${ec:-}" ]; then continue; fi
 
         # Fail closed: a malformed count must not read as "mic is idle".
         case "''${consumers:-}" in ""|*[!0-9]*) consumers=1 ;; esac
 
-        xruns="$(graph_xruns || true)"
         reason=""
 
-        if [ -n "$prev_probe" ] && [ "$probe" != "$prev_probe" ]; then
-          reason="reference moved to $probe"
-        elif [ "$prev_probe_state" = suspended ] && [ "$probe_state" = running ]; then
-          reason="reference sink resumed"
-        elif [ -n "$prev_xruns" ] && [ -n "$xruns" ] \
-          && [ "$xruns" -ge "$prev_xruns" ] \
-          && [ "$((xruns - prev_xruns))" -ge "$XRUN_THRESHOLD" ]; then
-          reason="$((xruns - prev_xruns)) xruns"
+        if [ "$ec" = none ]; then
+          prev_xruns=""
+          prev_probe_state=""
+
+          # EasyEffects up and the mic in the graph, but no canceller: the
+          # silent no-canceller-no-DFN-no-gate state the reset script warns it
+          # can leave behind, and which a failed autoload on mic re-plug lands
+          # in too. Nothing else in the system notices, so it is the one state
+          # worth acting on here. Debounced by an interval because the
+          # watchdog's own reset passes through it.
+          if [ "$src" = yes ] && [ "$mic" = yes ]; then
+            if [ "$prev_empty" = 1 ]; then reason="chain empty"; fi
+            prev_empty=1
+          else
+            prev_empty=0
+            pending=""
+            continue
+          fi
+        else
+          prev_empty=0
+          xruns="$(graph_xruns || true)"
+
+          # No "probe changed" trigger: upstream d4665ddf relinks the probe on
+          # output-device change by itself, and the probe reads back as "none"
+          # for the moment between the canceller appearing and its link being
+          # made — so a reset re-armed the trigger that caused it and the
+          # watchdog reset every COOLDOWN indefinitely.
+          if [ "$prev_probe_state" = suspended ] && [ "$probe_state" = running ]; then
+            reason="reference sink resumed"
+          elif [ -n "$prev_xruns" ] && [ -n "$xruns" ] \
+            && [ "$xruns" -ge "$prev_xruns" ] \
+            && [ "$((xruns - prev_xruns))" -ge "$XRUN_THRESHOLD" ]; then
+            reason="$((xruns - prev_xruns)) xruns"
+          fi
+
+          prev_probe_state="$probe_state"
+          prev_xruns="$xruns"
         fi
 
-        prev_probe="$probe"
-        prev_probe_state="$probe_state"
-        prev_xruns="$xruns"
-
-        if [ -n "$reason" ]; then pending="$reason"; fi
+        if [ -n "$reason" ]; then
+          pending="$reason"
+          logger -t ee-watchdog \
+            "trigger: $reason (ec=$ec probe=$probe state=$probe_state consumers=$consumers)"
+        fi
         if [ -z "$pending" ]; then continue; fi
 
         now="$(date +%s)"
-        if [ "$consumers" -eq 0 ]; then
-          easyeffects-aec-reset --quiet || true
+        # "chain empty" takes the cooldown path even when the mic is idle: if a
+        # reset cannot fix it, the state persists and the immediate path would
+        # re-fire every interval forever.
+        if [ "$consumers" -eq 0 ] && [ "$pending" != "chain empty" ]; then
+          :
         elif [ "$((now - last_reset))" -ge "$COOLDOWN" ]; then
-          easyeffects-aec-reset || true
+          :
         else
           continue
         fi
+
+        opts=()
+        if [ "$consumers" -eq 0 ]; then opts=(--quiet); fi
+        logger -t ee-watchdog "reset: $pending"
+        easyeffects-aec-reset "''${opts[@]}" || true
 
         pending=""
         last_reset="$now"
