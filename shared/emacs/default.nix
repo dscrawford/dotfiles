@@ -31,6 +31,8 @@ let
     ""
     (chunk (import ./markdown.nix { inherit pkgs; }))
     ""
+    (chunk (import ./kubernetes.nix { inherit pkgs; }))
+    ""
     (chunk (import ./lsp.nix { }))
   ];
 in

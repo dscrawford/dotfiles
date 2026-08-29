@@ -15,6 +15,7 @@ with epkgs; [
   use-package
   emacsql
   dockerfile-mode
+  kubed
   # Jenkinsfile syntax
   groovy-mode
   json-mode
