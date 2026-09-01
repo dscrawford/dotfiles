@@ -188,6 +188,13 @@ let
         ee -l ${presetName}
 
         if await ee_sie_echo_canceller present 25; then
+          # Not success yet: preset loads on a live instance sometimes build
+          # the chain only for it to vanish within seconds (observed
+          # 2026-09-01: 6 nodes at t+5s, 2 at t+10s). Declaring victory on the
+          # instantaneous check made that failure invisible and unreachable by
+          # the restart escalation below, which is the one path that reliably
+          # heals it.
+          sleep 3
           after="$(node_id ee_sie_echo_canceller)"
           if [ -n "$after" ] && [ "$after" != "$before" ]; then
             notify "Reset"
@@ -318,15 +325,18 @@ let
           prev_xruns=""
           prev_probe_state=""
 
-          # EasyEffects up and the mic in the graph, but no canceller: the
-          # silent no-canceller-no-DFN-no-gate state the reset script warns it
-          # can leave behind, and which a failed autoload on mic re-plug lands
-          # in too. Nothing else in the system notices, so it is the one state
-          # worth acting on here. Debounced by an interval because the
-          # watchdog's own reset passes through it.
-          if [ "$src" = yes ] && [ "$mic" = yes ]; then
-            if [ "$prev_empty" = 1 ]; then reason="chain empty"; fi
-            prev_empty=1
+          # EE 8.x builds the input chain on demand and tears it down ~10s
+          # after the last consumer detaches (verified 2026-09-01: attach
+          # pw-record -> 6 nodes in 1s, detach -> 2 nodes 10s later). An empty
+          # chain at idle is therefore NORMAL; gating on consumers>0 is what
+          # makes this a fault signal — something is recording the mic and the
+          # chain is not there. Triggering on idle-empty instead caused four
+          # days of 2-minute resets. Debounced 4 intervals so a consumer
+          # attaching just before a sample gets the ~1s build window plus
+          # margin.
+          if [ "$src" = yes ] && [ "$mic" = yes ] && [ "$consumers" -gt 0 ]; then
+            prev_empty=$((prev_empty + 1))
+            if [ "$prev_empty" -ge 4 ]; then reason="chain empty"; fi
           else
             prev_empty=0
             pending=""
@@ -334,6 +344,10 @@ let
           fi
         else
           prev_empty=0
+          # A banked chain-empty verdict is about a state, not an event; once
+          # the chain is back (e.g. someone restarted EasyEffects) spending it
+          # would tear down a healthy chain. Event-shaped pendings still bank.
+          if [ "$pending" = "chain empty" ]; then pending=""; fi
           xruns="$(graph_xruns || true)"
 
           # No "probe changed" trigger: upstream d4665ddf relinks the probe on
