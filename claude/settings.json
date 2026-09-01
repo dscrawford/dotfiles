@@ -14,6 +14,7 @@
   },
   "theme": "dark",
   "tui": "fullscreen",
+  "outputStyle": "Concise",
   "skillOverrides": {
     "cli-anything:audacity": "user-invocable-only",
     "cli-anything:blender": "user-invocable-only",

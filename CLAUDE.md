@@ -79,6 +79,12 @@ The k8s nodes (`node1`–`node3`) are built through the `kubeNode` helper in fla
 - Compile history stored per-directory in `~/.emacs.d/compile-history/` (using `!` as path separator)
 - All Emacs temp files redirected to `~/.emacs.d/` subdirectories: `backups/`, `auto-saves/`, `lockfiles/`
 
+### Comments
+
+Older modules are comment-dense; do not match that density. Follow the
+global comment policy: comment only non-obvious constraints or gotchas,
+most code gets none.
+
 ### Nix String Escaping
 
 In `''` (multiline) strings, bash variables need `''${var}` escaping to prevent Nix interpolation. Example: `''${OUTPUTS[$i]}` in shared/sway/scripts.nix.

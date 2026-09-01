@@ -42,6 +42,7 @@ in
       source = ../../claude/settings.json;
       force = true;
     };
+    ".claude/output-styles/concise.md".source = ../../claude/output-styles/concise.md;
     ".claude/hooks/prompt-router.sh" = {
       source = ../../claude/hooks/prompt-router.sh;
       executable = true;
