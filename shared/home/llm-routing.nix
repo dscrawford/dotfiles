@@ -1,8 +1,13 @@
 # shared/home/llm-routing.nix
 # Single source of truth for local-llm-router model selection, consumed by
-# copilot.nix and emacs/agent-shell.nix. Claude stays the primary model: the
-# router only intercepts the tiers listed in `overrides`, everything else
-# (opus included — security-scout's pin, 2bd9ee8) goes remote.
+# copilot.nix and emacs/agent-shell.nix. Claude stays the primary model, and
+# `overrides` is empty so no model hint maps to a local one.
+#
+# This map only picks WHICH local model local_model_run uses; it cannot send a
+# call back to Claude. server.mjs resolveModel falls through override ->
+# requested -> defaultModel, so an unmapped hint still lands on defaultModel.
+# Nothing reaches the router unless a caller invokes local_model_run
+# explicitly — agent `model:` frontmatter is a separate, remote-only system.
 #
 # Downstream flakes building on this repo's mkLocal/mkDarwin override via any
 # homeModule, e.g.:
@@ -23,13 +28,8 @@ in
 
     overrides = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
-      default = {
-        sonnet = cfg.defaultModel;
-        claude-sonnet-5 = cfg.defaultModel;
-      };
-      defaultText = lib.literalExpression
-        ''{ sonnet = cfg.defaultModel; claude-sonnet-5 = cfg.defaultModel; }'';
-      description = "Model-hint -> Ollama model routing map; unlisted hints stay remote.";
+      default = { };
+      description = "Model-hint -> Ollama model routing map; empty means no hint maps locally.";
     };
 
     env = lib.mkOption {
