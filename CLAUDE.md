@@ -15,7 +15,7 @@ sudo nixos-rebuild switch --flake .#terminal
 sudo nixos-rebuild switch --flake .#node1
 
 # All cluster nodes from the desktop (builds locally, switches over ssh,
-# workers first, waits for Ready between nodes; --build-only to just compile)
+# master first, waits for Ready between nodes; --build-only to just compile)
 deploy-nodes
 
 # macOS (nix-darwin)
