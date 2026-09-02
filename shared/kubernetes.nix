@@ -4,6 +4,22 @@ let
   isMaster = ip == kubeMasterIP;
 in
 {
+  # flannel-io moved the v1.9.1-flannel3 tag on 2026-08-07; the channel pinned
+  # here (20260816) predates nixpkgs' hash fix (PR #552589, 2026-08-18). Drop
+  # once nixpkgs is bumped past it.
+  nixpkgs.overlays = [
+    (final: prev: {
+      cni-plugin-flannel = prev.cni-plugin-flannel.overrideAttrs (old: {
+        src = prev.fetchFromGitHub {
+          owner = "flannel-io";
+          repo = "cni-plugin";
+          rev = "v${old.version}";
+          hash = "sha256-lYn9qDmUn8g3nnD4wQqyzKjd/lPXqoER5nZuY0sVK0s=";
+        };
+      });
+    })
+  ];
+
   environment.systemPackages = with pkgs; [
     kompose
     kubectl
