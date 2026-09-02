@@ -18,6 +18,10 @@ sudo nixos-rebuild switch --flake .#node1
 # master first, waits for Ready between nodes; --build-only to just compile)
 deploy-nodes
 
+# Rolling reboot after a kernel change: cordon/drain, Longhorn-aware waits,
+# scales single-node-replica consumers down and back. Interactive only.
+reboot-nodes
+
 # macOS (nix-darwin)
 darwin-rebuild switch --flake .#terminal-darwin-arm
 darwin-rebuild switch --flake .#terminal-darwin-x86

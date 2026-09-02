@@ -29,6 +29,7 @@ in
     ./ssh.nix
     ./kube-cert-sync.nix
     ./deploy-nodes.nix
+    ./reboot-nodes.nix
   ];
 
   home.file = {
