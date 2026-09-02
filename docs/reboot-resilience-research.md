@@ -74,7 +74,12 @@ mountpoint does exactly that, and the kernel honors it even for root.
 - **Keep `nofail`** (node stays bootable and reachable) but move the hard gate to the consumers: `systemd.services.{containerd,kubelet}.unitConfig.RequiresMountsFor = [ "/mnt/storage" ]` plus `AssertPathIsMountPoint=/mnt/storage` on kubelet. `ConditionPathIsMountPoint` would be wrong: it silently skips and never retries
   ([systemd.unit(5)](https://man7.org/linux/man-pages/man5/systemd.unit.5.html)). Note `fileSystems.<name>.depends` is not honored ([nixpkgs#217179](https://github.com/NixOS/nixpkgs/issues/217179)).
 - Activation script: `chattr +i /mnt/storage` while it is not a mountpoint.
+- **One-off, needed for the immutable-dir safeguard to bite:** the root-fs copy of `longhorn-disk.cfg` and the replica skeletons are hidden under the live mount and must be removed once, then the empty directory made immutable:
+  `sudo mount --bind / /mnt/rootfs && sudo rm -rf /mnt/rootfs/mnt/storage/* && sudo chattr +i /mnt/rootfs/mnt/storage && sudo umount /mnt/rootfs`
+  (with `/mnt/rootfs` created first). Otherwise an existing cfg with the right UUID is accepted as-is.
 - Longhorn: disable scheduling on node3's default `/var/lib/longhorn` disk so a replica can never land on the root fs.
+
+Implemented in `hosts/node3/storage.nix` (evaluated; not yet deployed).
 
 **Caveat:** the 2026-07 kernel 7.0 superblock-padding incompatibility
 ([writeup](https://www.technowizardry.net/2026/07/failure-to-launch-mdadm-edition))
