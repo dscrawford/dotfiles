@@ -25,4 +25,10 @@
     (message "kubed watch %s" (if auto-revert-mode "on" "off")))
   (with-eval-after-load 'kubed
     (keymap-set kubed-list-mode-map "V" #'my/kubed-list-watch))
+
+  ;; Lists, resource views, logs and config all pop new windows by default;
+  ;; reuse the current one. `o' still opens in another window: it sets
+  ;; inhibit-same-window, which this action honours.
+  (add-to-list 'display-buffer-alist
+               '("\\`\\*[Kk]ubed" (display-buffer-same-window)))
 ''
