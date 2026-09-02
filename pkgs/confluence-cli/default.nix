@@ -2,11 +2,11 @@
 
 buildNpmPackage rec {
   pname = "confluence-cli";
-  version = "2.15.0";
+  version = "2.22.0";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/confluence-cli/-/confluence-cli-${version}.tgz";
-    hash = "sha256-ysGg+zwW++XHMGrTZxyA8IX50t4wKmLsww0+SZFDyXM=";
+    hash = "sha256-m66/Ic0YFQOhevS+S/X9x1bFvAq6ZLlAOrME2sb6Ld0=";
   };
 
   sourceRoot = "package";
@@ -18,7 +18,7 @@ buildNpmPackage rec {
     sed -i '/"devDependencies"/,/}/d' package.json
   '';
 
-  npmDepsHash = "sha256-S3liH4UGkE5zftEPioZiS+R931g4rTYywkPBth/VLfc=";
+  npmDepsHash = "sha256-f373eifbKelQMHYAjbth9HkFlBX6VR3xew/IhtrKLIA=";
   npmFlags = [ "--omit=dev" ];
 
   dontNpmBuild = true;
