@@ -32,3 +32,4 @@ Thumbs.db
 .claude-flow/
 claude-flow.config.json
 ruvector.db
+.claude
