@@ -1,7 +1,8 @@
 # shared/home/deploy-nodes.nix
-# One-command fleet update: builds every node's closure on this machine, then
-# switches them over ssh one at a time, workers before the master, waiting for
-# each to report Ready before touching the next. Linux desktop only.
+# One-command fleet update: builds every node's closure here as a check, then
+# has each node build and switch over ssh one at a time, workers before the
+# master, waiting for each to report Ready before touching the next. Linux
+# desktop only.
 { lib, pkgs, ... }:
 
 let
@@ -16,9 +17,11 @@ let
       usage: deploy-nodes [--build-only] [--flake DIR] [node...]
 
       Default order: node2 node3 node1 — workers first so a bad config shows
-      up on a kubelet before it reaches the apiserver. Each switch prompts for
-      the remote sudo password. Nothing reboots; a kernel change is reported
-      per node and left to you, one node at a time.
+      up on a kubelet before it reaches the apiserver. Builds run here first
+      as a fleet-wide check, then each node rebuilds its own closure (the
+      desktop cannot push unsigned outputs) and prompts for the remote sudo
+      password. Nothing reboots; a kernel change is reported per node and
+      left to you, one node at a time.
       EOF
       }
 
@@ -54,7 +57,11 @@ let
 
       for n in "''${NODES[@]}"; do
         echo "==> switching $n"
-        nixos-rebuild switch --flake "$FLAKE#$n" --target-host "$n" \
+        # The node builds its own closure: the desktop's outputs are unsigned
+        # and `host` is not a nix trusted-user, so pushing them is refused.
+        # Only content-addressed paths (derivations, fetched sources) cross
+        # the wire, and the node substitutes the rest from cache.nixos.org.
+        nixos-rebuild switch --flake "$FLAKE#$n" --target-host "$n" --build-host "$n" \
           --ask-elevate-password --no-reexec
 
         echo "    waiting for $n Ready"
