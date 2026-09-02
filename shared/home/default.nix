@@ -28,6 +28,7 @@ in
     ./git.nix
     ./ssh.nix
     ./kube-cert-sync.nix
+    ./deploy-nodes.nix
   ];
 
   home.file = {
