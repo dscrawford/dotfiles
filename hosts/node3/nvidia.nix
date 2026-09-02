@@ -26,7 +26,31 @@
     };
     # Generates CDI specs at /var/run/cdi/. Pair with generic-cdi-plugin, not
     # NVIDIA's k8s-device-plugin, which needs FHS paths and /etc/ld.so.cache.
-    nvidia-container-toolkit.enable = true;
+    nvidia-container-toolkit = {
+      enable = true;
+      # The default profile mounts /run/opengl-driver and the driver package,
+      # but the libnvidia-egl-* links there go through the module's
+      # nvidia-egl-external-platforms symlinkJoin and then into egl-gbm /
+      # egl-x11 / egl-wayland*. Neither hop is mounted, so inside a container
+      # Xwayland's glamor cannot dlopen libnvidia-egl-gbm and silently falls
+      # back to llvmpipe (docs/node3-cdi-egl-platforms.md). containerPath ==
+      # hostPath because the links are absolute store paths.
+      mounts =
+        let
+          eglPlatforms = lib.findFirst
+            (p: lib.hasPrefix "nvidia-egl-external-platforms" (lib.getName p))
+            (throw "nvidia-egl-external-platforms not in hardware.graphics.extraPackages")
+            config.hardware.graphics.extraPackages;
+          same = path: { hostPath = path; containerPath = path; };
+        in
+        map same [
+          "${eglPlatforms}"
+          "${pkgs.egl-gbm}/lib"
+          "${pkgs.egl-x11}/lib"
+          "${pkgs.egl-wayland}/lib"
+          "${pkgs.egl-wayland2}/lib"
+        ];
+    };
   };
 
   virtualisation.docker.enable = true;

@@ -1,7 +1,7 @@
 # node3 CDI: the EGL external platforms are missing from GPU containers
 
-**Status: TODO.** Diagnosed and measured, not yet applied — the fix rebuilds
-node3, which also runs Jellyfin, so it wants a moment when interrupting a
+**Status: applied in `hosts/node3/nvidia.nix`, awaiting deploy.** The rebuild
+restarts containerd, which also hosts Jellyfin, so switch when interrupting a
 transcode is fine.
 
 ## Symptom
@@ -61,28 +61,53 @@ eglInitialize -> 1 (EGL_SUCCESS), EGL 1.5
 
 ## Fix
 
-Add the external-platform packages to the CDI profile in
-`hosts/node3/nvidia.nix`, so every GPU container sees a complete driver:
+The chain has one more hop than the table above shows. `/run/opengl-driver/lib`
+does not link straight to `egl-gbm`; it links into the NixOS nvidia module's
+`nvidia-egl-external-platforms` symlinkJoin, whose *relative* links then reach
+`egl-gbm`, `egl-x11`, `egl-wayland`, `egl-wayland2`:
+
+```
+/run/opengl-driver/lib/libnvidia-egl-gbm.so.1
+  -> …-nvidia-egl-external-platforms/lib/libnvidia-egl-gbm.so.1   (hop 1)
+  -> libnvidia-egl-gbm.so.1.1.3                                    (relative)
+  -> …-egl-gbm-1.1.3/lib/libnvidia-egl-gbm.so.1.1.3                (hop 2)
+```
+
+The toolkit's default profile mounts only `/run/opengl-driver`, the driver
+package, and glibc (nixpkgs `nvidia-container-toolkit/default.nix`, the
+`mounts` default), so both hops dangle. Mounting just `egl-gbm`/`egl-x11` leaves
+hop 1 broken. The symlinkJoin is built inline by the nvidia module and has no
+package attribute, so it is picked out of `hardware.graphics.extraPackages` by
+name. All four ICD targets are mounted while at it — Wayland-native clients hit
+the same wall through `libnvidia-egl-wayland`.
+
+Applied to `hosts/node3/nvidia.nix`:
 
 ```nix
 hardware.nvidia-container-toolkit = {
   enable = true;
-  # /run/opengl-driver/lib symlinks into these, and without them the links
-  # dangle inside a container: Xwayland's glamor cannot dlopen
-  # libnvidia-egl-gbm, falls back to software, and takes every X11 client
-  # on that display with it. The driver package alone is not enough.
-  mounts = [
-    {
-      hostPath = "${pkgs.egl-gbm}/lib";
-      containerPath = "${pkgs.egl-gbm}/lib";
-    }
-    {
-      hostPath = "${pkgs.egl-x11}/lib";
-      containerPath = "${pkgs.egl-x11}/lib";
-    }
-  ];
+  mounts =
+    let
+      eglPlatforms = lib.findFirst
+        (p: lib.hasPrefix "nvidia-egl-external-platforms" (lib.getName p))
+        (throw "nvidia-egl-external-platforms not in hardware.graphics.extraPackages")
+        config.hardware.graphics.extraPackages;
+      same = path: { hostPath = path; containerPath = path; };
+    in
+    map same [
+      "${eglPlatforms}"
+      "${pkgs.egl-gbm}/lib"
+      "${pkgs.egl-x11}/lib"
+      "${pkgs.egl-wayland}/lib"
+      "${pkgs.egl-wayland2}/lib"
+    ];
 };
 ```
+
+Rendered for node3 (`nix eval … hardware.nvidia-container-toolkit.mounts`),
+the five entries land ahead of the module defaults, and the `egl-gbm` /
+`egl-x11` paths are byte-identical to the symlinkJoin's targets — same
+`pkgs`, so they cannot drift apart.
 
 `containerPath` matches `hostPath` on purpose: the symlinks in
 `/run/opengl-driver` are absolute store paths, so they only resolve if the
@@ -91,7 +116,9 @@ store path exists at the same place inside the container.
 `egl-gbm` covers Xwayland; `egl-x11` covers EGL-on-X11 clients — needed
 too, or pinning `__EGL_VENDOR_LIBRARY_FILENAMES` to NVIDIA (which the GBM
 path also wants, or glvnd hands the GBM display to mesa and mesa rejects an
-NVIDIA gbm device) breaks ares instead.
+NVIDIA gbm device) breaks ares instead. The symlinkJoin mount also carries
+`share/egl/egl_external_platform.d/*.json`, which is how libEGL_nvidia
+discovers the platforms in the first place.
 
 ## After applying
 
