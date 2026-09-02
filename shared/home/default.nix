@@ -119,10 +119,12 @@ in
     '';
   };
 
-  services.gpg-agent = lib.mkIf isLinux {
+  # A real ssh-agent, socket-activated for the whole login session. gpg-agent
+  # used to fill this role, but importing a key into it needs a pinentry this
+  # config never installed ("agent refused operation"), and there are no gpg
+  # keys or signing to justify keeping it.
+  services.ssh-agent = lib.mkIf isLinux {
     enable = true;
-    defaultCacheTtl = 1800;
-    enableSshSupport = true;
   };
 
   # Darwin runs Determinate Nix, which owns its own settings.

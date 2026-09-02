@@ -9,6 +9,8 @@
     enableDefaultConfig = false;
     settings."*" = {
       SetEnv.TERM = "xterm-256color";
+      # First use of a key loads it into the agent for the rest of the session.
+      AddKeysToAgent = "yes";
     };
     # GitHub over SSH; this is the key registered as dscrawford.
     settings."github.com" = {
