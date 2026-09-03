@@ -89,9 +89,9 @@ The k8s nodes (`node1`–`node3`) are built through the `kubeNode` helper in fla
 
 ### Comments
 
-Older modules are comment-dense; do not match that density. Follow the
-global comment policy: comment only non-obvious constraints or gotchas,
-most code gets none.
+Comment only non-obvious constraints or gotchas; most code gets none. No
+banners, change narration, or restating what the code does — that belongs in
+the commit message. A `comment-density` PostToolUse hook flags 3+ line runs.
 
 ### Nix String Escaping
 

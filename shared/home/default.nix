@@ -36,8 +36,6 @@ in
     # Steer agent-shell/Claude Code memory to the ruflo MCP server instead of
     # the built-in file-based memory (memory/*.md + MEMORY.md index).
     ".claude/rules/common/ruflo-memory.md".source = ../../claude/rules/common/ruflo-memory.md;
-    # Rein in comment-heavy generated code across Claude Code and agent-shell.
-    ".claude/rules/common/comment-policy.md".source = ../../claude/rules/common/comment-policy.md;
     # Read-only under nix by design; /config and /hooks can no longer write it.
     # force: replace the pre-existing hand-managed file on first activation.
     ".claude/settings.json" = {
@@ -45,6 +43,10 @@ in
       force = true;
     };
     ".claude/output-styles/concise.md".source = ../../claude/output-styles/concise.md;
+    ".claude/hooks/comment-density.sh" = {
+      source = ../../claude/hooks/comment-density.sh;
+      executable = true;
+    };
     ".claude/hooks/prompt-router.sh" = {
       source = ../../claude/hooks/prompt-router.sh;
       executable = true;

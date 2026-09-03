@@ -112,10 +112,9 @@ let
   snowballDevice = "alsa_input.usb-BLUE_MICROPHONE_Blue_Snowball_SUGA_2021_10_07_90385-00.mono-fallback";
   snowballProfile = "mono-fallback";
 
-  # WebRTC's delay estimate re-converges slowly, so once the true delay jumps
-  # the canceller stays locked to a stale one until its instance is rebuilt
-  # (init_webrtc() runs on construction). A preset swap rebuilds it without
-  # tearing down easyeffects_source — try that before a full restart.
+  # init_webrtc() runs on construction, so a stale delay estimate only clears
+  # when the instance is rebuilt. A preset swap does that without dropping
+  # easyeffects_source; try it before a full restart.
   aecReset = pkgs.writeShellApplication {
     name = "easyeffects-aec-reset";
     runtimeInputs = [
@@ -131,9 +130,8 @@ let
       QUIET=0
       if [ "''${1:-}" = "--quiet" ]; then QUIET=1; fi
 
-      # Two interleaved runs (watchdog racing the keybind) can land the reset
-      # preset last and leave the mic with no canceller, no denoiser and no gate,
-      # silently. Second caller drops out rather than queueing.
+      # Interleaved runs can land the reset preset last, silently leaving the
+      # mic bare. Second caller drops out rather than queueing.
       exec 9>"''${XDG_RUNTIME_DIR:-/tmp}/easyeffects-aec-reset.lock"
       flock -n 9 || exit 0
 
@@ -173,21 +171,16 @@ let
 
       before="$(node_id ee_sie_echo_canceller)"
 
-      # Without the throwaway preset the swap is a no-op, the id never changes
-      # and every single reset escalates to a full restart. Worth telling
-      # apart from a genuine WebRTC lock.
+      # Without the throwaway preset the swap is a no-op and every reset
+      # escalates to a full restart.
       if [ -f "$HOME/.local/share/easyeffects/input/${resetPresetName}.json" ]; then
         ee -l ${resetPresetName}
         await ee_sie_echo_canceller absent 15 || true
         ee -l ${presetName}
 
         if await ee_sie_echo_canceller present 25; then
-          # Not success yet: preset loads on a live instance sometimes build
-          # the chain only for it to vanish within seconds (observed
-          # 2026-09-01: 6 nodes at t+5s, 2 at t+10s). Declaring victory on the
-          # instantaneous check made that failure invisible and unreachable by
-          # the restart escalation below, which is the one path that reliably
-          # heals it.
+          # A preset load can build the chain and lose it seconds later, so the
+          # instantaneous check is not proof.
           sleep 3
           after="$(node_id ee_sie_echo_canceller)"
           if [ -n "$after" ] && [ "$after" != "$before" ]; then
@@ -225,12 +218,9 @@ let
     '';
   };
 
-  # Resets are only free while nothing holds the mic, so the watchdog banks a
-  # trigger and spends it at the first idle moment; mid-call it still fires,
-  # just rate-limited, since a ~1s blip beats a dead canceller.
-  # Every trigger and every reset goes to the journal under `ee-watchdog`: a
-  # reset is audible, so a version of this that fired invisibly was impossible
-  # to tell apart from the dropouts it was meant to fix.
+  # Banks a trigger and spends it when the mic goes idle; mid-call it still
+  # fires, rate-limited. Logs to the journal as `ee-watchdog` — resets are
+  # audible, so a silent one is indistinguishable from the dropout it fixes.
   aecWatchdog = pkgs.writeShellApplication {
     name = "easyeffects-watchdog";
     runtimeInputs = [
@@ -243,18 +233,15 @@ let
     ];
     text = ''
       INTERVAL="''${EE_WATCHDOG_INTERVAL:-15}"
-      # 3 fires on any scheduling hiccup. Resets are not free — each one is an
-      # audible chain rebuild — so this wants to catch sustained starvation
-      # only.
+      # High on purpose: each reset is an audible rebuild, so only sustained
+      # starvation should trigger one.
       XRUN_THRESHOLD="''${EE_WATCHDOG_XRUNS:-50}"
       COOLDOWN="''${EE_WATCHDOG_COOLDOWN:-120}"
 
-      # Tab-separated "ec-node-id probe-node-name probe-node-state
-      # consumer-link-count source-present mic-present"; the first four are
-      # "none"/"0" when the canceller is not in the graph, the last two are
-      # yes/no regardless, which is what tells an empty chain apart from
-      # EasyEffects being down. Tabs, not spaces: PipeWire does not sanitize
-      # node.name and real ones contain spaces (e.g. "WEBRTC VoiceEngine").
+      # Tabs, not spaces: PipeWire node.name can contain spaces. Emits
+      # "ec-id probe-name probe-state consumers source-present mic-present";
+      # first four are none/0 when the canceller is absent, last two always
+      # yes/no so an empty chain is distinguishable from EE being down.
       ee_state() {
         pw-dump 2>/dev/null | jq -r '
           . as $all
@@ -319,15 +306,9 @@ let
           prev_xruns=""
           prev_probe_state=""
 
-          # EE 8.x builds the input chain on demand and tears it down ~10s
-          # after the last consumer detaches (verified 2026-09-01: attach
-          # pw-record -> 6 nodes in 1s, detach -> 2 nodes 10s later). An empty
-          # chain at idle is therefore NORMAL; gating on consumers>0 is what
-          # makes this a fault signal — something is recording the mic and the
-          # chain is not there. Triggering on idle-empty instead caused four
-          # days of 2-minute resets. Debounced 4 intervals so a consumer
-          # attaching just before a sample gets the ~1s build window plus
-          # margin.
+          # EE 8.x builds the chain on demand and drops it ~10s after the last
+          # consumer leaves, so an empty chain at idle is normal. Only
+          # consumers>0 makes it a fault. Debounced 4 intervals for build time.
           if [ "$src" = yes ] && [ "$mic" = yes ] && [ "$consumers" -gt 0 ]; then
             prev_empty=$((prev_empty + 1))
             if [ "$prev_empty" -ge 4 ]; then reason="chain empty"; fi
@@ -338,17 +319,13 @@ let
           fi
         else
           prev_empty=0
-          # A banked chain-empty verdict is about a state, not an event; once
-          # the chain is back (e.g. someone restarted EasyEffects) spending it
-          # would tear down a healthy chain. Event-shaped pendings still bank.
+          # Chain-empty describes a state, not an event: spending it once the
+          # chain is back would tear down a healthy one.
           if [ "$pending" = "chain empty" ]; then pending=""; fi
           xruns="$(graph_xruns || true)"
 
-          # No "probe changed" trigger: upstream d4665ddf relinks the probe on
-          # output-device change by itself, and the probe reads back as "none"
-          # for the moment between the canceller appearing and its link being
-          # made — so a reset re-armed the trigger that caused it and the
-          # watchdog reset every COOLDOWN indefinitely.
+          # No "probe changed" trigger: upstream d4665ddf relinks it already,
+          # and the transient "none" during relink made resets self-perpetuate.
           if [ "$prev_probe_state" = suspended ] && [ "$probe_state" = running ]; then
             reason="reference sink resumed"
           elif [ -n "$prev_xruns" ] && [ -n "$xruns" ] \
@@ -369,9 +346,8 @@ let
         if [ -z "$pending" ]; then continue; fi
 
         now="$(date +%s)"
-        # "chain empty" takes the cooldown path even when the mic is idle: if a
-        # reset cannot fix it, the state persists and the immediate path would
-        # re-fire every interval forever.
+        # chain-empty takes the cooldown path even when idle: if a reset cannot
+        # fix it, the immediate path would re-fire forever.
         if [ "$consumers" -eq 0 ] && [ "$pending" != "chain empty" ]; then
           :
         elif [ "$((now - last_reset))" -ge "$COOLDOWN" ]; then
@@ -417,10 +393,9 @@ in
     force = true;
   };
 
-  # processAllOutputs defaults to true, which routes playback through EE's sink
-  # and, with DFN's ~8ms block, produced thousands of xruns and audible static.
-  # These knobs live in EE's KConfig INI (not the presets, not dconf), and EE
-  # rewrites that file at runtime — so set only our keys instead of symlinking.
+  # processAllOutputs defaults true, routing playback through EE's sink; that
+  # produced thousands of xruns. Lives in EE's KConfig INI, which EE rewrites at
+  # runtime — set only our keys instead of symlinking.
   home.activation.easyeffectsPipelines =
     lib.hm.dag.entryAfter [ "writeBoundary" ] (
       let
