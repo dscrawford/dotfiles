@@ -68,7 +68,9 @@ let
         min-processing-threshold = -10.0;
         max-erb-processing-threshold = 30.0;
         max-df-processing-threshold = 20.0;
-        min-processing-buffer = 0;
+        # One frame of pre-paid latency so a single scheduling hiccup is
+        # absorbed instead of growing DeepFilterNet's queue for good.
+        min-processing-buffer = 1;
         post-filter-beta = 0.05;
       };
 

@@ -7,6 +7,7 @@
     ./nvidia.nix
     ./bluetooth.nix
     ./audio.nix
+    ./priority.nix
     ./udev.nix
     ./gpu-monitor.nix
     ./services.nix

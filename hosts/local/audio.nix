@@ -3,7 +3,18 @@
 { config, lib, pkgs, ... }:
 
 {
-  security.rtkit.enable = true;
+  security.rtkit = {
+    enable = true;
+    # rtkit's defaults cap RT at priority 20 and SIGKILL a thread that spins
+    # 200ms without blocking; a DeepFilterNet stall under a build hits both.
+    args = [
+      "--scheduling-policy=FIFO"
+      "--our-realtime-priority=89"
+      "--max-realtime-priority=88"
+      "--min-nice-level=-19"
+      "--rttime-usec-max=5000000"
+    ];
+  };
 
   services.pipewire = {
     enable = true;
@@ -11,6 +22,38 @@
     alsa.support32Bit = true;
     pulse.enable = true;
     jack.enable = true;
+    # Robustness over latency (docs/audio-under-load-research.md): a 1024
+    # floor gives the DeepFilterNet worker 21ms per cycle instead of 10, the
+    # data loop lives on a reserved physical core (11/23, kept free of nix
+    # builds in priority.nix). module-rt is not re-declared: pipewire.conf
+    # already loads it asking for 88 (clients 83), which rtkit now grants, and
+    # it sizes RLIMIT_RTTIME from rtkit's --rttime-usec-max.
+    extraConfig = {
+      pipewire."90-robust" = {
+        "context.properties" = {
+          "default.clock.rate" = 48000;
+          "default.clock.quantum" = 1024;
+          "default.clock.min-quantum" = 1024;
+          "default.clock.max-quantum" = 2048;
+        };
+        "context.data-loops" = [
+          {
+            "loop.rt-prio" = -1;
+            "loop.class" = [ "data.rt" ];
+            "thread.name" = "data-loop.0";
+            "thread.affinity" = [ 11 23 ];
+          }
+        ];
+      };
+      # Games and browsers talk PulseAudio and would otherwise pull the graph
+      # down to 256-sample cycles.
+      pipewire-pulse."92-pulse-floor" = {
+        "pulse.properties" = {
+          "pulse.min.quantum" = "1024/48000";
+          "pulse.min.req" = "1024/48000";
+        };
+      };
+    };
     wireplumber.extraConfig = {
       "10-bluez" = {
         "monitor.bluez.properties" = {
@@ -54,14 +97,10 @@
           }
           {
             matches = [ { "node.name" = "~alsa_input.*BLUE_MICROPHONE.*"; } ];
+            # The capture graph must not run a shorter cycle than the graph
+            # floor: 512 halved DeepFilterNet's time budget on the mic side.
             actions.update-props = {
-              # The mic drives the capture graph (the probe link welds the sink
-              # into it), so this pins the graph's quantum. Discord's request
-              # rounds to 256 frames (5.3 ms), too tight for DFN/WebRTC's 10 ms
-              # blocks; lock-quantum forces 512 instead of ceding to the lowest
-              # requester. Still under PipeWire's 1024 default.
-              "node.latency" = "512/48000";
-              "node.lock-quantum" = true;
+              "node.latency" = "1024/48000";
             };
           }
         ];
