@@ -34,7 +34,8 @@ in
     exec mako
     exec blueman-applet
     exec easyeffects --hide-window
-    exec easyeffects-watchdog
+    # No easyeffects-watchdog: its resets caused the xruns that retriggered it
+    # (1090 resets in 7 days). Reset by hand with Control+Shift+Mod1+e.
 
     # Monitor layout (managed by nwg-displays)
     include ~/.config/sway/outputs

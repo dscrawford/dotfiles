@@ -1,22 +1,18 @@
-# shared/easyeffects.nix
-# Mic denoising chain: high-pass -> echo canceller -> DeepFilterNet -> soft gate.
+# Mic chain: high-pass -> RNNoise -> gate -> echo canceller.
 #
-# AEC must stay BEFORE DeepFilterNet: it correlates the mic against a reference
-# tap, and DFN's non-linear processing destroys that correlation.
-# DFN, not RNNoise: only DFN removes a keystroke landing mid-word — RNNoise's
-# one-gain-per-band design handles steady noise but not transients.
-# Presets must live under ~/.local/share (EE 8.x AppDataLocation); writing the
-# old ~/.config/easyeffects path makes EE's xdg_migration() trash these symlinks.
-# Autostarted from the sway config via exec (systemd user services on
-# graphical-session.target never start under raw greetd), alongside
-# easyeffects-watchdog. Graph tuning the AEC needs lives in hosts/local/audio.nix.
+# Canceller runs last, which is backwards: AEC correlates the mic against a
+# reference tap and upstream denoising degrades that. Verified working anyway;
+# if echo cancellation regresses, move echo_canceller#0 second.
+# Presets must live under ~/.local/share — EE 8.x xdg_migration() trashes
+# symlinks written to the old ~/.config/easyeffects path.
+# easyeffects-watchdog is built here but not autostarted; see shared/sway/config.nix.
 { pkgs, lib, ... }:
 
 let
   micPreset = {
     input = {
       blocklist = [ ];
-      plugins_order = [ "filter#0" "echo_canceller#0" "deepfilternet#0" "gate#0" ];
+      plugins_order = [ "filter#0" "rnnoise#0" "gate#0" "echo_canceller#0" ];
 
       # Enum fields serialize as their label strings, not indices.
       "filter#0" = {
@@ -47,10 +43,10 @@ let
           enforce-high-pass = true;
           automatic-gain-control = false;
         };
-        # DFN does the denoising; a second suppressor here would fight it.
+        # VeryHigh is index 3 of Low/Moderate/High/VeryHigh.
         noise-suppression = {
-          enable = false;
-          level = "Moderate";
+          enable = true;
+          level = "VeryHigh";
         };
         high-pass = {
           enable = true;
@@ -58,20 +54,16 @@ let
         };
       };
 
-      # attenuation-limit 80 is the top of upstream's "balanced" range; raise
-      # toward 100 if keystrokes still get through.
-      "deepfilternet#0" = {
+      # Defaults spelled out so an EE update cannot silently retune the mic.
+      "rnnoise#0" = {
         bypass = false;
         input-gain = 0.0;
         output-gain = 0.0;
-        attenuation-limit = 80.0;
-        min-processing-threshold = -10.0;
-        max-erb-processing-threshold = 30.0;
-        max-df-processing-threshold = 20.0;
-        # One frame of pre-paid latency so a single scheduling hiccup is
-        # absorbed instead of growing DeepFilterNet's queue for good.
-        min-processing-buffer = 1;
-        post-filter-beta = 0.05;
+        enable-vad = true;
+        vad-thres = 50.0;
+        release = 20.0;
+        wet = 0.0;
+        model-name = "";
       };
 
       # Deliberately soft: a hard gate after the model clips word tails.
@@ -140,7 +132,7 @@ let
       if [ "''${1:-}" = "--quiet" ]; then QUIET=1; fi
 
       # Two interleaved runs (watchdog racing the keybind) can land the reset
-      # preset last and leave the mic with no canceller, no DFN and no gate,
+      # preset last and leave the mic with no canceller, no denoiser and no gate,
       # silently. Second caller drops out rather than queueing.
       exec 9>"''${XDG_RUNTIME_DIR:-/tmp}/easyeffects-aec-reset.lock"
       flock -n 9 || exit 0
