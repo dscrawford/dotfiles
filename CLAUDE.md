@@ -5,14 +5,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build Commands
 
 ```bash
-# NixOS desktop (full: Sway + Emacs + gaming)
-sudo nixos-rebuild switch --flake .#local
+# NixOS desktop (full: Sway + Emacs + gaming). ?submodules=1: its tailscale
+# auth key lives in the secrets submodule, which a plain flake ref leaves out.
+sudo nixos-rebuild switch --flake '.?submodules=1#local'
 
 # NixOS terminal-only
 sudo nixos-rebuild switch --flake .#terminal
 
-# NixOS servers (node1, node2, node3). ?submodules=1: their sops secrets live
-# in the secrets submodule, which a plain flake ref leaves out.
+# NixOS servers (node1, node2, node3), same submodule rule
 sudo nixos-rebuild switch --flake '.?submodules=1#node1'
 
 # All cluster nodes from the desktop (builds locally, switches over ssh,
@@ -28,7 +28,7 @@ darwin-rebuild switch --flake .#terminal-darwin-arm
 darwin-rebuild switch --flake .#terminal-darwin-x86
 
 # Test without activating
-sudo nixos-rebuild test --flake .#local
+sudo nixos-rebuild test --flake '.?submodules=1#local'
 
 # Update flake inputs
 nix flake update

@@ -23,9 +23,8 @@ exposed to the internet.
   against 34 MB/s on the bare LAN (the library's NFS-backed streaming is the
   LAN ceiling; WireGuard on the Gen8 Xeons is the tailnet one). Five times
   the ProtonVPN path, and no port that moves.
-- The desktop: `shared/local-common.nix` enables tailscale; `sudo tailscale
-  up` after the rebuild puts it on the tailnet, which it must be on to
-  download at all now.
+- The desktop joins the same way the nodes do, from the `local` key in
+  `secrets/tailscale.yaml` (`hosts/local/tailscale.nix`), as device `desktop`.
 
 ## Joining the nodes
 
@@ -39,7 +38,7 @@ private submodule, one entry per node.
 ```bash
 # Tailscale admin console → Settings → Keys → Generate: pre-authorized,
 # not reusable, tag as you like. One per node, then:
-sops secrets/tailscale.yaml        # paste into node1:, node2:, node3:
+sops secrets/tailscale.yaml        # paste into node1:, node2:, node3:, local:
 git -C secrets commit -am "feat: tailscale auth keys for the nodes"
 deploy-nodes                       # passes ?submodules=1 so the file is seen
 ```
@@ -49,7 +48,12 @@ only read again if that state is gone (a reinstall), so an expired key does
 not unjoin anything. A reinstalled node has a new host key: rederive its age
 recipient, replace it in `.sops.yaml`, `sops updatekeys secrets/tailscale.yaml`.
 
-The desktop is not a node: `sudo tailscale up` once after the rebuild.
+The desktop follows the same pattern from `hosts/local/tailscale.nix`, keyed
+`local` (the flake host; `local`, `terminal`, and `terminal-arm` all share the
+hostname `nixos`) and named `desktop` on the tailnet. Its recipient in
+`.sops.yaml` is the desktop's own host key, so a rebuild needs
+`'.?submodules=1#local'`. Terminal builds have no key: `sudo tailscale up`
+once.
 
 ## Pointing the catalog at it
 

@@ -11,10 +11,9 @@
 
   networking.firewall.enable = lib.mkForce false;
 
-  # The tailnet is how game bytes reach this machine from the cluster: the
-  # library's NodePort is only ever addressed by a node's tailscale IP, so a
-  # download rides WireGuard end to end instead of the ProtonVPN hairpin.
-  # Join once with `sudo tailscale up`; the state survives rebuilds.
+  # The tailnet reaches the cluster's game NodePort over WireGuard instead of
+  # the ProtonVPN hairpin. Desktop joins via a sops auth key (tailscale.nix);
+  # terminal builds via `sudo tailscale up` once; state survives rebuilds.
   services.tailscale.enable = true;
 
   # Router (192.168.0.1) DHCP hands out its own DNS, whose forwarder is

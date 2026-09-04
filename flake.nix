@@ -73,6 +73,7 @@
         ];
         extraModules = [
           ./shared/vr.nix
+          ./hosts/local/tailscale.nix
 
           # Needs Lossless Scaling installed via Steam; activate per-game with
           # `ENABLE_LSFG=1 %command%` in the launch options.
