@@ -1,8 +1,13 @@
 # node3 CDI: the EGL external platforms are missing from GPU containers
 
-**Status: applied in `hosts/node3/nvidia.nix`, awaiting deploy.** The rebuild
-restarts containerd, which also hosts Jellyfin, so switch when interrupting a
-transcode is fine.
+**Status: deployed 2026-09-04.** The mounts work as intended — Xwayland's
+glamor now initialises on the card through GBM inside a GPU pod. Note the
+result for the QA runner though: on this node's 580-branch driver that
+glamor offers X11 clients *no GLX visual at all*, so an emulator drawing
+through GLX gets no context. The QA image therefore pins `Xwayland -glamor
+off` (see GOTG `docs/qa-platform-plan.md`); the compositor still runs on the
+GPU. The mount is still right — anything using NVIDIA EGL directly, Wayland
+platform included, now has a complete driver.
 
 ## Symptom
 
