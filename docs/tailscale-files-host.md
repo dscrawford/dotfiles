@@ -7,13 +7,20 @@ every machine on it: the library's NodePort is addressed by a node's tailscale
 IP, the traffic is WireGuard end to end, and nothing about the house is
 exposed to the internet.
 
-## State on 2026-09-04
+## State on 2026-09-04 (evening: done)
 
-- `tailscaled` runs on node1/node2/node3 (`shared/server-common.nix`) but no
-  node has ever been logged in: `tailscale status` says NeedsLogin on all
-  three. `--accept-dns=false` on the nodes is right; they never resolve.
-- The desktop had no tailscale at all; `shared/local-common.nix` now enables
-  it. Join with `sudo tailscale up` after the rebuild.
+- node1 100.70.210.123, node2 100.107.126.30, node3 100.74.183.90 — joined
+  through their sops auth keys. Peers on the LAN connect direct
+  (`tailscale status` shows `direct 192.168.0.x:41641`), not via DERP.
+- The catalog advertises `http://100.70.210.123:30780`; the library
+  deployment no longer reads gluetun's port file.
+- Measured node2 → node1 for one 50 MB member: 10.7 MB/s over the tailnet
+  against 34 MB/s on the bare LAN (the library's NFS-backed streaming is the
+  LAN ceiling; WireGuard on the Gen8 Xeons is the tailnet one). Five times
+  the ProtonVPN path, and no port that moves.
+- The desktop: `shared/local-common.nix` enables tailscale; `sudo tailscale
+  up` after the rebuild puts it on the tailnet, which it must be on to
+  download at all now.
 
 ## Joining the nodes
 
