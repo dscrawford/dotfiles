@@ -17,19 +17,27 @@ exposed to the internet.
 
 ## Joining the nodes
 
-Each node prints its own login link:
+Each node joins on its own at activation: `shared/server-common.nix` hands
+`services.tailscale.authKeyFile` a sops-nix secret named after the host,
+decrypted with the node's own SSH host key (`ssh-to-age` of
+`/etc/ssh/ssh_host_ed25519_key`; the three recipients are in
+`secrets/.sops.yaml`). The keys live in `secrets/tailscale.yaml`, in the
+private submodule, one entry per node.
 
 ```bash
-ssh node1 'tailscale status'   # "Log in at: https://login.tailscale.com/a/..."
-ssh node2 'tailscale status'
-ssh node3 'sudo tailscale up --hostname=node3 --accept-dns=false'
+# Tailscale admin console → Settings → Keys → Generate: pre-authorized,
+# not reusable, tag as you like. One per node, then:
+sops secrets/tailscale.yaml        # paste into node1:, node2:, node3:
+git -C secrets commit -am "feat: tailscale auth keys for the nodes"
+deploy-nodes                       # passes ?submodules=1 so the file is seen
 ```
 
-Open each link as the tailnet admin. The login persists in
-`/var/lib/tailscale` across rebuilds and reboots. To make a node re-join on
-its own after a reinstall, put a reusable, pre-authorized auth key in sops and
-set `services.tailscale.authKeyFile`; the flags in `extraUpFlags` already
-carry the hostname.
+A node that has joined keeps its state in `/var/lib/tailscale`; the key is
+only read again if that state is gone (a reinstall), so an expired key does
+not unjoin anything. A reinstalled node has a new host key: rederive its age
+recipient, replace it in `.sops.yaml`, `sops updatekeys secrets/tailscale.yaml`.
+
+The desktop is not a node: `sudo tailscale up` once after the rebuild.
 
 ## Pointing the catalog at it
 

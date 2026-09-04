@@ -1,7 +1,16 @@
 # Configuration specific to server systems (not desktops)
-{ pkgs, hostname, ip, netInterface ? "eno1", kubeMasterIP, kubeMasterHostname, ... }:
+{ config, pkgs, hostname, ip, netInterface ? "eno1", kubeMasterIP, kubeMasterHostname, ... }:
 
 {
+  # Each node's tailscale auth key, decrypted at activation with the node's
+  # own host key — no age key to distribute. The file lives in the secrets
+  # submodule, so a rebuild must be given `.?submodules=1` (deploy-nodes does).
+  sops = {
+    defaultSopsFile = ../secrets/tailscale.yaml;
+    age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
+    secrets.${hostname} = { };
+  };
+
   services = {
     fail2ban = {
       enable = true;
@@ -14,6 +23,9 @@
 
     tailscale = {
       enable = true;
+      # Joins on its own with the key above; the state then persists, so an
+      # empty or expired key only matters for a node that has never joined.
+      authKeyFile = config.sops.secrets.${hostname}.path;
       extraUpFlags = [ "--hostname=${hostname}" "--accept-dns=false" ];
     };
 

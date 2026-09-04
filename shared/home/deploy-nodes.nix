@@ -55,7 +55,7 @@ let
       # node must not leave the fleet half-updated.
       for n in "''${NODES[@]}"; do
         echo "==> building $n"
-        nixos-rebuild build --flake "$FLAKE#$n" --no-reexec
+        nixos-rebuild build --flake "$FLAKE?submodules=1#$n" --no-reexec
       done
       if [ "$BUILD_ONLY" = 1 ]; then echo "build-only: done"; exit 0; fi
 
@@ -65,7 +65,7 @@ let
         # and `host` is not a nix trusted-user, so pushing them is refused.
         # Only content-addressed paths (derivations, fetched sources) cross
         # the wire, and the node substitutes the rest from cache.nixos.org.
-        if ! nixos-rebuild switch --flake "$FLAKE#$n" --target-host "$n" --build-host "$n" \
+        if ! nixos-rebuild switch --flake "$FLAKE?submodules=1#$n" --target-host "$n" --build-host "$n" \
           --ask-elevate-password --no-reexec; then
           rc=$?
           echo "deploy-nodes: switch on $n failed (exit $rc)" >&2

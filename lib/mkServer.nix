@@ -1,4 +1,4 @@
-{ nixpkgs, ... }:
+{ nixpkgs, sops-nix, ... }:
 { hostname, ip, netInterface ? "eno1", extraModules ? [] }: nixpkgs.lib.nixosSystem rec {
   system = "x86_64-linux";
   specialArgs = {
@@ -8,6 +8,7 @@
     kubeMasterAPIServerPort = 6443;
   };
   modules = [
+    sops-nix.nixosModules.sops
     ../shared/common.nix
     ../shared/server-common.nix
     ../shared/users.nix

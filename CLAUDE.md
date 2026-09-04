@@ -11,8 +11,9 @@ sudo nixos-rebuild switch --flake .#local
 # NixOS terminal-only
 sudo nixos-rebuild switch --flake .#terminal
 
-# NixOS servers (node1, node2, node3)
-sudo nixos-rebuild switch --flake .#node1
+# NixOS servers (node1, node2, node3). ?submodules=1: their sops secrets live
+# in the secrets submodule, which a plain flake ref leaves out.
+sudo nixos-rebuild switch --flake '.?submodules=1#node1'
 
 # All cluster nodes from the desktop (builds locally, switches over ssh,
 # master first, waits for Ready between nodes; --build-only to just compile)
