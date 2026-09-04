@@ -45,7 +45,10 @@
     };
     
     defaultGateway = "192.168.0.1";
-    nameservers = [ "192.168.0.1" "1.1.1.1" ];
+    # Router DNS (192.168.0.1) is deliberately excluded: it has returned
+    # REFUSED for every query since 2026-09-02, and CoreDNS forwards REFUSED
+    # straight through to pods instead of retrying the other upstream.
+    nameservers = [ "1.1.1.1" "9.9.9.9" ];
     
     extraHosts = ''
       ${kubeMasterIP} ${kubeMasterHostname}
