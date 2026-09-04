@@ -12,8 +12,13 @@ exposed to the internet.
 - node1 100.70.210.123, node2 100.107.126.30, node3 100.74.183.90 — joined
   through their sops auth keys. Peers on the LAN connect direct
   (`tailscale status` shows `direct 192.168.0.x:41641`), not via DERP.
-- The catalog advertises `http://100.70.210.123:30780`; the library
-  deployment no longer reads gluetun's port file.
+- The catalog advertises two hosts in `files_urls`: the tailnet NodePort
+  `http://100.70.210.123:30780` first, the VPN-fronted
+  `https://gotg-files.dcraw.net:<port>` behind it (`files_url` stays that
+  one, for older clients). A client probes each once per download with a
+  3 s connect timeout and takes the first that answers, so a machine off
+  the tailnet — a friend's, or this desktop before it joined — still
+  downloads, just through the VPN.
 - Measured node2 → node1 for one 50 MB member: 10.7 MB/s over the tailnet
   against 34 MB/s on the bare LAN (the library's NFS-backed streaming is the
   LAN ceiling; WireGuard on the Gen8 Xeons is the tailnet one). Five times
