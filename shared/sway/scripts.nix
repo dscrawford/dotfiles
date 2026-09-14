@@ -161,4 +161,47 @@
       notify-send -t 3000 "Recording started" "Press Ctrl+Alt+Shift+R to stop"
     '';
   };
+
+  # XWayland exposes every output as one root screen and marks none primary,
+  # so X11 games enumerate output 0's modes only: a 21:9 monitor's native mode
+  # never appears in their resolution list and they open on the wrong display.
+  # Naming a primary fixes both without wrapping the game.
+  xwayland-primary-script = pkgs.writeShellApplication {
+    name = "xwayland-primary.sh";
+    runtimeInputs = [ pkgs.sway pkgs.jq pkgs.xrandr ];
+    text = ''
+      OVERRIDE="$HOME/.config/sway/primary-output"
+
+      # sway reserves the X socket at startup but spawns the server lazily, so
+      # DISPLAY is set long before xrandr can connect. Hence the retry loop.
+      export DISPLAY="''${DISPLAY:-:0}"
+
+      TARGET=""
+      if [ -r "$OVERRIDE" ]; then
+        TARGET=$(grep -m1 -oE '[A-Za-z0-9-]+' "$OVERRIDE" || true)
+      fi
+
+      if [ -z "$TARGET" ]; then
+        # Widest aspect ratio wins (the ultrawide); pixel count breaks ties.
+        TARGET=$(swaymsg -t get_outputs | jq -r '
+          [ .[] | select(.active)
+            | { name, w: .rect.width, h: .rect.height }
+            | . + { aspect: (.w / .h), px: (.w * .h) } ]
+          | sort_by(-.aspect, -.px) | .[0].name // empty')
+      fi
+
+      [ -n "$TARGET" ] || exit 0
+
+      for ((i = 0; i < 30; i++)); do
+        # xrandr warns on every XWayland call; only the exit status matters.
+        if xrandr --output "$TARGET" --primary 2>/dev/null; then
+          exit 0
+        fi
+        sleep 1
+      done
+
+      echo "xwayland-primary: could not set $TARGET primary on $DISPLAY" >&2
+      exit 1
+    '';
+  };
 }

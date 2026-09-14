@@ -1,7 +1,8 @@
 # shared/sway/config.nix
 # Main Sway config string and the desktop home.packages list.
 # Imported as a plain function returning { packages, swayConfig }.
-{ pkgs, lib, workspaceBin, wallpaperBin, lockBin, volumeBin, recordBin }:
+{ pkgs, lib, workspaceBin, wallpaperBin, lockBin, volumeBin, recordBin
+, xwaylandPrimaryBin }:
 
 let
   bindGroup = keyOf: cmd:
@@ -42,7 +43,13 @@ in
 
     # Initialize workspaces on startup and when monitors change
     exec_always ${workspaceBin} init
-    exec swaymsg -t subscribe -m '["output"]' | while read -r _; do sleep 1; ${workspaceBin} init; done
+    exec swaymsg -t subscribe -m '["output"]' | while read -r _; do sleep 1; ${workspaceBin} init; ${xwaylandPrimaryBin}; done
+
+    # Tell XWayland which monitor is "the" display, so X11/Proton games offer
+    # its modes (3440x1440) and open on it. See scripts.nix for why.
+    # Override the auto-pick by writing an output name to
+    # ~/.config/sway/primary-output.
+    exec_always ${xwaylandPrimaryBin}
 
     exec_always ${wallpaperBin}
     exec bash -c 'while true; do sleep 1800; ${wallpaperBin}; done'

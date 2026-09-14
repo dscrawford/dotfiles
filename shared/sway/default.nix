@@ -10,18 +10,21 @@ let
     wallpaper-script
     lock-script
     volume-script
-    record-script;
+    record-script
+    xwayland-primary-script;
 
   workspaceBin = "${workspace-script}/bin/workspace.sh";
   wallpaperBin = "${wallpaper-script}/bin/wallpaper.sh";
   lockBin = "${lock-script}/bin/lock.sh";
   volumeBin = "${volume-script}/bin/volume.sh";
   recordBin = "${record-script}/bin/record.sh";
+  xwaylandPrimaryBin = "${xwayland-primary-script}/bin/xwayland-primary.sh";
 
   waybar = import ./waybar.nix { inherit pkgs; };
 
   swayConfig = import ./config.nix {
-    inherit pkgs lib workspaceBin wallpaperBin lockBin volumeBin recordBin;
+    inherit pkgs lib workspaceBin wallpaperBin lockBin volumeBin recordBin
+      xwaylandPrimaryBin;
   };
 in
 {
