@@ -57,7 +57,7 @@ remote. See `claude/skills/local-llm-routing/` for the usage pattern and
 
 1. Clone this repository to `~/.local/dotfiles` (use `--recurse-submodules` for secrets)
 2. Set up your age key for secrets (see `secrets/README.md`)
-3. Build — the full per-system command list lives in [CLAUDE.md](CLAUDE.md):
+3. Build — the full per-system command list lives in [AGENTS.md](AGENTS.md):
 
 ```bash
 sudo nixos-rebuild switch --flake .#local   # desktop; .#terminal / .#node1-3 likewise
