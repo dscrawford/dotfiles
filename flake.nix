@@ -22,6 +22,11 @@
       url = "github:pabloaul/lsfg-vk-flake/main";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # gotg/gotg-ui only; the importer and proxy images are the cluster's.
+    gamesonthego = {
+      url = "github:dscrawford/GamesOnTheGo";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     everything-claude-code = {
       url = "github:affaan-m/everything-claude-code";
       flake = false;
@@ -32,7 +37,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, sops-nix, nix-darwin, darwin-emacs, lsfg-vk-flake, everything-claude-code, cli-anything }:
+  outputs = { self, nixpkgs, home-manager, sops-nix, nix-darwin, darwin-emacs, lsfg-vk-flake, gamesonthego, everything-claude-code, cli-anything }:
   let
     builders = import ./lib {
       inherit nixpkgs home-manager sops-nix nix-darwin darwin-emacs
@@ -70,6 +75,12 @@
           # Ollama daemon itself comes from shared/home/ollama.nix; only the
           # GPU package choice is desktop-specific.
           ({ pkgs, ... }: { services.ollama.package = pkgs.ollama-cuda; })
+          ({ pkgs, ... }: {
+            home.packages = with gamesonthego.packages.${pkgs.stdenv.hostPlatform.system}; [
+              gotg
+              gotg-ui
+            ];
+          })
         ];
         extraModules = [
           ./shared/vr.nix
