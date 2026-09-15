@@ -26,6 +26,9 @@ in
     ''
       (my/guard "agent-shell" (require 'agent-shell))
       (global-set-key (kbd "C-c s") 'agent-shell)
+      ;; Type a prompt while the agent is mid-turn: queued when busy, sent
+      ;; straight away when idle. Upstream ships it unbound.
+      (global-set-key (kbd "C-c q") 'agent-shell-prompt-queue)
       ;; Always prompt for session on start so we can resume from another session
       (setq agent-shell-session-strategy 'prompt)
       ;; Central ~/.emacs.d/agent-shell/<project>/ rather than per-project
