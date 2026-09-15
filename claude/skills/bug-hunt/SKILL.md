@@ -1,6 +1,6 @@
 ---
 name: bug-hunt
-description: Clone a repo into a throwaway Nix sandbox, review it read-only, then write unit and e2e tests that try to prove the suspected bugs are real. Reports findings with a failing test as evidence; never posts, pushes, or touches the original checkout.
+description: Clone a repo into a disposable /tmp sandbox with its own HOME and no credentials, review it read-only, then write unit and e2e tests that try to prove the suspected bugs are real. Reports findings with a failing test as evidence, then deletes the sandbox; never posts, pushes, or touches the original checkout.
 argument-hint: "<repo-url | owner/repo | local path> [ref] [-- focus area]"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent, Skill
 ---
@@ -12,22 +12,63 @@ in a sandbox, and reports — it changes nothing the user depends on.
 
 ## Ground rules
 
-- Everything happens inside the clone. Never edit, stage, or run anything in the source
+- Everything happens inside the sandbox. Never edit, stage, or run anything in the source
   checkout, even when given a local path.
 - **Never post.** Invoke review without `--comment`, `--post`, or `--fix`.
 - Never `git push`, open a PR, or `gh` anything mutating. No `git commit` in the clone
   unless the user asks for a patch.
-- Keep the clone when done and print its path. Ask before deleting.
+- **The sandbox is deleted at the end of the run**, so the report is the only artifact.
+  Paste the tests you wrote into it; a path into a deleted directory is worthless.
 
-## Phase 1: Clone
+## Phase 1: Sandbox and clone
 
 ```bash
-dir=$(mktemp -d /tmp/bug-hunt-XXXXXX)
-git clone --depth 100 <url-or-local-path> "$dir/repo"   # local paths clone too, leaving the source untouched
-git -C "$dir/repo" checkout <ref>                       # if a ref was given
+sandbox=$(mktemp -d /tmp/bug-hunt-XXXXXX)
+trap 'rm -rf "$sandbox"' EXIT INT TERM     # also delete on a failed or interrupted run
+mkdir -p "$sandbox/home"
+git clone --depth 100 "file://$(realpath <local-path>)" "$sandbox/repo"   # local source
+git clone --depth 100 <url> "$sandbox/repo"                              # remote source
+git -C "$sandbox/repo" checkout <ref>      # if a ref was given
 ```
 
-`owner/repo` → `gh repo clone`. Record the HEAD sha; every finding is reported against it.
+A local path needs the `file://` form: git ignores `--depth` for plain local clones (it
+says so, on stderr) and links the object stores together instead of copying. `file://`
+forces a real transport, so the clone is shallow and shares nothing. `owner/repo` →
+`gh repo clone`. Record the HEAD sha; every finding is reported against it.
+
+`/tmp` is not tmpfs on every host — on this one it is ext4 on root, swept at 10 days — so
+deletion is this skill's job, not the system's. Delete explicitly when the run ends, and
+report the sandbox as gone. Keep it only if the user asked to inspect it, and say where.
+
+## Phase 1b: Cut the sandbox off from the user
+
+Every command after the clone runs with:
+
+```bash
+HOME="$sandbox/home" XDG_CONFIG_HOME="$sandbox/home/.config" XDG_CACHE_HOME="$sandbox/home/.cache" \
+GIT_TERMINAL_PROMPT=0 GIT_ASKPASS=true GIT_CONFIG_GLOBAL=/dev/null SSH_AUTH_SOCK= \
+  <cmd>
+```
+
+A redirected `HOME` is the load-bearing one: it keeps `npm install` lifecycle scripts,
+`cargo build.rs`, `pip` and friends out of `~/.ssh`, `~/.claude`, `~/.config/sops`, and
+out of the user's caches. Dropping `SSH_AUTH_SOCK` and the git credential helpers means
+repo code cannot borrow the user's push rights even if it tries.
+
+For a repo you have reason to distrust, go further and run the build and test phases under
+bubblewrap, which is not installed but is one command away:
+
+```bash
+nix shell nixpkgs#bubblewrap -c bwrap \
+  --unshare-all --share-net --die-with-parent \
+  --ro-bind /nix/store /nix/store --proc /proc --dev /dev \
+  --bind "$sandbox" "$sandbox" --chdir "$sandbox/repo" \
+  --setenv HOME "$sandbox/home" \
+  -- <cmd>
+```
+
+Drop `--share-net` once dependencies are fetched; a test suite that then fails on network
+access is itself worth reporting.
 
 ## Phase 2: Enter an isolated environment
 
@@ -35,14 +76,18 @@ First match wins:
 
 | Repo has | Use |
 |---|---|
-| `flake.nix` with `devShells` | `nix develop "$dir/repo" -c <cmd>` |
-| `shell.nix` / `default.nix` | `nix-shell --run <cmd>` |
+| `flake.nix` with `devShells` | `nix develop --ignore-environment "$sandbox/repo" -c <cmd>` |
+| `shell.nix` / `default.nix` | `nix-shell --pure "$sandbox/repo" --run <cmd>` |
 | `.envrc` only | read it, then reproduce as `nix shell nixpkgs#…` |
 | none | detect the stack and `nix shell nixpkgs#<toolchain> -c <cmd>` |
 
+`--ignore-environment` / `--pure` drop the ambient shell, so the run depends on what the
+repo declares rather than on what happens to be installed — which is also how you catch a
+repo that only builds because of something in *your* profile.
+
 Never install globally, never `sudo`, never mutate the user's profile. If the repo's own
-setup wants network (`npm ci`, `cargo fetch`, `uv sync`), that is fine — it lands in the
-clone. Say so in the report if a dependency fetch was needed.
+setup wants network (`npm ci`, `cargo fetch`, `uv sync`), that is fine — it writes into the
+sandbox `HOME`, not the user's caches. Say so in the report if a fetch was needed.
 
 Confirm the environment works by running the repo's existing test suite **first**: a
 pre-existing failure invalidates everything downstream, so report it and stop for
@@ -92,10 +137,12 @@ Environment: <nix develop | nix shell nixpkgs#…>  |  Baseline suite: <pass/fai
 
 ## Confirmed (N)
 ### 1. <one-line defect> — `path/file.ext:LINE`
-Repro: `<exact command>`
+Repro: `<exact command, including the nix develop/shell wrapper>`
 Failing assertion: <the message the test prints>
 Cause: <one or two sentences>
-Test: `<path to the test you wrote in the clone>`
+Test: <the full source, in a fenced block — it has to survive the sandbox>
+      <and where it belonged: tests/unit/test_foo.py>
+
 
 ## Not reproduced (N)
 <suspect — one line on what the test showed instead>
@@ -104,11 +151,12 @@ Test: `<path to the test you wrote in the clone>`
 <suspect — what blocks it>
 
 ## Verified behavior
-<what the passing tests now pin down — the useful by-product>
+<what the passing tests pinned down — the useful by-product, with their source>
 
-Clone: <path>   (tests live here; nothing was pushed)
+Sandbox: deleted (/tmp/bug-hunt-XXXXXX). Nothing was pushed; the source checkout is
+untouched.
 ```
 
 Lead with confirmed bugs. If nothing is confirmed, say that plainly — "reviewed N
 suspects, none reproduced" is a real result, and the tests written along the way are the
-deliverable.
+deliverable. Offer to open the confirmed ones as a patch or an issue; do not do it unasked.
