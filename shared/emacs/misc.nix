@@ -38,9 +38,6 @@
       (compile cmd)))
   (global-set-key (kbd "C-c C-k") 'my/compile)
 
-  (global-set-key (kbd "M-<up>") 'backward-paragraph)
-  (global-set-key (kbd "M-<down>") 'forward-paragraph)
-
   (windmove-default-keybindings)
   (global-set-key (kbd "M-o") 'ace-window)
   (global-set-key (kbd "C-c w") 'windresize)

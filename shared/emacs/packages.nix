@@ -31,6 +31,7 @@ with epkgs; [
   ace-window
   windresize
   ultra-scroll
+  scroll-on-jump
   pdf-tools
   doom-modeline
   nerd-icons

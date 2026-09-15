@@ -27,9 +27,6 @@
           (file-name-nondirectory (directory-file-name (project-root project)))
         (file-name-nondirectory (directory-file-name default-directory)))))
   (setq tab-bar-tab-name-function #'my/tab-bar-name)
-  (my/guard "ultra-scroll"
-    (require 'ultra-scroll)
-    (ultra-scroll-mode 1))
 
   ;; Deferred: eager pdf-tools cost ~150ms per start, and we run one Emacs per
   ;; tmux pane. Args (no-query-p skip-dependencies-p no-error-p) keep it quiet —
@@ -56,7 +53,6 @@
   (setq gc-cons-threshold (* 100 1024 1024)   ; 100MB - reduce GC pauses
         read-process-output-max (* 1024 1024)  ; 1MB - faster subprocess communication
         inhibit-compacting-font-caches t
-        fast-but-imprecise-scrolling t          ; skip fontification during fast scroll
         jit-lock-defer-time 0.05               ; defer font-lock 50ms — keeps typing snappy
         process-adaptive-read-buffering nil)    ; don't delay reading subprocess output
   (setq-default bidi-display-reordering nil    ; Disable bidirectional text

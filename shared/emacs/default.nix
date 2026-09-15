@@ -20,6 +20,10 @@ let
   sections = [
     (chunk (import ./ui.nix { }))
     ""
+    (chunk (import ./scrolling.nix { }))
+    ""
+    (chunk (import ./navigation.nix { }))
+    ""
     (chunk agentShell.claudeCodeIde)
     (chunk (import ./python.nix { }))
     ""
