@@ -6,6 +6,7 @@
 let
   enabledLocalSkills = [
     "agentize"
+    "bug-hunt"
     "deep-research"
     "design-doc"
     "diagram"
