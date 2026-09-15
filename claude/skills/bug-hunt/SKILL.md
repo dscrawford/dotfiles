@@ -1,6 +1,6 @@
 ---
 name: bug-hunt
-description: Clone a repo into a disposable /tmp sandbox with its own HOME and no credentials, review it read-only, then write unit and e2e tests that try to prove the suspected bugs are real. Reports findings with a failing test as evidence, then deletes the sandbox; never posts, pushes, or touches the original checkout.
+description: Clone a repo into a disposable /tmp sandbox with its own HOME and no credentials, review it read-only, then write unit and e2e tests that try to prove the suspected bugs are real. Reports findings with a failing test as evidence; never posts, pushes, or touches the original checkout.
 argument-hint: "<repo-url | owner/repo | local path> [ref] [-- focus area]"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent, Skill
 ---
@@ -17,14 +17,13 @@ in a sandbox, and reports — it changes nothing the user depends on.
 - **Never post.** Invoke review without `--comment`, `--post`, or `--fix`.
 - Never `git push`, open a PR, or `gh` anything mutating. No `git commit` in the clone
   unless the user asks for a patch.
-- **The sandbox is deleted at the end of the run**, so the report is the only artifact.
-  Paste the tests you wrote into it; a path into a deleted directory is worthless.
+- Leave the sandbox in place and print its path. `/tmp` is swept for you; deleting it by
+  hand only throws away the evidence while the user is still reading the report.
 
 ## Phase 1: Sandbox and clone
 
 ```bash
 sandbox=$(mktemp -d /tmp/bug-hunt-XXXXXX)
-trap 'rm -rf "$sandbox"' EXIT INT TERM     # also delete on a failed or interrupted run
 mkdir -p "$sandbox/home"
 git clone --depth 100 "file://$(realpath <local-path>)" "$sandbox/repo"   # local source
 git clone --depth 100 <url> "$sandbox/repo"                              # remote source
@@ -36,9 +35,8 @@ says so, on stderr) and links the object stores together instead of copying. `fi
 forces a real transport, so the clone is shallow and shares nothing. `owner/repo` →
 `gh repo clone`. Record the HEAD sha; every finding is reported against it.
 
-`/tmp` is not tmpfs on every host — on this one it is ext4 on root, swept at 10 days — so
-deletion is this skill's job, not the system's. Delete explicitly when the run ends, and
-report the sandbox as gone. Keep it only if the user asked to inspect it, and say where.
+Nothing to clean up: `systemd-tmpfiles` sweeps `/tmp` on its own. Never `rm -rf` the
+sandbox — the user may want to re-run a failing test or read the code behind a finding.
 
 ## Phase 1b: Cut the sandbox off from the user
 
@@ -140,8 +138,8 @@ Environment: <nix develop | nix shell nixpkgs#…>  |  Baseline suite: <pass/fai
 Repro: `<exact command, including the nix develop/shell wrapper>`
 Failing assertion: <the message the test prints>
 Cause: <one or two sentences>
-Test: <the full source, in a fenced block — it has to survive the sandbox>
-      <and where it belonged: tests/unit/test_foo.py>
+Test: `<path in the sandbox>`, source in a fenced block — /tmp gets swept eventually,
+      and a confirmed bug should still be readable after it does
 
 
 ## Not reproduced (N)
@@ -153,7 +151,7 @@ Test: <the full source, in a fenced block — it has to survive the sandbox>
 ## Verified behavior
 <what the passing tests pinned down — the useful by-product, with their source>
 
-Sandbox: deleted (/tmp/bug-hunt-XXXXXX). Nothing was pushed; the source checkout is
+Sandbox: <path> — re-run anything from there. Nothing was pushed; the source checkout is
 untouched.
 ```
 
