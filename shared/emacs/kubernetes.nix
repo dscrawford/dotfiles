@@ -26,9 +26,17 @@
   (with-eval-after-load 'kubed
     (keymap-set kubed-list-mode-map "V" #'my/kubed-list-watch))
 
-  ;; Lists, resource views, logs and config all pop new windows by default;
-  ;; reuse the current one. `o' still opens in another window: it sets
-  ;; inhibit-same-window, which this action honours.
+  ;; Reuse the current window; `o' still opens another, since it sets
+  ;; inhibit-same-window. same-window refuses a dedicated window (the agent
+  ;; sidebar), where use-some-window reuses rather than splits.
   (add-to-list 'display-buffer-alist
-               '("\\`\\*[Kk]ubed" (display-buffer-same-window)))
+               '("\\`\\*[Kk]ubed"
+                 (display-buffer-same-window display-buffer-use-some-window)))
+
+  ;; kubed-explain renders into *Help*, which the rule above cannot name
+  ;; without capturing every other help buffer.
+  (defun my/kubed-explain-same-window (fn &rest args)
+    (let ((display-buffer-overriding-action '((display-buffer-same-window))))
+      (apply fn args)))
+  (advice-add 'kubed-explain :around #'my/kubed-explain-same-window)
 ''
