@@ -11,6 +11,10 @@
         revert-without-query '(".*"))          ; never prompt "file changed, revert?" — just do it
   (global-auto-revert-mode 1)
 
+  ;; C-x C-c sits one key from C-x C-s, and this Emacs is a tmux pane's server:
+  ;; killing it takes the pane's agent-shell sessions and compile history with it.
+  (setq confirm-kill-emacs #'yes-or-no-p)
+
   (require 'ansi-color)
   (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter)
 
