@@ -10,35 +10,34 @@ let
       src = pkgs.fetchFromGitHub { inherit owner repo rev hash; };
     };
 
-  # agent-shell requires exactly acp 0.13.1, which is untagged; pinned past the
-  # 0.13.1 tag point to pick up "Clear out subscriptions when shutting down".
+  # agent-shell pins exact versions of both, so these three move together.
   acp = mkEmacsPackage {
     pname = "acp";
-    version = "0.13.1";
+    version = "0.15.1";
     owner = "xenodium";
     repo = "acp.el";
-    rev = "7d5c16ebcf2af86aa0f14ad9ae0ce45df4e8c8a5";
-    hash = "sha256-fjQwxSim8nfD76xcknErYVqPQqjXqI3b9amEV0GOfKU=";
+    rev = "v0.15.1";
+    hash = "sha256-qB+phi7Frs3pHptl1xY5XzBPBIf4ukFSvAzB3uAFAyQ=";
   };
 
   shell-maker = mkEmacsPackage {
     pname = "shell-maker";
-    version = "0.95.3";
+    version = "0.97.3";
     owner = "xenodium";
     repo = "shell-maker";
-    rev = "v0.95.3";
-    hash = "sha256-KC/dE35hdQPJ6fgmp5nVlDtRjACzTnTIeh7rluORVYA=";
+    rev = "v0.97.3";
+    hash = "sha256-wH0OYeKthy+V0pWX1WNM8BEJW/gkzEdj/duJfRScS0w=";
   };
 
   # In the let block, not the output set, so agent-shell-workspace can depend
   # on it — attribute sets are not self-referential.
   agent-shell = mkEmacsPackage {
     pname = "agent-shell";
-    version = "0.69.2";
+    version = "0.76.1";
     owner = "xenodium";
     repo = "agent-shell";
-    rev = "v0.69.2";
-    hash = "sha256-b3JiSCZSV9DyYSRfqtIQ1CZ3JRgWjNYEerfUQF6C414=";
+    rev = "v0.76.1";
+    hash = "sha256-XwTgzVvUVueJjRrkDMaRJN9KxtlDy6KIObcQ2pojEbE=";
     packageRequires = [ shell-maker acp ];
   };
 in
@@ -47,11 +46,11 @@ in
 
   claude-code-ide = mkEmacsPackage {
     pname = "claude-code-ide";
-    version = "0.2.7-unstable-2026-07";
+    version = "0.2.7-unstable-2026-09-14";
     owner = "manzaltu";
     repo = "claude-code-ide.el";
-    rev = "1de17bbadc650962a05fd68463fdff71697ec649";
-    hash = "sha256-jW0R4TqXqVIumHJB9DziqB7NPfMmIKbhsn2H1dLwT6A=";
+    rev = "50a3d55262805d7207889ed429ff30da96fbf68b";
+    hash = "sha256-u+87PjLh0Mc7C8nvDG758rdgpmjED8G/hO+FE1tj7DU=";
     packageRequires = with epkgs; [ websocket transient web-server ];
   };
 
