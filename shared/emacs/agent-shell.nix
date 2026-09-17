@@ -42,7 +42,21 @@ in
                  user-emacs-directory))))
       (setq agent-shell-anthropic-claude-acp-command
             '("${pkgs.callPackage ../../pkgs/claude-agent-acp {}}/bin/claude-agent-acp"))
-      (setq agent-shell-preferred-agent-config 'anthropic-claude)
+      ;; A bare symbol would skip the picker; preselect keeps it, Claude first.
+      (setq agent-shell-preferred-agent-config '(preselect . claude-code))
+      ;; Only offer agents whose CLI is installed. Building a client is just an
+      ;; alist, but it resolves credentials, cheap only under :login auth.
+      (setq agent-shell-agent-configs
+            (lambda ()
+              (seq-filter
+               (lambda (maker)
+                 (when-let* ((config (ignore-errors (funcall maker)))
+                             (client (ignore-errors
+                                       (funcall (map-elt config :client-maker)
+                                                (current-buffer))))
+                             (command (map-elt client :command)))
+                   (executable-find command)))
+               (agent-shell-default-agent-config-makers))))
       (setq agent-shell-show-context-usage-indicator t)
       ;; Agent sidebar. Deliberately NOT `agent-shell-workspace-toggle', which
       ;; spawns an "Agents" tab and forces buffer isolation -- too much ceremony
