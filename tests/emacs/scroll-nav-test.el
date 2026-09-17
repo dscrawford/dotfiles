@@ -105,6 +105,56 @@ PgUp/PgDn because pixel-scroll.el routes them through these two commands."
                                     "\\|fast-but-imprecise-scrolling")
                             nil t))))))
 
+(defun my/test--wheel (device delta)
+  "Run the wheel advice for a DEVICE-class event carrying pixel DELTA.
+Returns a plist of what reached the interpolator and the fallthrough."
+  (let (interpolated fell-through)
+    (cl-letf (((symbol-function 'device-class) (lambda (&rest _) device))
+              ((symbol-function 'mwheel-event-window) (lambda (_) (selected-window)))
+              ((symbol-function 'pixel-scroll-precision-interpolate)
+               (lambda (d &rest _)
+                 (setq interpolated
+                       (list :delta d :time pixel-scroll-precision-interpolation-total-time)))))
+      (my/ultra-scroll-interpolate-mouse
+       (lambda (&rest _) (setq fell-through t))
+       (list 'wheel-up nil 1 nil delta)))
+    (list :interpolated interpolated :fell-through fell-through)))
+
+(ert-deftest my/scroll-module-advises-ultra-scroll ()
+  "The module installs the advice itself, or a dropped advice-add still passes."
+  (my/test--with-scroll-defaults
+    (my/test--load "SCROLLING_EL")
+    (should (advice-member-p #'my/ultra-scroll-interpolate-mouse 'ultra-scroll))))
+
+(ert-deftest my/scroll-wheel-mouse-clicks-animate-quickly ()
+  "A wheel reports a constant 150px per click; animate it on the wheel's clock."
+  (my/test--with-scroll-defaults
+    (my/test--load "SCROLLING_EL")
+    (let ((pixel-scroll-precision-interpolation-total-time 0.1)
+          (result (my/test--wheel 'mouse '(0.0 . 150.0))))
+      (should-not (plist-get result :fell-through))
+      (should (equal (plist-get result :interpolated)
+                     (list :delta 150 :time my/wheel-scroll-time)))
+      (should (< my/wheel-scroll-time 0.1))
+      ;; Let-bound, so PgUp/PgDn keep their slower page-sized animation.
+      (should (= pixel-scroll-precision-interpolation-total-time 0.1)))))
+
+(ert-deftest my/scroll-wheel-trackpad-keeps-ultra-scroll ()
+  "Trackpads send real, varying deltas; ultra-scroll's direct path is better."
+  (my/test--with-scroll-defaults
+    (my/test--load "SCROLLING_EL")
+    (let ((result (my/test--wheel 'touchpad '(0.0 . 37.0))))
+      (should (plist-get result :fell-through))
+      (should-not (plist-get result :interpolated)))))
+
+(ert-deftest my/scroll-wheel-without-pixel-delta-falls-through ()
+  "No pixel delta at all: nothing to animate, leave it to ultra-scroll."
+  (my/test--with-scroll-defaults
+    (my/test--load "SCROLLING_EL")
+    (let ((result (my/test--wheel 'mouse nil)))
+      (should (plist-get result :fell-through))
+      (should-not (plist-get result :interpolated)))))
+
 ;;; navigation.nix
 
 (ert-deftest my/nav-binds-defun-motion-without-scroll-on-jump ()
