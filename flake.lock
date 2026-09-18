@@ -100,11 +100,11 @@
         "uv2nix": "uv2nix"
       },
       "locked": {
-        "lastModified": 1789746850,
-        "narHash": "sha256-Bkb+nGTVdP86FpvTPFLFfD1wUthTvwBndAd9AeKZQlw=",
+        "lastModified": 1789752394,
+        "narHash": "sha256-Zpki2x78I1DCuPEATUMZGQ1zUJ/OM/nqjwpOtHTiDlk=",
         "owner": "dscrawford",
         "repo": "GamesOnTheGo",
-        "rev": "fed1f4c2254175f0c1f8a6ce1735aa016b4b7c46",
+        "rev": "2de29412c507be569b1343a90185e63e786f8454",
         "type": "github"
       },
       "original": {
