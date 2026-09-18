@@ -8,13 +8,16 @@
 
 let
   localLlmMcp = pkgs.callPackage ../../pkgs/local-llm-mcp { };
+  rufloMcp = pkgs.callPackage ../../pkgs/ruflo-mcp { };
 in
 {
   home.file.".copilot/mcp-config.json".text = builtins.toJSON {
     mcpServers = {
+      # Supervised: a crashed or wedged ruflo becomes a retryable tool error
+      # instead of a dead connection for the rest of the session.
       ruflo = {
-        command = "ruflo";
-        args = [ "mcp" "start" ];
+        command = "${rufloMcp}/bin/ruflo-mcp";
+        args = [ ];
         autoStart = false;
       };
       local-llm-router = {

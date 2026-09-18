@@ -68,8 +68,8 @@ in
       ;; ~/.claude/.mcp.json nor `claude mcp` user scope.
       (setq agent-shell-mcp-servers
             '(((name . "ruflo")
-               (command . "ruflo")
-               (args . ("mcp" "start")))
+               (command . "ruflo-mcp")
+               (args . ()))
               ((name . "emacs-mcp")
                (command . "npx")
                (args . ("-y" "@keegancsmith/emacs-mcp-server")))

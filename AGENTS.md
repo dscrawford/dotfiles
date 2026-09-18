@@ -54,6 +54,7 @@ No aggregate runner; each suite is invoked directly. `bats` is not on `PATH` —
 nix run nixpkgs#bats -- tests/nix/generators.bats        # generator output pinning
 nix run nixpkgs#bats -- tests/hooks/prompt-router.bats tests/hooks/tool-output-filter.bats
 ./tests/local-llm-mcp/run.sh                             # node --test, Ollama mocked
+./tests/ruflo-mcp/run.sh                                 # node --test, fake MCP server
 ./tests/emacs/scroll-nav-run.sh                          # ERT, elisp extracted from the nix modules
 ```
 
@@ -105,7 +106,7 @@ shared/            modules shared across hosts
   home/            cross-platform Home Manager (bash, git, tmux, ssh, ollama, …)
   emacs/           elisp modules assembled by default.nix
   sway/            Sway + waybar, Home Manager level only
-pkgs/              locally packaged software (local-llm-mcp, ruflo, claude-code, …)
+pkgs/              locally packaged software (local-llm-mcp, ruflo, ruflo-mcp, claude-code, …)
 claude/            source for ~/.claude — hooks, agents, rules, skills, settings.json
 tests/             bats + node + ERT suites
 docs/              research notes and runbooks
@@ -187,3 +188,6 @@ holds the user-level Sway config.
 - `deploy-nodes` and `reboot-nodes` act on the live cluster and are interactive; never run
   them unattended.
 - Renaming a key in `secrets/secrets.yaml` silently renames the exported env var.
+- MCP clients must launch ruflo as `ruflo-mcp` (the supervisor), not `ruflo mcp start`.
+  `pkgs/ruflo` is pinned to `nodejs_22` on purpose: node 24.19 aborts better-sqlite3 12.x
+  during GC and kills the server mid-session — see `docs/ruflo-mcp-crash-research.md`.

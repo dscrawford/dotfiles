@@ -1,4 +1,4 @@
-{ lib, buildNpmPackage, fetchurl, autoPatchelfHook, stdenv }:
+{ lib, buildNpmPackage, fetchurl, autoPatchelfHook, stdenv, nodejs_22 }:
 
 buildNpmPackage rec {
   pname = "ruflo";
@@ -10,6 +10,16 @@ buildNpmPackage rec {
   };
 
   sourceRoot = "package";
+
+  # Node 24.19 backported cleanup hooks into the header-only
+  # node::ObjectWrap, so ~ObjectWrap() calls RemoveEnvironmentCleanupHook()
+  # with no entered context and node aborts on `(env) != nullptr`.
+  # better-sqlite3 12.x still derives from ObjectWrap, so every GC that
+  # finalizes a Statement kills the MCP server mid-session (~50 memory tool
+  # calls in), taking the stdio transport with it. Node 22 predates the
+  # backport; upstream's own fix is better-sqlite3 13.x (N-API), which is
+  # outside the `^12.9.0` optional-dependency range ruflo pins.
+  nodejs = nodejs_22;
 
   postPatch = ''
     cp ${./package-lock.json} package-lock.json

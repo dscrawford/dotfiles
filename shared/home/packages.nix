@@ -86,6 +86,7 @@ in
     # IDE
     (pkgs.callPackage ../../pkgs/claude-code {})
     (pkgs.callPackage ../../pkgs/ruflo {})
+    (pkgs.callPackage ../../pkgs/ruflo-mcp {})
     (pkgs.callPackage ../../pkgs/claude-agent-acp {})
     (pkgs.callPackage ../../pkgs/local-llm-mcp {})
     gemini-cli
