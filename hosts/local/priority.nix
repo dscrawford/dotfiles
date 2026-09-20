@@ -41,6 +41,13 @@
     "vm.page-cluster" = 0;
     "vm.watermark_boost_factor" = 0;
     "vm.watermark_scale_factor" = 125;
+    # The ratio defaults are a share of 62G of RAM: writeback only starts at
+    # 6.2G dirty and every task blocks at 12.4G. A Steam library move built an
+    # 8.5G backlog and stalled the whole machine 33% of a 20s window. Absolute
+    # bytes instead, sized so the worst-case flush is ~1s at NVMe speed.
+    # Setting these zeroes the corresponding *_ratio knobs, which is intended.
+    "vm.dirty_background_bytes" = 512 * 1024 * 1024;
+    "vm.dirty_bytes" = 2048 * 1024 * 1024;
   };
   systemd.oomd = {
     enable = true;
