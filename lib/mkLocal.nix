@@ -13,6 +13,7 @@
 
     ../shared/common.nix
     ../shared/boot-common.nix
+    ../shared/nix-gc.nix
     ../shared/local-common.nix
     ../hosts/local/local.nix
     ../hosts/local/hardware-configuration.nix

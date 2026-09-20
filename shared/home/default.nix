@@ -28,6 +28,7 @@ in
     ./git.nix
     ./ssh.nix
     ./kube-cert-sync.nix
+    ./nix-gc.nix
     ./deploy-nodes.nix
     ./reboot-nodes.nix
   ];

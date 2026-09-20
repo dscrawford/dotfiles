@@ -13,5 +13,6 @@
     ../shared/server-common.nix
     ../shared/users.nix
     ../shared/boot-common.nix
+    ../shared/nix-gc.nix
   ] ++ extraModules;
 }
