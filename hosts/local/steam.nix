@@ -31,6 +31,10 @@
     })
   ];
 
+  # Default is 1 GiB, and the driver wipes the cache rather than pruning when it
+  # overflows; GLCache measured 1000.5 MiB on 2026-09-20, i.e. already at it.
+  environment.sessionVariables.__GL_SHADER_DISK_CACHE_SIZE = "10737418240";
+
   programs = {
     dconf.enable = true;
     gamemode.enable = true;
@@ -53,8 +57,11 @@
           "--force-grab-cursor"
         ];
       };
+      # Both flags: docs/steam-io-stutter-research.md §7. CEF self-disables GPU
+      # web views after 3 GPU-process crashes (last 2026-08-30) — stutter suspect.
       package = pkgs.steam.override {
         extraPkgs = pkgs: with pkgs; [ gamemode gamescope ];
+        extraArgs = "-system-composer -cef-force-gpu";
       };
       # Select per-game in Steam → Properties → Compatibility.
       extraCompatPackages = [ (pkgs.callPackage ../../pkgs/proton-cachyos { }) ];
