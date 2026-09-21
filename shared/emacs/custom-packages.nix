@@ -63,11 +63,11 @@ in
   # rev below for the individual fixes.
   agent-shell-workspace = mkEmacsPackage {
     pname = "agent-shell-workspace";
-    version = "0.1.0-unstable-2026-08-19";
+    version = "0.1.0-unstable-2026-09-20";
     owner = "dscrawford";
     repo = "agent-shell-workspace";
-    rev = "e2ab5a44295c975699c15f8101d0a125f00241b0";
-    hash = "sha256-w2bD0iegRhGxJugESRBvWF7tCiomLoFJ4hXGjBQFYEM=";
+    rev = "2e355fa4244120736463bf1b69f42db4181706ec";
+    hash = "sha256-DNLm2xXTVRkR6YRY1tAF4uTN5Mwg9KGK6vY00lkjO0I=";
     packageRequires = [ agent-shell ];
   };
 }
