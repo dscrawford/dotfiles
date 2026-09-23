@@ -33,11 +33,11 @@ let
   # on it — attribute sets are not self-referential.
   agent-shell = mkEmacsPackage {
     pname = "agent-shell";
-    version = "0.76.1";
+    version = "0.78.2";
     owner = "xenodium";
     repo = "agent-shell";
-    rev = "v0.76.1";
-    hash = "sha256-XwTgzVvUVueJjRrkDMaRJN9KxtlDy6KIObcQ2pojEbE=";
+    rev = "v0.78.2";
+    hash = "sha256-97sMybDaWbzj10QIl4jj8+h/PY6uAQvDK/8KMvIp00Q=";
     packageRequires = [ shell-maker acp ];
   };
 in
