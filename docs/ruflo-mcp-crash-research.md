@@ -80,6 +80,27 @@ Requests that were still queued during a restart are dispatched to the new
 server rather than failed, so a crash between a client's write and the server's
 read costs nothing.
 
+## 2026-09-23: SIGSEGV loading sharp (ruflo 3.42.5)
+
+A second, unrelated crash: `signal=SIGSEGV` on every `memory_store` /
+`memory_search` call. The coredumps show a fault in `libvips-cpp.so.8.18.6`
+during `dlopen`, reached from `@huggingface/transformers` importing sharp 0.35.4.
+
+The library is broken by our build, not upstream. `autoPatchelf` adds a
+program header; upstream places `.init` at `0x25c`, directly after the nine
+original headers, so the tenth (`0x238`–`0x270`) overwrites it and `DT_INIT`
+jumps into header bytes. The older libvips 8.17.3 has slack there and survives.
+
+Fix: `pkgs/ruflo` restores the unpatched `libvips*.so*` after autoPatchelf (it
+needs no RUNPATH; node already has libstdc++ loaded), and an install check
+renders an image through every bundled sharp so the build fails if it recurs.
+
+| Check | Before | After |
+|---|---|---|
+| `require('sharp')` 0.35.4 | SIGSEGV | loads, renders PNG |
+| install check without the restore | — | build fails, exit 139 |
+| memory tool calls through `ruflo-mcp` | 10/10 SIGSEGV; at 60 iterations the supervisor hits its restart cap and exits | 120/120 ok, 0 restarts |
+
 ## Residual risks
 
 - Node 22 goes EOL in April 2027. The exit is better-sqlite3 13.x: once a ruflo

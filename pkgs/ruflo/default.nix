@@ -52,8 +52,30 @@ buildNpmPackage rec {
   # Prebuilt musl variants ship next to the glibc ones and want
   # libc.musl-x86_64.so.1, which autoPatchelf cannot provide; they are dead
   # weight on glibc.
+  # patchelf's added program header overwrites libvips-cpp's .init (SIGSEGV on
+  # dlopen), so the originals are restored after autoPatchelf's hook runs.
   preFixup = ''
     find $out -path '*/prebuilds/*' -name '*musl*.node' -delete
+
+    vipsStash=$(mktemp -d)
+    find $out -path '*/@img/sharp-libvips-*/lib/libvips*.so*' -type f -printf '%P\0' \
+      | while IFS= read -r -d "" lib; do
+          mkdir -p "$vipsStash/$(dirname "$lib")"
+          cp -p "$out/$lib" "$vipsStash/$lib"
+        done
+    restoreVips() { cp -rp --no-preserve=ownership "$vipsStash/." "$out/"; }
+    postFixupHooks+=(restoreVips)
+  '';
+
+  doInstallCheck = true;
+  installCheckPhase = ''
+    runHook preInstallCheck
+    find $out -path '*/node_modules/sharp/package.json' -printf '%h\0' \
+      | while IFS= read -r -d "" dir; do
+          echo "loading $dir"
+          ${nodejs_22}/bin/node -e "require(process.argv[1])({create:{width:1,height:1,channels:3,background:'red'}}).png().toBuffer()" "$dir"
+        done
+    runHook postInstallCheck
   '';
 
   meta = {
