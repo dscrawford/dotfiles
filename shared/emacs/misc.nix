@@ -93,6 +93,20 @@
                    "C-<left>" "C-<right>" "C-<up>" "C-<down>"))
       (define-key eat-semi-char-mode-map (kbd key) #'eat-self-input)))
 
+  ;; async-shell-command runs under TERM=dumb and can't redraw, so progress
+  ;; bars (nix, rsync, …) never show; eat is a real terminal.
+  (defun my/eat-shell-command (command)
+    "Run COMMAND in a new eat terminal: `async-shell-command' with a real TTY."
+    (interactive (list (read-shell-command "Eat command: " nil 'shell-command-history)))
+    (let ((buffer (generate-new-buffer (format "*eat: %s*" command))))
+      (with-current-buffer buffer (eat-mode))
+      ;; Shown before exec so eat sizes the terminal to the window.
+      (pop-to-buffer-same-window buffer)
+      (with-current-buffer buffer
+        (eat-exec buffer (buffer-name) shell-file-name nil (list "-c" command)))
+      buffer))
+  (global-set-key [remap async-shell-command] #'my/eat-shell-command)
+
   (add-hook 'eshell-load-hook #'eat-eshell-mode)
   (add-hook 'eshell-load-hook #'eat-eshell-visual-command-mode)
 
