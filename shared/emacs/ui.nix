@@ -46,9 +46,22 @@
   (my/guard "envrc"
     (require 'envrc)
     (envrc-global-mode 1)
-    ;; envrc: debounce re-exports when switching buffers rapidly
     (setq envrc-none-lighter nil   ; hide "none" in modeline for non-direnv buffers
-          envrc-show-summary-in-minibuffer nil)) ; reduce minibuffer noise
+          envrc-show-summary-in-minibuffer nil ; reduce minibuffer noise
+          envrc-async 1) ; a warm nix-direnv cache answers in <0.3s; anything slower is a real eval
+    ;; With envrc-async, eglot-ensure fires before a slow direnv lands and starts the server
+    ;; with the global env (purcell/envrc#136). Reconnect those servers once direnv succeeds.
+    (defun my/envrc-eglot-refresh (status)
+      (when (and (eq status 'success) (featurep 'eglot))
+        (let (seen)
+          (dolist (buf (envrc--mode-buffers))
+            (when (string= default-directory (buffer-local-value 'envrc--env-dir buf))
+              (with-current-buffer buf
+                (when-let* ((server (eglot-current-server)))
+                  (unless (memq server seen)
+                    (push server seen)
+                    (eglot-reconnect server)))))))))
+    (advice-add 'envrc--direnv-set-status :after #'my/envrc-eglot-refresh))
 
   (setq gc-cons-threshold (* 100 1024 1024)   ; 100MB - reduce GC pauses
         read-process-output-max (* 1024 1024)  ; 1MB - faster subprocess communication

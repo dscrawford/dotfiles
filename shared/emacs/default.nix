@@ -53,6 +53,16 @@ in
           hash = "sha256-QyrhwAW55Y4vtgMbIjSQOkNr+8uTSmXdumi2qc8dTIE=";
         };
       });
+      # 0.15 adds `envrc-async`; nixpkgs still ships the pre-async 2026-06 snapshot.
+      envrc = prev.envrc.overrideAttrs (old: {
+        version = "0.15";
+        src = pkgs.fetchFromGitHub {
+          owner = "purcell";
+          repo = "envrc";
+          rev = "1ecb82e01745d700578754eb35d6c1758290b869";
+          hash = "sha256-dwq+RmnlcGiCYsPIxPFlOXASRNt1fRAOKVp0yGW+ZI4=";
+        };
+      });
     };
     extraPackages = epkgs: import ./packages.nix { inherit pkgs epkgs; };
     extraConfig = prologue + "\n\n" + (lib.concatStringsSep "\n" sections) + "\n";
