@@ -32,11 +32,15 @@ Generate a direnv dev environment: `flake.nix`, `.envrc`, `.dir-locals.el` (Emac
 ## Phase 3: Generate .envrc
 
 ```bash
+nix_direnv_manual_reload
 nix_direnv_watch_file <dependency-file>   # pyproject.toml, package.json, go.mod, etc.
 use flake
 ```
 
-Watching the primary dependency file rebuilds the env when deps change.
+`nix_direnv_manual_reload` keeps serving the cached env when `flake.nix`, `flake.lock`,
+or a watched file changes; direnv prints a notice instead of re-evaluating. That keeps
+Emacs (envrc) from blocking on a nix eval mid-edit. Run `nix-direnv-reload` to pick up
+the change. Tell the user this when `.envrc` is new or the line was added.
 
 ## Phase 4: Generate .dir-locals.el
 
