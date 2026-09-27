@@ -85,9 +85,11 @@
     '';
   };
 
+  # Drives swaybg directly: `swaymsg output bg` forces a modeset, and any
+  # modeset mid-screenshare kills xdg-desktop-portal-wlr (duplicate frame).
   wallpaper-script = pkgs.writeShellApplication {
     name = "wallpaper.sh";
-    runtimeInputs = [ pkgs.sway pkgs.jq pkgs.findutils ];
+    runtimeInputs = [ pkgs.sway pkgs.swaybg pkgs.jq pkgs.findutils pkgs.procps pkgs.util-linux ];
     text = ''
       WALLPAPER_DIR="$HOME/.local/share/wallpapers"
 
@@ -95,12 +97,20 @@
         exit 0
       fi
 
+      ARGS=()
       for OUTPUT in $(swaymsg -t get_outputs | jq -r '.[] | select(.active) | .name'); do
         IMG=$(find "$WALLPAPER_DIR" -type f \( -name '*.jpg' -o -name '*.jpeg' -o -name '*.png' -o -name '*.webp' \) | shuf -n 1)
         if [ -n "$IMG" ]; then
-          swaymsg "output $OUTPUT bg '$IMG' fill"
+          ARGS+=(-o "$OUTPUT" -i "$IMG" -m fill)
         fi
       done
+      [ "''${#ARGS[@]}" -gt 0 ] || exit 0
+
+      mapfile -t OLD < <(pgrep -x swaybg || true)
+      setsid -f swaybg "''${ARGS[@]}" >/dev/null 2>&1
+      # New instance maps first so the swap never shows a bare background.
+      sleep 1
+      [ "''${#OLD[@]}" -eq 0 ] || kill "''${OLD[@]}" 2>/dev/null || true
     '';
   };
 
