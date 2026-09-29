@@ -64,7 +64,7 @@ found=$(awk -v leader="$leader" '
     n++
     if (n == 1) first = line
   }
-  END { if (n) printf "%d\t%s\n", n, substr(first, 1, 80) }' <<<"$added")
+  END { if (n) printf "%d\t%s\n", n, substr(first, 1, 60) }' <<<"$added")
 
 [ -z "$found" ] && exit 0
 
@@ -73,11 +73,6 @@ first="${found#*$'\t'}"
 
 jq -n --arg f "$base" --arg n "$count" --arg first "$first" '
   {hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext:
-    ("Comment challenge: \($f) — you just added \($n) comment line(s) (first: `\($first)`). "
-     + "Code and tests should explain themselves; a comment is a last resort. "
-     + "For each one, delete it or make the code say it instead: a clearer name, "
-     + "an extracted function, an assertion, a test. Keep it only if it explains a "
-     + "genuine workaround or an external constraint the code cannot express. "
-     + "Advisory, not a rejection: decide once and move on; do not re-edit a comment "
-     + "you have already justified.")}}'
+    ("Comment challenge: \($f) +\($n) (`\($first)`). Delete or make the code say it; "
+     + "keep only for a workaround the code cannot express. Decide once.")}}'
 exit 0

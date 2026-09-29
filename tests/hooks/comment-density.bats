@@ -33,8 +33,8 @@ assert_silent() {
 @test "one challenge per edit, reporting the count and first comment" {
   run edit "a.py" $'# one\nx = 1\n# two\n# three'
   [ "$(jq -s length <<<"$output")" -eq 1 ]
-  [[ "$(ctx_of "$output")" == *"3 comment line"* ]]
-  [[ "$(ctx_of "$output")" == *"# one"* ]]
+  [[ "$(ctx_of "$output")" == *"a.py +3 (\`# one\`)"* ]]
+  [ "$(ctx_of "$output" | wc -c)" -lt 200 ]
 }
 
 @test "code without comments is silent" {
