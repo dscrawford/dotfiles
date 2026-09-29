@@ -136,6 +136,30 @@ in
             (ignore-errors (process-send-eof proc))
             (run-at-time 30 nil #'my/ruflo--reap proc))))
       (add-hook 'agent-shell-mode-hook #'my/ruflo-register-session)
+      ;; Copilot ends a turn with a task_complete tool call and puts the
+      ;; summary in rawInput, which the collapsed tool block never shows.
+      (defun my/agent-shell--surface-task-complete (event)
+        (let* ((data (map-elt event :data))
+               (tool-call (map-elt data :tool-call))
+               (summary (map-nested-elt tool-call '(:raw-input summary))))
+          (when (and (equal (map-elt tool-call :title) "task_complete")
+                     (stringp summary)
+                     (not (string-blank-p summary)))
+            (agent-shell--update-fragment
+             :state (agent-shell--state)
+             :block-id (concat (map-elt data :tool-call-id) "-summary")
+             :label-left (propertize "Task complete" 'font-lock-face 'agent-shell-section-heading)
+             :body summary
+             :expanded t
+             :navigation 'never
+             :render-body-images t
+             :above-last-prompt (not (agent-shell--active-requests-p (agent-shell--state)))))))
+      (defun my/agent-shell-subscribe-task-complete ()
+        (agent-shell-subscribe-to
+         :shell-buffer (current-buffer)
+         :event 'tool-call-update
+         :on-event #'my/agent-shell--surface-task-complete))
+      (add-hook 'agent-shell-mode-hook #'my/agent-shell-subscribe-task-complete)
       ;; Clipboard image support (not upstream). MIME types are checked first so
       ;; text clipboard falls through to yank. The guard sits INSIDE
       ;; with-eval-after-load so it covers the deferred load too: this body pokes
