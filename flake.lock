@@ -25,17 +25,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1790349438,
-        "narHash": "sha256-6GLzhEq4DcK/y2L/sC4uhq6mh+CfHRXlxWfbDP7gGB8=",
+        "lastModified": 1790643737,
+        "narHash": "sha256-6MTxXjCHfUjDCCQWIxkn0dvlKQHjY73GLjOQU5Y7AxQ=",
         "ref": "main",
-        "rev": "572f90acf29c9479901d996ea66cfccb18c69319",
-        "revCount": 209,
+        "rev": "c8c6a4f454b2ae8bbd17d2fc8bad9dddd64e859b",
+        "revCount": 219,
         "type": "git",
         "url": "ssh://git@github.com/dscrawford/danstick"
       },
       "original": {
         "ref": "main",
-        "rev": "572f90acf29c9479901d996ea66cfccb18c69319",
+        "rev": "c8c6a4f454b2ae8bbd17d2fc8bad9dddd64e859b",
         "type": "git",
         "url": "ssh://git@github.com/dscrawford/danstick"
       }
@@ -124,11 +124,11 @@
         "uv2nix": "uv2nix"
       },
       "locked": {
-        "lastModified": 1790366433,
-        "narHash": "sha256-Z7gctuG3imXug0uiZay+qZ0vRQ110rqTZlP8OGj7rpM=",
+        "lastModified": 1790650263,
+        "narHash": "sha256-lLA8w6q71RV8lrx/hehdPhFMz03bJBQL8J/aJT8LymY=",
         "owner": "dscrawford",
         "repo": "GamesOnTheGo",
-        "rev": "db4fe421dbcb1fe3910345a64d55274fd7713b33",
+        "rev": "20385c8b4f20ef7e53ccf3f367711d9d2f31be83",
         "type": "github"
       },
       "original": {
