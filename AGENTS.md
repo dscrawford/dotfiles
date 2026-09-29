@@ -52,7 +52,7 @@ No aggregate runner; each suite is invoked directly. `bats` is not on `PATH` —
 
 ```bash
 nix run nixpkgs#bats -- tests/nix/generators.bats        # generator output pinning
-nix run nixpkgs#bats -- tests/hooks/prompt-router.bats tests/hooks/tool-output-filter.bats
+nix run nixpkgs#bats -- tests/hooks/          # prompt-router, tool-output-filter, comment-density
 ./tests/local-llm-mcp/run.sh                             # node --test, Ollama mocked
 ./tests/ruflo-mcp/run.sh                                 # node --test, fake MCP server
 ./tests/emacs/scroll-nav-run.sh                          # ERT, elisp extracted from the nix modules
@@ -80,9 +80,12 @@ The real gate is evaluation: `nix eval ...drvPath` above, then the relevant test
 
 - Nix `''` strings: bash variables need `''${var}`, or Nix interpolates them — e.g.
   `''${OUTPUTS[$i]}` in `shared/sway/scripts.nix`.
-- Comment only non-obvious constraints or gotchas. No banners, no change narration, no
-  restating the code — that belongs in the commit message. A `comment-density` PostToolUse
-  hook flags runs of 3+ comment lines.
+- Code and tests explain themselves; a comment is a last resort for a genuine workaround
+  or external constraint the code cannot express. No inline comments, banners, change
+  narration, or restating the code — that belongs in the commit message. The
+  `comment-density` PostToolUse hook challenges every comment you add (advisory, one
+  message per edit, never a rejection); the `comment-scout` agent proposes the code
+  rewrite that makes a comment unnecessary.
 - Many small files over few large ones: 200–400 lines typical, 800 max. Organize by
   feature, not by type.
 - `shared/emacs/*.nix` modules are functions returning elisp strings, assembled in order by
