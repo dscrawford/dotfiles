@@ -1,6 +1,6 @@
 # shared/home/llm-routing.nix
 # Single source of truth for local-llm-router model selection, consumed by
-# copilot.nix and emacs/agent-shell.nix. Claude stays the primary model, and
+# emacs/agent-shell.nix and the opt-in copilot.nix. Claude stays the primary model, and
 # `overrides` is empty so no model hint maps to a local one.
 #
 # This map only picks WHICH local model local_model_run uses; it cannot send a

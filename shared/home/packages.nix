@@ -90,7 +90,6 @@ in
     (pkgs.callPackage ../../pkgs/claude-agent-acp {})
     (pkgs.callPackage ../../pkgs/local-llm-mcp {})
     gemini-cli
-    github-copilot-cli
     nodejs  # npx, for emacs-mcp-server
 
     # Business / Productivity CLIs

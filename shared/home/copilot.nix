@@ -1,7 +1,9 @@
 # shared/home/copilot.nix
-# User-level Copilot MCP config: a workspace .mcp.json is only discovered when
-# the cwd is that repo, so copilot/agent-shell sessions anywhere else need
-# ~/.copilot/mcp-config.json. Servers mirror emacs/agent-shell.nix; model
+# Opt-in: not imported by shared/home; a host that wants Copilot adds this
+# file to its homeModules. Brings the CLI plus user-level MCP config: a
+# workspace .mcp.json is only discovered when the cwd is that repo, so
+# copilot/agent-shell sessions anywhere else need ~/.copilot/mcp-config.json.
+# Servers mirror emacs/agent-shell.nix; model
 # routing comes from my.llmRouting (llm-routing.nix). autoStart off: Copilot
 # spawns servers on first tool call. hooks/*.json is Copilot's user-level hook
 # dir; the comment challenge is the same script Claude Code runs, which reads
@@ -13,6 +15,8 @@ let
   rufloMcp = pkgs.callPackage ../../pkgs/ruflo-mcp { };
 in
 {
+  home.packages = [ pkgs.github-copilot-cli ];
+
   home.file.".copilot/mcp-config.json".text = builtins.toJSON {
     mcpServers = {
       # Supervised: a crashed or wedged ruflo becomes a retryable tool error
