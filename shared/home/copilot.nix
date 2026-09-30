@@ -3,7 +3,9 @@
 # the cwd is that repo, so copilot/agent-shell sessions anywhere else need
 # ~/.copilot/mcp-config.json. Servers mirror emacs/agent-shell.nix; model
 # routing comes from my.llmRouting (llm-routing.nix). autoStart off: Copilot
-# spawns servers on first tool call.
+# spawns servers on first tool call. hooks/*.json is Copilot's user-level hook
+# dir; the comment challenge is the same script Claude Code runs, which reads
+# either payload shape.
 { pkgs, config, ... }:
 
 let
@@ -27,5 +29,16 @@ in
         autoStart = false;
       };
     };
+  };
+
+  home.file.".copilot/hooks/comment-density.json".text = builtins.toJSON {
+    version = 1;
+    hooks.postToolUse = [
+      {
+        type = "command";
+        bash = "${config.home.homeDirectory}/.claude/hooks/comment-density.sh";
+        timeoutSec = 10;
+      }
+    ];
   };
 }

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 input=$(cat)
-file=$(jq -r '.tool_input.file_path // empty' <<<"$input")
+file=$(jq -r '.tool_input.file_path // .toolArgs.path // empty' <<<"$input")
 [ -z "$file" ] && exit 0
 
 base=$(basename "$file")
@@ -24,8 +24,8 @@ tex|sty|erl|hrl|m) leader='%+' ;;
 esac
 
 added=$(jq -r '
-  [ (.tool_input.new_string // empty),
-    (.tool_input.content // empty),
+  [ (.tool_input.new_string // .toolArgs.new_str // empty),
+    (.tool_input.content // .toolArgs.file_text // empty),
     ((.tool_input.edits // []) | map(.new_string) | join("\n")) ]
   | map(select(. != "")) | join("\n")' <<<"$input")
 [ -z "$added" ] && exit 0
@@ -71,8 +71,11 @@ found=$(awk -v leader="$leader" '
 count="${found%%$'\t'*}"
 first="${found#*$'\t'}"
 
-jq -n --arg f "$base" --arg n "$count" --arg first "$first" '
-  {hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext:
-    ("Comment challenge: \($f) +\($n) (`\($first)`). Delete or make the code say it; "
-     + "keep only for a workaround the code cannot express. Decide once.")}}'
+message="Comment challenge: $base +$count (\`$first\`). Delete or make the code say it; keep only for a workaround the code cannot express. Decide once."
+
+if jq -e '.toolName' <<<"$input" >/dev/null; then
+  jq -n --arg m "$message" '{additionalContext: $m}'
+else
+  jq -n --arg m "$message" '{hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: $m}}'
+fi
 exit 0

@@ -106,3 +106,29 @@ assert_silent() {
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
+
+copilot() {
+  jq -cn --arg t "$1" --argjson a "$2" \
+    '{toolName: $t, toolArgs: $a, toolResult: {resultType: "success", textResultForLlm: "ok"}}' | bash "$HOOK"
+}
+copilot_ctx() { jq -r '.additionalContext' <<<"$1"; }
+
+@test "copilot edit and create payloads are scanned, answering in copilot shape" {
+  run copilot edit '{"path": "/tmp/a.py", "old_str": "x=1", "new_str": "# bump\nx=2"}'
+  [ "$status" -eq 0 ]
+  [[ "$(copilot_ctx "$output")" == *"Comment challenge: a.py +1"* ]]
+  [ "$(jq -r '.hookSpecificOutput // "none"' <<<"$output")" = "none" ]
+  run copilot create '{"path": "/tmp/b.sh", "file_text": "#!/usr/bin/env bash\n# why\nls"}'
+  [[ "$(copilot_ctx "$output")" == *"Comment challenge: b.sh +1"* ]]
+  run copilot str_replace_editor '{"command": "str_replace", "path": "/tmp/c.js", "old_str": "a", "new_str": "// note\nb"}'
+  [[ "$(copilot_ctx "$output")" == *"Comment challenge: c.js +1"* ]]
+}
+
+@test "copilot payloads without comments or without a path are silent" {
+  run copilot edit '{"path": "/tmp/a.py", "old_str": "x=1", "new_str": "x=2"}'
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  run copilot bash '{"command": "ls # list"}'
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}

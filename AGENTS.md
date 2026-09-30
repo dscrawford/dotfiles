@@ -83,7 +83,7 @@ The real gate is evaluation: `nix eval ...drvPath` above, then the relevant test
 - Code and tests explain themselves; a comment is a last resort for a genuine workaround
   or external constraint the code cannot express. No inline comments, banners, change
   narration, or restating the code — that belongs in the commit message. The
-  `comment-density` PostToolUse hook challenges every comment you add (advisory, one
+  `comment-density` PostToolUse hook (Claude Code and Copilot CLI) challenges every comment you add (advisory, one
   message per edit, never a rejection); the `comment-scout` agent proposes the code
   rewrite that makes a comment unnecessary.
 - Many small files over few large ones: 200–400 lines typical, 800 max. Organize by
