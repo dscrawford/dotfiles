@@ -52,7 +52,7 @@ No aggregate runner; each suite is invoked directly. `bats` is not on `PATH` —
 
 ```bash
 nix run nixpkgs#bats -- tests/nix/generators.bats        # generator output pinning
-nix run nixpkgs#bats -- tests/hooks/          # prompt-router, tool-output-filter, comment-density, session-guard
+nix run nixpkgs#bats -- tests/hooks/          # prompt-router, tool-output-filter, comment-density, session-guard, pr-guard
 ./tests/local-llm-mcp/run.sh                             # node --test, Ollama mocked
 ./tests/ruflo-mcp/run.sh                                 # node --test, fake MCP server
 ./tests/emacs/scroll-nav-run.sh                          # ERT, elisp extracted from the nix modules
@@ -177,6 +177,8 @@ holds the user-level Sway config.
   subject ≤72 chars, whole message ≤10 lines. `--amend`, `--fixup`, `-F` bypass the check.
 - No attribution or co-author footer in commit messages.
 - Subject describes the change in the repo's voice: state what now holds, not what you did.
+- PR bodies show, not tell — enforced by the `pr-guard` PreToolUse hook: a code block,
+  CLI call with output, or screenshot is required, and prose is capped at 100 words.
 - For a PR, diff the whole branch (`git diff main...HEAD`), not just the last commit.
 
 ## Gotchas

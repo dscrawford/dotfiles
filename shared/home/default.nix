@@ -57,6 +57,11 @@ in
       executable = true;
       force = true;
     };
+    ".claude/hooks/pr-guard.sh" = {
+      source = ../../claude/hooks/pr-guard.sh;
+      executable = true;
+      force = true;
+    };
     ".claude/hooks/session-guard.sh" = {
       source = ../../claude/hooks/session-guard.sh;
       executable = true;
