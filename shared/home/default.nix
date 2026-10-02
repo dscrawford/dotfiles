@@ -57,6 +57,11 @@ in
       executable = true;
       force = true;
     };
+    ".claude/hooks/session-guard.sh" = {
+      source = ../../claude/hooks/session-guard.sh;
+      executable = true;
+      force = true;
+    };
     ".claude/hooks/tool-output-filter.sh" = {
       source = ../../claude/hooks/tool-output-filter.sh;
       executable = true;

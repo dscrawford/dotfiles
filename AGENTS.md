@@ -52,7 +52,7 @@ No aggregate runner; each suite is invoked directly. `bats` is not on `PATH` —
 
 ```bash
 nix run nixpkgs#bats -- tests/nix/generators.bats        # generator output pinning
-nix run nixpkgs#bats -- tests/hooks/          # prompt-router, tool-output-filter, comment-density
+nix run nixpkgs#bats -- tests/hooks/          # prompt-router, tool-output-filter, comment-density, session-guard
 ./tests/local-llm-mcp/run.sh                             # node --test, Ollama mocked
 ./tests/ruflo-mcp/run.sh                                 # node --test, fake MCP server
 ./tests/emacs/scroll-nav-run.sh                          # ERT, elisp extracted from the nix modules
@@ -181,6 +181,10 @@ holds the user-level Sway config.
 
 ## Gotchas
 
+- The `session-guard` PreToolUse hook denies `kill`/`pkill`/`killall` that reach sway,
+  Xwayland, greetd, systemd or emacs unless the agent started that process, plus
+  `swaymsg exit` (without a private socket), `loginctl terminate-*`/`kill-*` and
+  `systemctl --user exit`. Kill a helper by its saved `$!`, not by name.
 - `tests/emacs/run.sh` currently **fails**: it calls `agent-shell.nix` with only `pkgs`,
   but that module has required `lib` and `config` arguments since commit `d857fa9`. Fix the
   runner's `nix eval` args before trusting it. `tests/emacs/scroll-nav-run.sh` is unaffected.

@@ -101,6 +101,10 @@
           },
           {
             "type": "command",
+            "command": "~/.claude/hooks/session-guard.sh"
+          },
+          {
+            "type": "command",
             "command": "~/.claude/hooks/tool-output-filter.sh"
           }
         ]
