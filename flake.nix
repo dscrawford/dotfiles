@@ -75,11 +75,12 @@
           # Ollama daemon itself comes from shared/home/ollama.nix; only the
           # GPU package choice is desktop-specific.
           ({ pkgs, ... }: { services.ollama.package = pkgs.ollama-cuda; })
-          ({ pkgs, ... }: {
+          ({ pkgs, config, ... }: {
             home.packages = with gamesonthego.packages.${pkgs.stdenv.hostPlatform.system}; [
               gotg
               gotg-ui
             ];
+            nix.settings.netrc-file = "${config.xdg.configHome}/gotg/netrc";
           })
         ];
         extraModules = [
