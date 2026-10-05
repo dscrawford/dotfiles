@@ -2,11 +2,11 @@
 
 buildNpmPackage rec {
   pname = "claude-agent-acp";
-  version = "0.81.0";
+  version = "0.86.0";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/@agentclientprotocol/claude-agent-acp/-/claude-agent-acp-${version}.tgz";
-    hash = "sha256-hUmksDoVi8tjbbc66bFyE5P7u2JeQpa5Q5CVQTzvj3I=";
+    hash = "sha256-/Tx9M+CdnxXlb17bsGeCfWVNZTgHjdrrNG0EPMT4Z1s=";
   };
 
   sourceRoot = "package";
@@ -15,7 +15,7 @@ buildNpmPackage rec {
     cp ${./package-lock.json} package-lock.json
   '';
 
-  npmDepsHash = "sha256-iwqLR6dwnk0SnTnk/2MMuRsHX2Vd+HZzuheCY0HWnOo=";
+  npmDepsHash = "sha256-rBoHN3KNcdkX3d/L3GMSS74Um4+wRKiUyB/WJzbMF8M=";
 
   # autoPatchelfHook + libstdc++ are only needed to fix up ELF binaries from
   # native npm deps on Linux; Darwin needs neither.

@@ -22,22 +22,22 @@ let
 
   shell-maker = mkEmacsPackage {
     pname = "shell-maker";
-    version = "0.97.3";
+    version = "0.97.5";
     owner = "xenodium";
     repo = "shell-maker";
-    rev = "v0.97.3";
-    hash = "sha256-wH0OYeKthy+V0pWX1WNM8BEJW/gkzEdj/duJfRScS0w=";
+    rev = "v0.97.5";
+    hash = "sha256-8ObWd2bo6f71MzYqiVJ8Cz2NRmvpgfr1gQ/b8Sr9uzU=";
   };
 
   # In the let block, not the output set, so agent-shell-workspace can depend
   # on it — attribute sets are not self-referential.
   agent-shell = mkEmacsPackage {
     pname = "agent-shell";
-    version = "0.78.2";
+    version = "0.84.2";
     owner = "xenodium";
     repo = "agent-shell";
-    rev = "v0.78.2";
-    hash = "sha256-97sMybDaWbzj10QIl4jj8+h/PY6uAQvDK/8KMvIp00Q=";
+    rev = "v0.84.2";
+    hash = "sha256-P46ycfpUGc7nnpyR/WFsKiIIJ62PqT+sts0EnMPbESk=";
     packageRequires = [ shell-maker acp ];
   };
 in
