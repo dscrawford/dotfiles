@@ -3,7 +3,26 @@ set -euo pipefail
 
 input=$(cat)
 file=$(jq -r '.tool_input.file_path // .toolArgs.path // empty' <<<"$input")
-[ -z "$file" ] && exit 0
+command=$(jq -r '.tool_input.command // empty' <<<"$input")
+
+writes_file() {
+  grep -Eq '<<|>>?[[:space:]]*[^&>[:space:]]|(^|[[:space:]|;&(])(sed|perl)[[:space:]]+(-[a-zA-Z]*i|--in-place)|(^|[[:space:]|])tee[[:space:]]' <<<"$1"
+}
+
+written_path() {
+  local p
+  p=$(grep -oE '>>?[[:space:]]*[^&>[:space:];|)]+' <<<"$1" | grep -v '/dev/' | head -1 | sed -E 's/^>>?[[:space:]]*//')
+  [ -z "$p" ] && p=$(grep -oE '(^|[[:space:]|])tee[[:space:]]+(-a[[:space:]]+)?[^[:space:];|)]+' <<<"$1" | head -1 | awk '{print $NF}')
+  [ -z "$p" ] && p=$(grep -oE '(sed|perl)[[:space:]]+.*' <<<"$1" | head -1 \
+    | sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g; s/[[:space:]]#.*$//; s/[[:space:]]*(&&|\|\||;|\|).*$//" | awk '{print $NF}')
+  printf '%s' "${p:-bash}"
+}
+
+if [ -z "$file" ]; then
+  [ -n "$command" ] && writes_file "$command" || exit 0
+  file=$(written_path "$command")
+  added="$command"
+fi
 
 base=$(basename "$file")
 ext="${base##*.}"
@@ -14,8 +33,13 @@ case "$ext" in
 md|markdown|txt|org|rst|adoc) exit 0 ;;
 esac
 
+case "${base,,}" in
+makefile|gnumakefile|dockerfile|justfile|config|bash) ext=sh ;;
+esac
+
 case "$ext" in
 sh|bash|zsh|bats|py|rb|nix|yaml|yml|toml|pl|r|mk|cfg|ini|conf|tf|ex|exs|ps1) leader='#+' ;;
+gitignore|gitattributes|gitmodules|gitconfig|dockerignore|envrc|bashrc|bash_profile|profile|zshrc|editorconfig|npmrc|sops) leader='#+' ;;
 js|mjs|cjs|jsx|ts|tsx|go|rs|c|h|cpp|hpp|cc|cxx|java|kt|kts|swift|scala|cs|php|dart|zig|proto|groovy) leader='//+' ;;
 lua|hs|sql|elm|ada|vhdl) leader='--+' ;;
 el|lisp|cl|clj|cljs|cljc|edn|scm|rkt|asm|s) leader=';+' ;;
@@ -23,11 +47,11 @@ tex|sty|erl|hrl|m) leader='%+' ;;
 *) leader='' ;;
 esac
 
-added=$(jq -r '
+added="${added-$(jq -r '
   [ (.tool_input.new_string // .toolArgs.new_str // empty),
     (.tool_input.content // .toolArgs.file_text // empty),
     ((.tool_input.edits // []) | map(.new_string) | join("\n")) ]
-  | map(select(. != "")) | join("\n")' <<<"$input")
+  | map(select(. != "")) | join("\n")' <<<"$input")}"
 [ -z "$added" ] && exit 0
 
 found=$(awk -v leader="$leader" '

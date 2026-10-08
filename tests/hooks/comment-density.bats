@@ -107,6 +107,40 @@ assert_silent() {
   [ -z "$output" ]
 }
 
+@test "extensionless config files take shell trailing comments" {
+  assert_challenged ".gitignore" $'result # build output'
+  assert_challenged ".envrc" $'use flake # here'
+  assert_challenged "Makefile" $'all: # default'
+  assert_challenged "sway/config" $'set $mod Mod4 # super'
+  assert_silent ".gitignore" 'result'
+}
+
+cmd() {
+  jq -cn --arg c "$1" '{tool_input: {command: $c}}' | bash "$HOOK"
+}
+
+@test "bash commands that write files are scanned, naming the target" {
+  run cmd $'cat > flake.nix <<EOF\n# inputs\n{ }\nEOF'
+  [[ "$(ctx_of "$output")" == *"Comment challenge: flake.nix +1"* ]]
+  run cmd $'sed -i -e \'s|a|b|\' pkgs/x/default.nix # bump'
+  [[ "$(ctx_of "$output")" == *"Comment challenge: default.nix +1"* ]]
+  run cmd $'tee -a .gitignore <<EOF\n# why\n.swarm/\nEOF'
+  [[ "$(ctx_of "$output")" == *"Comment challenge: .gitignore +1"* ]]
+  run cmd $'echo x >> .envrc # note'
+  [[ "$(ctx_of "$output")" == *"Comment challenge: .envrc +1"* ]]
+}
+
+@test "bash commands that only read, or write without comments, are silent" {
+  run cmd 'grep -n "#" a.sh | head'
+  [ -z "$output" ]
+  run cmd $'nix eval --raw \'.?submodules=1#nixosConfigurations.local\' 2>&1 | tail -1'
+  [ -z "$output" ]
+  run cmd $'cat > a.nix <<EOF\n{ x = 1; }\nEOF'
+  [ -z "$output" ]
+  run cmd 'ls # list'
+  [ -z "$output" ]
+}
+
 copilot() {
   jq -cn --arg t "$1" --argjson a "$2" \
     '{toolName: $t, toolArgs: $a, toolResult: {resultType: "success", textResultForLlm: "ok"}}' | bash "$HOOK"
