@@ -10,7 +10,7 @@ setup() {
 route() { printf '{"prompt": %s}' "$(jq -Rn --arg p "$1" '$p')" | bash "$ROUTER"; }
 ctx_of() { jq -r '.hookSpecificOutput.additionalContext' <<<"$1"; }
 
-@test "a feature prompt names all four scouts and the hard guard" {
+@test "a feature prompt names all five reviewers and the hard guard" {
   run route "implement a new feature for the parser"
   [ "$status" -eq 0 ]
   local ctx
@@ -19,7 +19,8 @@ ctx_of() { jq -r '.hookSpecificOutput.additionalContext' <<<"$1"; }
   [[ "$ctx" == *"security-scout"* ]]
   [[ "$ctx" == *"performance-scout"* ]]
   [[ "$ctx" == *"comment-scout"* ]]
-  [[ "$ctx" == *"all four"* ]]
+  [[ "$ctx" == *"code-simplifier"* ]]
+  [[ "$ctx" == *"all five"* ]]
   [[ "$ctx" == *"hard task"* ]]
 }
 
