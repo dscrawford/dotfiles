@@ -5,6 +5,7 @@
   services = {
     greetd = {
       enable = true;
+      useTextGreeter = true;
       # --sessions is needed because tuigreet only searches
       # /usr/share/{x,wayland}-sessions, while NixOS registers sessions (e.g.
       # Steam/gamescope) under sessionData.desktops. F3 switches session.
