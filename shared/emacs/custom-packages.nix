@@ -13,31 +13,31 @@ let
   # agent-shell pins exact versions of both, so these three move together.
   acp = mkEmacsPackage {
     pname = "acp";
-    version = "0.15.1";
+    version = "0.17.1";
     owner = "xenodium";
     repo = "acp.el";
-    rev = "v0.15.1";
-    hash = "sha256-qB+phi7Frs3pHptl1xY5XzBPBIf4ukFSvAzB3uAFAyQ=";
+    rev = "v0.17.1";
+    hash = "sha256-vRvUAP3Al7itI6iaqUaRXNifYp4vfGvbSATfUYCrHHg=";
   };
 
   shell-maker = mkEmacsPackage {
     pname = "shell-maker";
-    version = "0.97.5";
+    version = "0.97.7";
     owner = "xenodium";
     repo = "shell-maker";
-    rev = "v0.97.5";
-    hash = "sha256-8ObWd2bo6f71MzYqiVJ8Cz2NRmvpgfr1gQ/b8Sr9uzU=";
+    rev = "v0.97.7";
+    hash = "sha256-dmr5xjbEEw/SjB3E+j/cnlfBY4whyJs11v6PbX26E98=";
   };
 
   # In the let block, not the output set, so agent-shell-workspace can depend
   # on it — attribute sets are not self-referential.
   agent-shell = mkEmacsPackage {
     pname = "agent-shell";
-    version = "0.84.2";
+    version = "0.87.10";
     owner = "xenodium";
     repo = "agent-shell";
-    rev = "v0.84.2";
-    hash = "sha256-P46ycfpUGc7nnpyR/WFsKiIIJ62PqT+sts0EnMPbESk=";
+    rev = "v0.87.10";
+    hash = "sha256-eEPQsquCVBMK6AL/8X2ypeNU0u5VPOJGu0GnSSiuhY4=";
     packageRequires = [ shell-maker acp ];
   };
 in

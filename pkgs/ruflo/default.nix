@@ -2,11 +2,11 @@
 
 buildNpmPackage rec {
   pname = "ruflo";
-  version = "3.42.5";
+  version = "3.56.10";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/ruflo/-/ruflo-${version}.tgz";
-    hash = "sha256-snSnkKkIsOP/gLeoqROEk5zwwdHlj51pVqdOjJKUHAc=";
+    hash = "sha256-0yosWjMZmhrFAazCmPr6gIGUlYK2iY2FTbyNjTuGaSo=";
   };
 
   sourceRoot = "package";
@@ -25,7 +25,7 @@ buildNpmPackage rec {
     cp ${./package-lock.json} package-lock.json
   '';
 
-  npmDepsHash = "sha256-K9DUfdeKhS9BKCM0ebfZ6X78k0X6R0+dAQW3dK1CBZM=";
+  npmDepsHash = "sha256-qCqufCQleZbOD/R/xuZw24Hxp6/+dLTTPz1po2VQ2Ow=";
   makeCacheWritable = true;
 
   # onnxruntime-node (pulled in transitively via agentic-flow) runs a
