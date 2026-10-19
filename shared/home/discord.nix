@@ -19,7 +19,7 @@ pkgs.symlinkJoin {
   nativeBuildInputs = [ pkgs.makeWrapper ];
   postBuild = ''
     for bin in $out/bin/discord $out/bin/Discord; do
-      wrapProgram "$bin" --set LIBVA_DRIVER_NAME none
+      wrapProgram "$bin" --set LIBVA_DRIVER_NAME none --set __NV_DISABLE_EXPLICIT_SYNC 1
     done
   '';
   inherit (discord) meta;

@@ -62,6 +62,7 @@
       package = pkgs.steam.override {
         extraPkgs = pkgs: with pkgs; [ gamemode gamescope ];
         extraArgs = "-system-composer -cef-force-gpu";
+        extraEnv.__NV_DISABLE_EXPLICIT_SYNC = "1";
       };
       # Select per-game in Steam → Properties → Compatibility.
       extraCompatPackages = [ (pkgs.callPackage ../../pkgs/proton-cachyos { }) ];

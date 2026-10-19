@@ -8,6 +8,7 @@ let
   inherit (scripts)
     workspace-script
     wallpaper-script
+    steam-redraw-script
     lock-script
     volume-script
     record-script
@@ -15,6 +16,7 @@ let
 
   workspaceBin = "${workspace-script}/bin/workspace.sh";
   wallpaperBin = "${wallpaper-script}/bin/wallpaper.sh";
+  steamRedrawBin = "${steam-redraw-script}/bin/steam-redraw.sh";
   lockBin = "${lock-script}/bin/lock.sh";
   volumeBin = "${volume-script}/bin/volume.sh";
   recordBin = "${record-script}/bin/record.sh";
@@ -23,8 +25,8 @@ let
   waybar = import ./waybar.nix { inherit pkgs; };
 
   swayConfig = import ./config.nix {
-    inherit pkgs lib workspaceBin wallpaperBin lockBin volumeBin recordBin
-      xwaylandPrimaryBin;
+    inherit pkgs lib workspaceBin wallpaperBin steamRedrawBin lockBin volumeBin
+      recordBin xwaylandPrimaryBin;
   };
 in
 {

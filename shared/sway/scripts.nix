@@ -106,11 +106,34 @@
       done
       [ "''${#ARGS[@]}" -gt 0 ] || exit 0
 
-      mapfile -t OLD < <(pgrep -x swaybg || true)
+      mapfile -t OLD < <(pgrep -x -- '.swaybg-wrapped|swaybg' || true)
       setsid -f swaybg "''${ARGS[@]}" >/dev/null 2>&1
       # New instance maps first so the swap never shows a bare background.
       sleep 1
       [ "''${#OLD[@]}" -eq 0 ] || kill "''${OLD[@]}" 2>/dev/null || true
+    '';
+  };
+
+  steam-redraw-script = pkgs.writeShellApplication {
+    name = "steam-redraw.sh";
+    runtimeInputs = [ pkgs.sway pkgs.jq ];
+    text = ''
+      LAST=""
+      swaymsg -t subscribe -m '["window","workspace"]' | jq --unbuffered -r '
+        select(.change == "focus")
+        | if .container then
+            select(.container.window_properties.class == "steam") | "W \(.container.id)"
+          else "S" end' \
+      | while read -r KIND ID; do
+          case "$KIND" in
+            S) LAST="" ;;
+            W)
+              [ "$ID" = "$LAST" ] && continue
+              LAST=$ID
+              swaymsg "[con_id=$ID] border none, border normal" >/dev/null
+              ;;
+          esac
+        done
     '';
   };
 

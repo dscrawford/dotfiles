@@ -1,8 +1,8 @@
 # shared/sway/config.nix
 # Main Sway config string and the desktop home.packages list.
 # Imported as a plain function returning { packages, swayConfig }.
-{ pkgs, lib, workspaceBin, wallpaperBin, lockBin, volumeBin, recordBin
-, xwaylandPrimaryBin }:
+{ pkgs, lib, workspaceBin, wallpaperBin, steamRedrawBin, lockBin, volumeBin
+, recordBin, xwaylandPrimaryBin }:
 
 let
   bindGroup = keyOf: cmd:
@@ -52,6 +52,8 @@ in
     exec_always ${xwaylandPrimaryBin}
 
     exec_always ${wallpaperBin}
+
+    exec ${steamRedrawBin}
     exec bash -c 'while true; do sleep 1800; ${wallpaperBin}; done'
 
     exec_always pkill swayidle; swayidle -w \
