@@ -1,9 +1,7 @@
-# shared/audio-keepalive.nix
-# The amplifier on the analog output drops into signal-sense standby after a
-# stretch of silence and takes seconds to wake, which eats the start of the
-# next sound. The sink itself never suspends (hosts/local/audio.nix), so the
-# fix lives in the signal: a 20 Hz tone at -40 dBFS is below hearing and
-# below the sink's noise floor at normal volume, but above the amp's detector.
+# The amplifier on the analog output goes to signal-sense standby after
+# silence; PipeWire's sink never suspends (hosts/local/audio.nix), so the
+# signal itself has to carry a tone that is below hearing but above the
+# amp's detector.
 { pkgs, ... }:
 
 {
@@ -14,7 +12,7 @@
     };
     Service = {
       ExecStart = toString [
-        "${pkgs.ffmpeg}/bin/ffmpeg -nostdin -loglevel error -re"
+        "${pkgs.ffmpeg-full}/bin/ffmpeg -nostdin -loglevel error -re"
         "-f lavfi -i sine=frequency=20:sample_rate=48000"
         "-af volume=0.01"
         "-f pulse -name audio-keepalive -stream_name keepalive default"
