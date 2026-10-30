@@ -20,8 +20,8 @@ let
       reboots anyway); scale to 0 every Deployment/StatefulSet whose Longhorn
       volume has all its replicas on that node (--no-scale skips this; the
       drain will then block on jellyfin-data); cordon; drain; sudo reboot over
-      ssh; wait for ssh, node Ready, Longhorn Ready and volumes settled;
-      uncordon; scale back; wait for the pods.
+      ssh; wait for ssh, node Ready, Longhorn Ready and volumes settled,
+      printing a health line every 30s; uncordon; scale back; wait for the pods.
 
       Interactive only. You will type the node list back, then sudo's
       password once per node.
@@ -95,12 +95,26 @@ let
             done | sort -u
       }
 
+      health() {  # health <node>: one-line snapshot of the node and the cluster
+        local n="$1" up node lh vols pods
+        up=$(ssh -o ConnectTimeout=3 -o BatchMode=yes "$n" 'cut -d. -f1 /proc/uptime' 2>/dev/null || true)
+        node=$(kubectl get node "$n" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)
+        lh=$(kubectl -n longhorn-system get nodes.longhorn.io "$n" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)
+        vols=$(kubectl -n longhorn-system get volumes.longhorn.io -o jsonpath='{range .items[*]}{.status.state}/{.status.robustness}{"\n"}{end}' 2>/dev/null \
+               | sort | uniq -c | awk '{printf "%s%s=%s", sep, $2, $1; sep=" "}')
+        pods=$(kubectl get pods -A --no-headers 2>/dev/null | grep -cvE 'Running|Completed' || true)
+        local ssh="down"
+        [ -n "$up" ] && ssh="up ''${up}s"
+        echo "ssh $ssh | node Ready=''${node:-?} | longhorn Ready=''${lh:-?} | volumes ''${vols:-?} | pods not running: ''${pods:-?}"
+      }
+
       wait_for() {  # wait_for <label> <seconds> <command...>
         local label="$1" secs="$2"; shift 2
         local i=0
         until "$@"; do
           i=$((i + 5))
           [ "$i" -ge "$secs" ] && { echo "reboot-nodes: timed out waiting for $label" >&2; return 1; }
+          [ $((i % 30)) -eq 0 ] && echo "    [''${i}s] $label: $(health "$n")"
           sleep 5
         done
       }
