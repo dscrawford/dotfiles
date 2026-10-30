@@ -69,6 +69,19 @@ in
     };
   };
 
+  # Second CRI runtime, selected per pod via RuntimeClass `crun` (KubeServer
+  # config/scooter/runtimeclass.yaml). crun delegates a writable cgroup subtree to
+  # the container, which systemd-as-PID-1 images (Scooter sandboxes) need to run
+  # unprivileged in their own cgroup namespace; under runc they only boot
+  # privileged-equivalent in the host cgroup namespace and churn kubepods.slice.
+  virtualisation.containerd.settings.plugins."io.containerd.grpc.v1.cri".containerd.runtimes.crun = {
+    runtime_type = "io.containerd.runc.v2";
+    options = {
+      BinaryName = "${pkgs.crun}/bin/crun";
+      SystemdCgroup = true;
+    };
+  };
+
   systemd.services = lib.mkIf isMaster {
     kube-controller-manager.serviceConfig = {
       Restart = "on-failure";

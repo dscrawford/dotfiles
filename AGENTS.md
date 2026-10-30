@@ -134,7 +134,9 @@ mkDarwin: darwin-common.nix → Home Manager
 
 `node1`–`node3` go through the `kubeNode` helper in `flake.nix`, which adds
 `kubernetes.nix`, `kube-cert-renew.nix`, `kube-stale-mount-recovery.nix`, `iscsi.nix` plus
-the host's hardware and boot files. `local` adds `shared/sway`, `shared/gaming.nix`, and
+the host's hardware and boot files. `kubernetes.nix` also registers `crun` as a second
+containerd runtime; the KubeServer repo's `RuntimeClass crun` (Scooter sandboxes) selects it,
+so deploy the nodes before pushing a manifest that references it. `local` adds `shared/sway`, `shared/gaming.nix`, and
 `shared/easyeffects.nix` as Home Manager modules; terminal configs use only `shared/home`.
 
 `shared/emacs/` uses `emacs-pgtk` on Linux and `emacs-30` (darwin-emacs overlay) on macOS.
