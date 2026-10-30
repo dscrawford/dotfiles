@@ -69,6 +69,28 @@ in
     };
   };
 
+  # Pod source IPs must survive the hop between nodes or NetworkPolicy (enforced
+  # by kube-router, KubeServer config/kube-router/) cannot match them. The flannel
+  # CNI plugin defaults the bridge's ipMasq to the inverse of flanneld's, and
+  # NixOS runs flanneld without --ip-masq, so by default every pod gets a
+  # per-pod MASQUERADE chain that rewrites off-subnet traffic to the node IP.
+  # Flip it: flanneld masquerades only traffic leaving 10.1.0.0/16, the bridge
+  # masquerades nothing. Pods created before this change keep their old chain
+  # until recreated.
+  services.kubernetes.kubelet.cni.config = [
+    {
+      name = "mynet";
+      type = "flannel";
+      cniVersion = "0.3.1";
+      delegate = {
+        isDefaultGateway = true;
+        hairpinMode = true;
+        bridge = "mynet";
+        ipMasq = false;
+      };
+    }
+  ];
+
   # Second CRI runtime, selected per pod via RuntimeClass `crun` (KubeServer
   # config/scooter/runtimeclass.yaml). crun delegates a writable cgroup subtree to
   # the container, which systemd-as-PID-1 images (Scooter sandboxes) need to run
@@ -82,15 +104,18 @@ in
     };
   };
 
-  systemd.services = lib.mkIf isMaster {
-    kube-controller-manager.serviceConfig = {
-      Restart = "on-failure";
-      StartLimitBurst = 5;
-      StartLimitIntervalSec = 10;
-    };
-    etcd.environment = {
-      ETCD_LISTEN_CLIENT_URLS = lib.mkForce "https://127.0.0.1:2379,https://${kubeMasterIP}:2379";
-      ETCD_ADVERTISE_CLIENT_URLS = lib.mkForce "https://${kubeMasterIP}:2379,https://etcd.local:2379";
-    };
-  };
+  systemd.services = lib.mkMerge [
+    { flannel.environment.FLANNELD_IP_MASQ = "true"; }
+    (lib.mkIf isMaster {
+      kube-controller-manager.serviceConfig = {
+        Restart = "on-failure";
+        StartLimitBurst = 5;
+        StartLimitIntervalSec = 10;
+      };
+      etcd.environment = {
+        ETCD_LISTEN_CLIENT_URLS = lib.mkForce "https://127.0.0.1:2379,https://${kubeMasterIP}:2379";
+        ETCD_ADVERTISE_CLIENT_URLS = lib.mkForce "https://${kubeMasterIP}:2379,https://etcd.local:2379";
+      };
+    })
+  ];
 }
