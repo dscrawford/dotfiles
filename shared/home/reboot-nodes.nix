@@ -21,7 +21,7 @@ let
       Sandbox whose Longhorn volume has all its replicas on that node
       (--no-scale skips this; the drain will then block on jellyfin-data);
       wait for those volumes to detach, naming whatever still holds one;
-      drain; sudo reboot over ssh; wait for ssh, node Ready, Longhorn Ready;
+      drain; sudo reboot over ssh; wait for ssh, node Ready, etcd active, Longhorn Ready;
       uncordon; restart the stopped workloads; wait for every volume to be
       healthy. A health line prints every 30s during each wait. On failure or
       ^C the stopped workloads are restarted and the node uncordoned.
@@ -157,6 +157,7 @@ let
       node_ready()     { [ "$(kubectl get node "$1" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)" = True ]; }
       longhorn_ready() { [ "$(kubectl -n longhorn-system get nodes.longhorn.io "$1" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)" = True ]; }
       volumes_settled() { ! kubectl -n longhorn-system get volumes.longhorn.io -o jsonpath='{range .items[*]}{.status.state}/{.status.robustness}{"\n"}{end}' | grep -qE 'attaching|detaching|faulted|degraded'; }
+      etcd_active() { [ "$(ssh -o ConnectTimeout=3 -o BatchMode=yes "$1" systemctl is-active etcd 2>/dev/null)" = active ]; }
       ssh_down() { ! ssh -o ConnectTimeout=3 -o BatchMode=yes "$1" true 2>/dev/null; }
       ssh_up()   { ssh -o ConnectTimeout=3 -o BatchMode=yes "$1" true 2>/dev/null; }
 
@@ -225,6 +226,7 @@ let
         wait_for "$n ssh" 900 ssh_up "$n"
         echo "    back: $(ssh "$n" uname -r)"
         wait_for "$n Ready" 600 node_ready "$n"
+        wait_for "etcd on $n" 1200 etcd_active "$n"
         wait_for "Longhorn on $n" 600 longhorn_ready "$n"
         kubectl uncordon "$n" >/dev/null
 
