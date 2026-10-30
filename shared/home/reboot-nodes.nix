@@ -17,11 +17,14 @@ let
       Reboots nodes one at a time, default order node2 node3 node1 (master
       last, so the API stays up for the workers). Per node: skip unless the
       booted kernel/initrd differs from the current generation (--force
-      reboots anyway); scale to 0 every Deployment/StatefulSet whose Longhorn
-      volume has all its replicas on that node (--no-scale skips this; the
-      drain will then block on jellyfin-data); cordon; drain; sudo reboot over
-      ssh; wait for ssh, node Ready, Longhorn Ready and volumes settled,
-      printing a health line every 30s; uncordon; scale back; wait for the pods.
+      reboots anyway); cordon; stop every Deployment, StatefulSet and Scooter
+      Sandbox whose Longhorn volume has all its replicas on that node
+      (--no-scale skips this; the drain will then block on jellyfin-data);
+      wait for those volumes to detach, naming whatever still holds one;
+      drain; sudo reboot over ssh; wait for ssh, node Ready, Longhorn Ready;
+      uncordon; restart the stopped workloads; wait for every volume to be
+      healthy. A health line prints every 30s during each wait. On failure or
+      ^C the stopped workloads are restarted and the node uncordoned.
 
       Interactive only. You will type the node list back, then sudo's
       password once per node.
@@ -61,38 +64,71 @@ let
         done; exit 1'
       }
 
-      # Deployments/StatefulSets whose pods mount a Longhorn volume with every
-      # replica on this node. Longhorn's drain policy is
-      # allow-if-replica-is-stopped, so these must be stopped, not merely
-      # cordoned around.
-      consumers_on() {
-        local node="$1"
-        local vols
-        vols=$(kubectl -n longhorn-system get replicas.longhorn.io -o json \
-          | jq -r --arg n "$node" '
+      local_volumes() {  # Longhorn volumes whose every replica sits on <node>
+        kubectl -n longhorn-system get replicas.longhorn.io -o json \
+          | jq -r --arg n "$1" '
               [.items[] | {v: .spec.volumeName, n: .spec.nodeID}]
-              | group_by(.v) | map(select(all(.[]; .n == $n))) | map(.[0].v) | .[]')
+              | group_by(.v) | map(select(all(.[]; .n == $n))) | map(.[0].v) | .[]'
+      }
+
+      attached_local_volumes() {  # "<volume> <ns>/<pvc>" for local volumes not yet detached
+        local vols
+        vols=$(local_volumes "$1")
         [ -n "$vols" ] || return 0
-        kubectl get pv -o json \
+        kubectl -n longhorn-system get volumes.longhorn.io -o json \
           | jq -r --argjson vols "$(printf '%s\n' "$vols" | jq -R . | jq -s .)" '
+              .items[] | select(.metadata.name as $n | $vols | index($n))
+              | select(.status.state != "detached")
+              | select(.status.kubernetesStatus.pvcName != null)
+              | "\(.metadata.name) \(.status.kubernetesStatus.namespace)/\(.status.kubernetesStatus.pvcName)"'
+      }
+      local_volumes_detached() { [ -z "$(attached_local_volumes "$1")" ]; }
+
+      holders_of() {  # stdin "<ns>/<pvc>" -> "<ns> <pod> <ownerKind> <ownerName> <node>" for live pods
+        while IFS=/ read -r ns pvc; do
+          kubectl -n "$ns" get pods -o json \
+            | jq -r --arg ns "$ns" --arg pvc "$pvc" '
+                .items[] | select(.spec.volumes[]?.persistentVolumeClaim.claimName == $pvc)
+                | select(.status.phase == "Running" or .status.phase == "Pending")
+                | "\($ns) \(.metadata.name) \(.metadata.ownerReferences[0].kind // "Pod") \(.metadata.ownerReferences[0].name // .metadata.name) \(.spec.nodeName // "-")"'
+        done | sort -u
+      }
+
+      consumers_on() {  # "<ns> <kind> <name>" workloads that must stop before <node> drains
+        kubectl get pv -o json \
+          | jq -r --argjson vols "$(local_volumes "$1" | jq -R . | jq -s .)" '
               .items[] | select(.spec.csi.driver == "driver.longhorn.io")
               | select(.metadata.name as $n | $vols | index($n))
               | "\(.spec.claimRef.namespace)/\(.spec.claimRef.name)"' \
-          | while IFS=/ read -r ns pvc; do
-              kubectl -n "$ns" get pods -o json \
-                | jq -r --arg pvc "$pvc" '
-                    .items[] | select(.spec.volumes[]?.persistentVolumeClaim.claimName == $pvc)
-                    | .metadata.ownerReferences[]? | select(.kind == "ReplicaSet" or .kind == "StatefulSet")
-                    | "\(.kind)/\(.name)"' \
-                | sort -u | while IFS=/ read -r kind name; do
-                    if [ "$kind" = ReplicaSet ]; then
-                      owner=$(kubectl -n "$ns" get rs "$name" -o jsonpath='{.metadata.ownerReferences[0].name}')
-                      [ -n "$owner" ] && echo "$ns deployment $owner"
-                    else
-                      echo "$ns statefulset $name"
-                    fi
-                  done
+          | holders_of | while read -r ns _ kind name _; do
+              case "$kind" in
+                ReplicaSet)
+                  owner=$(kubectl -n "$ns" get rs "$name" -o jsonpath='{.metadata.ownerReferences[0].name}')
+                  [ -n "$owner" ] && echo "$ns deployment $owner" ;;
+                StatefulSet) echo "$ns statefulset $name" ;;
+                Sandbox) echo "$ns sandbox $name" ;;
+              esac
             done | sort -u
+      }
+
+      stop_workload() {  # stop_workload <ns> <kind> <name>; prints the setting to restore
+        local ns="$1" kind="$2" name="$3" prev
+        case "$kind" in
+          sandbox)
+            prev=$(kubectl -n "$ns" get sandbox "$name" -o jsonpath='{.spec.operatingMode}')
+            kubectl -n "$ns" patch sandbox "$name" --type merge -p '{"spec":{"operatingMode":"Suspended"}}' >/dev/null ;;
+          *)
+            prev=$(kubectl -n "$ns" get "$kind/$name" -o jsonpath='{.spec.replicas}')
+            kubectl -n "$ns" scale "$kind/$name" --replicas=0 >/dev/null ;;
+        esac
+        echo "$prev"
+      }
+      start_workload() {  # start_workload <ns> <kind> <name> <setting>
+        local ns="$1" kind="$2" name="$3" prev="$4"
+        case "$kind" in
+          sandbox) kubectl -n "$ns" patch sandbox "$name" --type merge -p "{\"spec\":{\"operatingMode\":\"$prev\"}}" >/dev/null ;;
+          *) kubectl -n "$ns" scale "$kind/$name" --replicas="$prev" >/dev/null ;;
+        esac
       }
 
       health() {  # health <node>: one-line snapshot of the node and the cluster
@@ -120,9 +156,36 @@ let
       }
       node_ready()     { [ "$(kubectl get node "$1" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)" = True ]; }
       longhorn_ready() { [ "$(kubectl -n longhorn-system get nodes.longhorn.io "$1" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)" = True ]; }
-      volumes_settled() { ! kubectl -n longhorn-system get volumes.longhorn.io -o jsonpath='{range .items[*]}{.status.state}/{.status.robustness}{"\n"}{end}' | grep -qE 'attaching|detaching|faulted'; }
+      volumes_settled() { ! kubectl -n longhorn-system get volumes.longhorn.io -o jsonpath='{range .items[*]}{.status.state}/{.status.robustness}{"\n"}{end}' | grep -qE 'attaching|detaching|faulted|degraded'; }
       ssh_down() { ! ssh -o ConnectTimeout=3 -o BatchMode=yes "$1" true 2>/dev/null; }
       ssh_up()   { ssh -o ConnectTimeout=3 -o BatchMode=yes "$1" true 2>/dev/null; }
+
+      stopped=()
+      n=""
+      rebooted=0
+      restore_stopped() {
+        local entry ns kind name prev
+        for entry in "''${stopped[@]}"; do
+          read -r ns kind name prev <<<"$entry"
+          echo "    restoring $ns/$kind/$name -> $prev"
+          start_workload "$ns" "$kind" "$name" "$prev" || true
+        done
+        stopped=()
+      }
+      cleanup() {
+        local rc=$?
+        [ "$rc" -eq 0 ] && return
+        trap - EXIT
+        echo "reboot-nodes: failed on $n (exit $rc); restoring" >&2
+        restore_stopped
+        if [ -n "$n" ] && [ "$rebooted" = 0 ]; then
+          echo "    uncordon $n" >&2
+          kubectl uncordon "$n" >/dev/null || true
+        fi
+        exit "$rc"
+      }
+      trap cleanup EXIT
+      trap 'exit 130' INT
 
       for n in "''${NODES[@]}"; do
         echo "==> $n"
@@ -130,23 +193,33 @@ let
           echo "    booted generation is current; skipping (--force to reboot anyway)"
           continue
         fi
+        rebooted=0
 
-        scaled=()
+        echo "    cordon"
+        kubectl cordon "$n" >/dev/null
         if [ "$SCALE" = 1 ]; then
           while read -r ns kind name; do
             [ -n "$name" ] || continue
-            replicas=$(kubectl -n "$ns" get "$kind/$name" -o jsonpath='{.spec.replicas}')
-            echo "    scaling $ns/$kind/$name $replicas -> 0 (its volume lives only on $n)"
-            kubectl -n "$ns" scale "$kind/$name" --replicas=0 >/dev/null
-            scaled+=("$ns $kind $name $replicas")
+            prev=$(stop_workload "$ns" "$kind" "$name")
+            echo "    stopping $ns/$kind/$name (was $prev; its volume lives only on $n)"
+            stopped+=("$ns $kind $name $prev")
           done < <(consumers_on "$n")
         fi
+        if ! wait_for "volumes on $n to detach" 300 local_volumes_detached "$n"; then
+          attached_local_volumes "$n" | while read -r vol claim; do
+            echo "    still attached: $vol ($claim)" >&2
+            echo "$claim" | holders_of | while read -r ns pod kind name node; do
+              echo "      held by $ns/$pod ($kind/$name on $node)" >&2
+            done
+          done
+          exit 1
+        fi
 
-        echo "    cordon + drain"
-        kubectl cordon "$n" >/dev/null
+        echo "    drain"
         kubectl drain "$n" --ignore-daemonsets --delete-emptydir-data --timeout=600s
 
         echo "    rebooting (sudo password for $n)"
+        rebooted=1
         ssh -t "$n" 'sudo systemctl reboot' || true
         wait_for "$n to go down" 120 ssh_down "$n"
         wait_for "$n ssh" 900 ssh_up "$n"
@@ -155,18 +228,17 @@ let
         wait_for "Longhorn on $n" 600 longhorn_ready "$n"
         kubectl uncordon "$n" >/dev/null
 
-        for entry in "''${scaled[@]}"; do
-          read -r ns kind name replicas <<<"$entry"
-          echo "    scaling $ns/$kind/$name back to $replicas"
-          kubectl -n "$ns" scale "$kind/$name" --replicas="$replicas" >/dev/null
-        done
-        wait_for "volumes to settle" 900 volumes_settled
-        for entry in "''${scaled[@]}"; do
+        restarting=("''${stopped[@]}")
+        restore_stopped
+        wait_for "volumes to settle" 1800 volumes_settled
+        for entry in "''${restarting[@]}"; do
           read -r ns kind name _ <<<"$entry"
+          [ "$kind" = sandbox ] && continue
           kubectl -n "$ns" rollout status "$kind/$name" --timeout=600s || true
         done
         echo "    $n done"
       done
+      n=""
       echo "reboot-nodes: done"
     '';
   };
