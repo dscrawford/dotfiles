@@ -28,33 +28,71 @@ The cluster has a single master (node1). If node1 dies: no API server, no etcd, 
 | Controller-mgr | node1 only | All 3 nodes (leader-elected) |
 | Scheduler | node1 only | All 3 nodes (leader-elected) |
 | API endpoint | `192.168.0.2` (node1) | `192.168.0.10` (floating VIP via keepalived) |
-| CFSSL (CA) | node1 | node1 (unchanged — low-risk SPOF, certs valid 30 days) |
-| Longhorn replicas | 2 | 3 for default/retain classes |
+| CFSSL (CA) | node1 | node1 only, forced off elsewhere (renewal-only SPOF; certs valid 1 year) |
+| SA signing key | per-node certmgr cert | one key from sops on all masters |
+| Longhorn replicas | 3 default, 2 in default/retain classes | 3 for default/retain classes |
+
+## Review 2026-10-30
+
+Checked against nixpkgs `31ecbac` (`nixos/modules/services/cluster/kubernetes/`),
+the live cluster (k8s 1.37.1, etcd 3.7.3, certs issued 2026-05-16 for one year,
+CA valid to 2031), and every public NixOS HA cluster found (justinas,
+misumisumi, starcraft66 — none use easyCerts; the manual still says
+"Multi-master (HA) clusters are not supported by the easyCerts module").
+The first draft below would not have produced a working cluster. What it missed:
+
+| # | Blocker | Why | Fix |
+|---|---------|-----|-----|
+| 1 | **Service-account signing key differs per master** | `certs.serviceAccount` is a certmgr spec; each node mints its own key (`default.nix:298`, wired with `mkDefault` at `pki.nix:394,404`). Tokens signed by one apiserver are rejected by the other two. | One `sa.key` in `secrets/`, delivered by sops-nix (owner `kubernetes`), set on all three `serviceAccount*KeyFile` options. |
+| 2 | **Three CAs and three API tokens** | `roles` containing `master` enables cfssl on every node (`pki.nix:146`); its preStart generates a CA and `apitoken.secret` when missing (`:180-198`). "CFSSL stays on node1" is not what the config would do. | `services.cfssl.enable = mkForce false` on node2/3, or ship `ca.pem`/`ca-key.pem`/`apitoken.secret` via sops with `genCfsslCACert = false; genCfsslAPIToken = false`. |
+| 3 | **`masterAddress` cannot be the VIP while cfssl lives on node1** | certmgr's `remote` is `https://${masterAddress}:8888` (`pki.nix:48`). A VIP that floats to node2 breaks every renewal. | `masterAddress = "node1"` (cfssl host); `apiserverAddress = "https://api.kube:6443"` (VIP) set explicitly; VIP and all node IPs in `apiserver.extraSANs`. |
+| 4 | **`pki.certs.etcd.hosts = mkForce …` destroys the cert spec** | `pki.certs` is `types.attrs`: shallow `//` merge, so overriding `hosts` drops `name`/`cert`/`key`/`action`. | Don't touch `pki.certs`. `apiserver.advertiseAddress = ip` already adds the node IP to the etcd and apiserver SANs (`apiserver.nix:544`); peer URLs must use exactly that IP. |
+| 5 | **etcd overrides conflict** | `pki.nix:358-363` assigns the five etcd URL lists at normal priority; the current `systemd.services.etcd.environment` `mkForce` would clash with `services.etcd.*` for the same variables. | Use `services.etcd.*` with `mkForce` only; drop the environment override. `services.etcd.name` defaults to `masterAddress` on every node — set it per node. |
+| 6 | **`advertiseAddress` breaks the default `apiserverAddress`** | `default.nix:345`: with `advertiseAddress` set the default URL has no port and points at the node, not the VIP. | Set `apiserverAddress` explicitly (already in the draft; keep it). |
+| 7 | **keepalived health script silently ignored** | `vrrpScripts.*.user` defaults to `keepalived_script`, which the module never creates. VRRP is IP protocol 112, not a port. | `user = "root"` + `enableScriptSecurity`; `services.keepalived.openFirewall = true` (handles iptables and nftables on this nixpkgs). |
+| 8 | **1→3 etcd without learners** | `member add` of a voter to a 1-member cluster stalls the cluster until the new member starts. | `member add --learner`, start, `member promote`; one node at a time. |
+| 9 | **`kube-cert-renew.nix` token sync** | `isMaster = apiserver.enable` becomes true everywhere, so node2/3 stop syncing the token from node1. | Deliver `apitoken.secret` via sops; delete the ssh sync. |
+| 10 | **Desktop and manifests pin node1's IP** | `hosts/local/local.nix:89` maps `api.kube` to `192.168.0.2`; five KubeServer manifests reference `192.168.0.2`. | Point at the VIP in the same change. |
+
+Already done since the draft: Longhorn `default-replica-count` is 3 and the
+`longhorn` class uses 3 replicas; `longhorn-default`/`longhorn-retain` still say 2.
+
+Verdict: **feasible with easyCerts kept**, provided cfssl runs on node1 only and
+the SA key, CA and API token come from sops. That makes every node able to hold
+the control plane (etcd member, apiserver, leader-elected controller-manager and
+scheduler, VIP). cfssl stays a renewal-only SPOF: with one-year certs, node1
+being down costs nothing until a renewal falls due. The cleaner end state — a
+hand-rolled PKI in `secrets/` with `easyCerts = false`, which is what every
+real NixOS HA cluster does — drops cfssl, certmgr and `kube-cert-renew.nix`
+entirely and is listed under Future Improvements.
 
 ## Key Design Decisions
 
 ### VIP: keepalived (VRRP)
-Lightweight, no Kubernetes dependency, no chicken-and-egg problem (unlike kube-vip which runs inside K8s). The VIP `192.168.0.10` floats to whichever healthy node has highest priority. Health check curls the local API server — if unhealthy, priority drops and VIP moves.
+Lightweight, no Kubernetes dependency, no chicken-and-egg problem (unlike kube-vip which runs inside K8s). The VIP `192.168.0.10` floats to whichever healthy node has highest priority. Health check curls the local API server — if unhealthy, priority drops and VIP moves. Unicast peers, `nopreempt`, `openFirewall` for protocol 112.
 
 ### All 3 nodes become master+worker
-Controller-manager and scheduler already support leader election (`leaderElect = true` is the default in the NixOS module). Only one instance leads at a time; the others are standby.
+Controller-manager and scheduler already support leader election (`leaderElect = true` is the default in the NixOS module). Only one instance leads at a time; the others are standby. addon-manager runs on all three with no election; its `kubectl apply` is idempotent.
 
-### easyCerts kept but overridden
-Upstream NixOS `pki.nix` doesn't officially support multi-master (comment on line ~357: "easyCerts doesn't support multimaster clusters anyway atm"). We keep `easyCerts = true` but systematically override defaults with `lib.mkForce` where needed (etcd listen addresses, cert SANs, etc.).
+### easyCerts kept, cfssl on node1 only
+Upstream `pki.nix` does not support multi-master ("easyCerts doesn't support multimaster clusters anyway atm", line 357). We keep `easyCerts = true` for certmgr renewal, force cfssl off on node2/3, and `mkForce` the etcd URL lists. `masterAddress` stays `node1` (it is the cfssl endpoint and the etcd cert CN); only `apiserverAddress` moves to the VIP.
 
-### CFSSL stays on node1
-CFSSL is the CA server that issues certs. It remains a SPOF, but certs are valid ~30 days — if node1 dies, existing certs keep working. The CA key (`/var/lib/cfssl/ca-key.pem`) must be backed up.
+### Shared secrets via sops-nix
+`secrets/secrets.yaml` gains `k8s/sa.key` (RSA 4096, generated once), `k8s/apitoken.secret` (copied from node1's `/var/lib/cfssl/`) and `k8s/ca.pem` is already public. All three nodes decrypt with their host keys (already configured in `shared/server-common.nix`).
 
 ## Files to Change
 
 | File | Change |
 |------|--------|
-| `shared/kubernetes.nix` | **Major rewrite** — remove `isMaster` conditional, all nodes master+worker, etcd clustering, cert SAN overrides |
-| `shared/keepalived.nix` | **New** — VRRP floating VIP `192.168.0.10` with API server health checks |
-| `flake.nix` | Add `kubeApiVIP`/`cfsslHostIP` specialArgs, add keepalived to all nodes |
-| `shared/server-common.nix` | Point `api.kube` at VIP, add etcd ports 2379/2380 to firewall |
-| `~/Documents/Kubernetes/longhorn/settings.yaml` | `default-replica-count: "3"` |
-| `~/Documents/Kubernetes/longhorn/storage-class.yaml` | `numberOfReplicas: "3"` for default + retain classes |
+| `shared/kubernetes.nix` | **Major rewrite** — all nodes master+worker, cfssl forced off on node2/3, sops SA key + API token, etcd `mkForce` overrides (Phase 3) |
+| `shared/keepalived.nix` | **New** — VRRP VIP `192.168.0.10`, unicast, nopreempt, `/healthz` track script (Phase 2a) |
+| `lib/mkServer.nix` | `kubeApiVIP`, `kubeNodeIPs` specialArgs |
+| `flake.nix` | keepalived module in `kubeNode` |
+| `shared/server-common.nix` | `api.kube` → VIP, `node1` → 192.168.0.2, firewall 6443 (+8888 on node1) |
+| `shared/kube-cert-renew.nix` | Drop the ssh token sync (sops delivers it) |
+| `secrets/secrets.yaml` | `k8s/sa.key`, `k8s/apitoken.secret` |
+| `hosts/local/local.nix` | `api.kube` → VIP |
+| `~/Documents/Kubernetes` | `longhorn-default`/`longhorn-retain` → 3 replicas; five manifests pinning `192.168.0.2` |
 
 ## Implementation Phases
 
@@ -81,87 +119,98 @@ CFSSL is the CA server that issues certs. It remains a SPOF, but certs are valid
 
 **2a. Create `shared/keepalived.nix`:**
 ```nix
-{ config, pkgs, lib, ip, netInterface ? "eno1", ... }:
+{ config, pkgs, lib, ip, netInterface ? "eno1", kubeApiVIP, kubeNodeIPs, ... }:
 let
-  vip = "192.168.0.10";
-  priorityMap = {
-    "192.168.0.2" = 101;  # node1 — preferred VIP holder
-    "192.168.0.4" = 100;  # node2
-    "192.168.0.6" = 99;   # node3
-  };
-  priority = priorityMap.${ip};
+  priority = { "192.168.0.2" = 101; "192.168.0.4" = 100; "192.168.0.6" = 99; }.${ip};
 in {
-  services.keepalived.enable = true;
-  services.keepalived.vrrpInstances.kube-api = {
-    interface = netInterface;
-    state = if priority == 101 then "MASTER" else "BACKUP";
-    virtualRouterId = 51;
-    priority = priority;
-    virtualIps = [{ addr = "${vip}/24"; }];
-    trackScripts = ["chk_apiserver"];
+  services.keepalived = {
+    enable = true;
+    openFirewall = true;                       # VRRP is IP proto 112, not a port
+    enableScriptSecurity = true;
+    vrrpInstances.kube-api = {
+      interface = netInterface;
+      state = "BACKUP";                        # nopreempt needs every node BACKUP
+      virtualRouterId = 51;
+      inherit priority;
+      noPreempt = true;                        # a rebuild restart must not bounce the VIP
+      unicastSrcIp = ip;
+      unicastPeers = lib.filter (p: p != ip) kubeNodeIPs;
+      virtualIps = [ { addr = "${kubeApiVIP}/24"; } ];
+      trackScripts = [ "chk_apiserver" ];
+    };
+    vrrpScripts.chk_apiserver = {
+      script = "${pkgs.curl}/bin/curl -sfk --max-time 2 https://127.0.0.1:6443/healthz";
+      user = "root";                           # the module creates no keepalived_script user
+      interval = 2; fall = 3; rise = 2; weight = -50;
+    };
   };
-  services.keepalived.vrrpScripts.chk_apiserver = {
-    script = "${pkgs.curl}/bin/curl -sk https://127.0.0.1:6443/healthz";
-    interval = 2;
-    weight = -50;  # drop priority if API server unhealthy
-  };
-  networking.firewall.extraCommands = "iptables -A INPUT -p vrrp -j ACCEPT";
 }
 ```
 
-**2b. Update `flake.nix` specialArgs:**
+**2b. Update `lib/mkServer.nix` specialArgs** (that is where `kubeMasterIP` lives today):
 ```nix
-specialArgs = {
-  inherit hostname ip netInterface;
-  kubeMasterIP = "192.168.0.2";         # CFSSL host (unchanged)
-  kubeApiVIP = "192.168.0.10";          # NEW: floating VIP
-  cfsslHostIP = "192.168.0.2";          # NEW: explicit CFSSL location
-  kubeMasterHostname = "api.kube";
-  kubeMasterAPIServerPort = 6443;
-};
+kubeMasterIP = "192.168.0.2";         # cfssl host, etcd cert CN — unchanged
+kubeMasterHostname = "api.kube";      # now the VIP's name
+kubeMasterAPIServerPort = 6443;
+kubeApiVIP = "192.168.0.10";
+kubeNodeIPs = [ "192.168.0.2" "192.168.0.4" "192.168.0.6" ];
 ```
 
-Add `./shared/keepalived.nix` to all 3 nodes' `extraModules`.
+Add `./shared/keepalived.nix` to `kubeNode` in `flake.nix`.
 
 **2c. Update `shared/server-common.nix`:**
-- Change extraHosts: point `api.kube` at VIP (`192.168.0.10`) instead of `192.168.0.2`
-- Add etcd ports to firewall: `2379` (client), `2380` (peer)
-- Add `kubeApiVIP` to function params
-- Remove unused `isMaster` from function params (if present)
+- extraHosts: `api.kube` → VIP; add `node1` → `192.168.0.2` (it becomes `masterAddress`)
+- Firewall: 6443 on every node, 8888 (cfssl) on node1 only; etcd 2379/2380 via `services.etcd.openFirewall`
+
+**2d. Secrets** (`secrets/secrets.yaml`, decrypted by each node's host key):
+```bash
+openssl genrsa -out sa.key 4096                      # k8s/sa.key
+ssh node1 sudo cat /var/lib/cfssl/apitoken.secret    # k8s/apitoken.secret
+```
+In `shared/kubernetes.nix`:
+```nix
+sops.secrets."k8s/sa.key" = { owner = "kubernetes"; mode = "0400"; };
+sops.secrets."k8s/apitoken.secret" = { owner = "root"; mode = "0400"; };
+```
+
+**2e. Also point at the VIP:** `hosts/local/local.nix:89` (`api.kube`), and the five
+KubeServer manifests that embed `192.168.0.2` (`config/game-servers/{minecraft,valheim}`,
+`config/openvpn`, `config/GOTG/{api,importer}`).
 
 ### Phase 3: Rewrite kubernetes.nix for multi-master
 
 Replace `isMaster` conditional with all-nodes-are-master design:
 
 ```nix
-{ config, pkgs, lib, hostname, ip, kubeMasterIP, kubeMasterHostname, kubeMasterAPIServerPort, ... }:
+{ config, pkgs, lib, hostname, ip, kubeMasterIP, kubeMasterHostname, kubeMasterAPIServerPort,
+  kubeApiVIP, kubeNodeIPs, ... }:
 let
-  allNodes = {
-    node1 = "192.168.0.2";
-    node2 = "192.168.0.4";
-    node3 = "192.168.0.6";
-  };
-  allNodeIPs = lib.attrValues allNodes;
-  kubeApiVIP = "192.168.0.10";
-  isCfsslHost = ip == "192.168.0.2";
+  isCfsslHost = ip == kubeMasterIP;
+  saKey = config.sops.secrets."k8s/sa.key".path;
 in {
   environment.systemPackages = with pkgs; [ kompose kubectl kubernetes ];
 
+  sops.secrets."k8s/sa.key" = { owner = "kubernetes"; mode = "0400"; };
+  sops.secrets."k8s/apitoken.secret" = { mode = "0400"; };
+
   services.kubernetes = {
     roles = [ "master" "node" ];
-    masterAddress = kubeMasterHostname;
-    apiserverAddress = "https://${kubeMasterHostname}:${toString kubeMasterAPIServerPort}";
+    masterAddress = "node1";              # certmgr remote (cfssl) and etcd cert CN; NOT the VIP
+    apiserverAddress = "https://${kubeMasterHostname}:${toString kubeMasterAPIServerPort}";  # VIP
     easyCerts = true;
-    pki.cfsslAPIExtraSANs = lib.mkIf isCfsslHost (allNodeIPs ++ [ kubeApiVIP ]);
+    pki.cfsslAPIExtraSANs = lib.mkIf isCfsslHost ([ kubeMasterIP ] ++ kubeNodeIPs);
 
     apiserver = {
       securePort = kubeMasterAPIServerPort;
-      advertiseAddress = ip;  # Each API server advertises its own IP
+      advertiseAddress = ip;              # adds this node's IP to the apiserver AND etcd cert SANs
       bindAddress = "0.0.0.0";
-      etcd.servers = lib.mkForce (map (nodeIP: "https://${nodeIP}:2379") allNodeIPs);
-      extraSANs = [ kubeMasterHostname kubeApiVIP ] ++ allNodeIPs;
+      etcd.servers = lib.mkForce (map (n: "https://${n}:2379") kubeNodeIPs);
+      extraSANs = [ kubeMasterHostname kubeApiVIP ] ++ kubeNodeIPs;
       extraOpts = "--allow-privileged=true";
+      serviceAccountKeyFile = saKey;        # identical on every master, or tokens fail 2/3 of the time
+      serviceAccountSigningKeyFile = saKey;
     };
+    controllerManager.serviceAccountKeyFile = saKey;
 
     proxy.enable = true;
     addons.dns.enable = true;
@@ -172,25 +221,25 @@ in {
     };
   };
 
-  # Override etcd cert SANs to include all node IPs
-  services.kubernetes.pki.certs.etcd.hosts = lib.mkForce ([
-    "etcd.local" "etcd.cluster.local" kubeMasterHostname kubeApiVIP
-  ] ++ allNodeIPs);
+  # cfssl only on node1; the others get the token from sops and the CA from
+  # certmgr's trust-on-bootstrap against node1.
+  services.cfssl.enable = lib.mkForce isCfsslHost;
+  systemd.services.cfssl.preStart = lib.mkIf (!isCfsslHost) (lib.mkForce "");
+  systemd.services.kube-certmgr-bootstrap.preStart = lib.mkIf (!isCfsslHost) (lib.mkBefore ''
+    install -m 600 ${config.sops.secrets."k8s/apitoken.secret".path} \
+      ${config.services.kubernetes.secretsPath}/apitoken.secret
+  '');
 
-  # etcd clustering — override easyCerts loopback defaults
+  # pki.nix pins etcd to loopback at normal priority: mkForce is required for the
+  # five URL lists. Never also set systemd.services.etcd.environment.
   services.etcd = {
-    name = lib.mkForce hostname;
+    name = hostname;                      # default is masterAddress on every node
     listenClientUrls = lib.mkForce [ "https://127.0.0.1:2379" "https://${ip}:2379" ];
     listenPeerUrls = lib.mkForce [ "https://${ip}:2380" ];
     advertiseClientUrls = lib.mkForce [ "https://${ip}:2379" ];
     initialAdvertisePeerUrls = lib.mkForce [ "https://${ip}:2380" ];
-    initialCluster = lib.mkForce [
-      "node1=https://192.168.0.2:2380"
-      "node2=https://192.168.0.4:2380"
-      "node3=https://192.168.0.6:2380"
-    ];
-    initialClusterToken = lib.mkForce "kube-etcd-cluster";
-    initialClusterState = lib.mkForce "existing";  # Toggle during migration
+    initialCluster = lib.mkForce (map (n: "node${n}=https://${n}:2380") [ ... ]);  # see Phase 4
+    initialClusterState = "existing";     # "new" only for node1's first start
     openFirewall = true;
   };
 
@@ -201,6 +250,11 @@ in {
   };
 }
 ```
+
+Removed from the first draft: `pki.certs.etcd.hosts = mkForce …` (`pki.certs` is
+`types.attrs`, the override would discard the cert's `name`/`cert`/`key`), and the
+`systemd.services.etcd.environment` `mkForce` (conflicts with `services.etcd.*`).
+`shared/kube-cert-renew.nix` loses its ssh token sync; the sops copy replaces it.
 
 ### Phase 4: Rolling deployment — etcd migration (CRITICAL)
 
@@ -218,25 +272,28 @@ This is imperative and cannot be purely declarative. **Do not skip steps.**
     --key=/var/lib/kubernetes/secrets/etcd-key.pem
   ```
 
-**4.2. Add node2 to etcd (imperative on node1):**
+**4.2. Add node2 as a learner (imperative on node1):**
 ```bash
-sudo ETCDCTL_API=3 etcdctl member add node2 \
+sudo ETCDCTL_API=3 etcdctl member add node2 --learner \
   --peer-urls=https://192.168.0.4:2380 \
   --endpoints=https://192.168.0.2:2379 \
   --cacert=/var/lib/kubernetes/secrets/ca.pem \
   --cert=/var/lib/kubernetes/secrets/etcd.pem \
   --key=/var/lib/kubernetes/secrets/etcd-key.pem
 ```
-Then deploy node2 with `initialClusterState = "existing"` and 2-node `initialCluster`.
-
-> **WARNING:** 2-node etcd has NO fault tolerance (quorum=2). Proceed immediately to step 4.3.
-
-**4.3. Add node3 to etcd (same procedure):**
+A learner does not vote, so the 1-member cluster keeps serving while node2 syncs
+(a voter added to a 1-member cluster stalls it until the new member starts). Deploy
+node2 with `initialClusterState = "existing"` and the 2-entry `initialCluster`;
+node2's `/var/lib/etcd` must be empty. Then promote once it has caught up:
 ```bash
-sudo ETCDCTL_API=3 etcdctl member add node3 \
-  --peer-urls=https://192.168.0.6:2380 ...
+sudo ETCDCTL_API=3 etcdctl member promote <node2-id> ...
 ```
-Deploy node3. Now 3-node cluster with quorum=2. Verify:
+
+> **WARNING:** between this promote and node3's, quorum is 2 of 2 — no fault
+> tolerance. Do 4.3 in the same sitting.
+
+**4.3. Add node3 the same way** (`member add node3 --learner`, deploy with the
+3-entry `initialCluster`, `member promote`). Now 3 voters, quorum 2. Verify:
 ```bash
 sudo ETCDCTL_API=3 etcdctl endpoint health --cluster ...
 ```
@@ -309,10 +366,28 @@ For each node (one at a time):
 | CFSSL single point of failure | Medium | Low | Certs valid 30 days; CA key backed up; can restore on any node |
 | keepalived split-brain | Low | Medium | VRRP proven on single-subnet L2 networks |
 | Longhorn volumes during API downtime | Low | Medium | Existing mounts continue working; only new attach/detach blocked |
+| SA key rotation (sops `k8s/sa.key` replaced) | Low | High | Every SA token is invalidated; see docs/reboot-resilience-research.md §2. Never rotate casually; add the old key as a second `--service-account-key-file` via `extraOpts` for 24h |
+| certmgr colon-SAN restart loop on 3 masters (#434442) | Medium | Low | kube-apiserver restarts every 30 min; patch `request.hosts` if it appears |
 
 ## Future Improvements
 
-- **Distribute CFSSL CA key** to all nodes so any node can run the CA server
-- **Move to kubeadm or k3s** for proper multi-master support without easyCerts workarounds
-- **Add external etcd backup cronjob** for automated disaster recovery
-- **Consider kube-vip** once the cluster is stable (replaces keepalived, runs as static pod)
+- **Hand-rolled PKI in `secrets/`, `easyCerts = false`** — what justinas/nixos-ha-kubernetes,
+  misumisumi and starcraft66 all do. Removes cfssl, certmgr, `kube-cert-renew.nix`, the
+  node1 renewal SPOF, the certmgr colon-SAN restart loop (nixpkgs #434442) and the
+  etcd-before-cert race (#124037). Cost: generate CA, per-node apiserver/etcd server+peer
+  certs, client certs once; renew by re-encrypting and `deploy-nodes`.
+- **Longhorn `longhorn-default`/`longhorn-retain` to 3 replicas** (`default-replica-count`
+  and the `longhorn` class are already 3). `longhorn-single` volumes (jellyfin-data,
+  windrose, nitrox, scooter) stay pinned to node3 regardless.
+- **External etcd snapshot timer** to the NAS.
+- **kube-vip** only if the VIP no longer has to cover cfssl:8888; it elects through the
+  API it fronts (Talos documents the same chicken-and-egg).
+
+## Sources
+
+nixpkgs `31ecbac` `pki.nix:48,146,180-198,356-367,386,394,404`, `default.nix:255,298-308,345-350`,
+`apiserver.nix:465-474,500-548`; NixOS manual "Kubernetes" chapter; nixpkgs #59364, #124037,
+#434442, PR #45670, PR #457523; justinas/nixos-ha-kubernetes; misumisumi/nixos-k8s-config;
+Luukvdm/nixos-config (sops-delivered CA/token with easyCerts); kubernetes #22351 and
+Wikimedia T329826 (per-master SA keys); kubeadm HA guide and ha-considerations.md
+(keepalived `check_apiserver`); etcd v3.6 runtime-reconfiguration and learner docs.
