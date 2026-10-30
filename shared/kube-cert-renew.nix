@@ -4,13 +4,11 @@
 
 let
   secretsPath = config.services.kubernetes.secretsPath;
-  isMaster = config.services.kubernetes.apiserver.enable;
-
-  kubeMasterIP = "192.168.0.2";
+  isCfsslHost = config.services.cfssl.enable;
 
   renewScript = pkgs.writeShellApplication {
     name = "kube-cert-renew";
-    runtimeInputs = [ pkgs.openssl pkgs.coreutils pkgs.systemd pkgs.openssh ];
+    runtimeInputs = [ pkgs.openssl pkgs.coreutils pkgs.systemd ];
     text = ''
       SECRETS="${secretsPath}"
       RENEW_THRESHOLD=$((7 * 24 * 3600))
@@ -20,21 +18,6 @@ let
         echo "kube-cert-renew: secrets dir $SECRETS not found, skipping"
         exit 0
       fi
-
-    '' + lib.optionalString (!isMaster) ''
-      echo "kube-cert-renew: syncing API token from master"
-      TOKEN_FILE="$SECRETS/apitoken.secret"
-      if ssh -i /home/host/.ssh/id_ed25519 -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new \
-           "host@${kubeMasterIP}" "sudo cat /var/lib/cfssl/apitoken.secret" > "$TOKEN_FILE.tmp" 2>/dev/null; then
-        mv "$TOKEN_FILE.tmp" "$TOKEN_FILE"
-        chmod 600 "$TOKEN_FILE"
-        echo "kube-cert-renew: API token synced"
-      else
-        rm -f "$TOKEN_FILE.tmp"
-        echo "kube-cert-renew: WARNING: could not sync API token from master"
-      fi
-
-    '' + ''
       NOW=$(date +%s)
 
       for cert in "$SECRETS"/*.pem; do
@@ -107,7 +90,7 @@ in
       Type = "oneshot";
       ExecStart = "${renewScript}/bin/kube-cert-renew";
     };
-    after = [ "network-online.target" ] ++ lib.optionals isMaster [ "cfssl.target" ];
+    after = [ "network-online.target" ] ++ lib.optionals isCfsslHost [ "cfssl.target" ];
     wants = [ "network-online.target" ];
   };
 
