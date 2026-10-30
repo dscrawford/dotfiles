@@ -94,267 +94,77 @@ Upstream `pki.nix` does not support multi-master ("easyCerts doesn't support mul
 | `hosts/local/local.nix` | `api.kube` → VIP |
 | `~/Documents/Kubernetes` | `longhorn-default`/`longhorn-retain` → 3 replicas; five manifests pinning `192.168.0.2` |
 
-## Implementation Phases
+## Implementation (done 2026-10-30, not yet deployed)
 
-### Phase 1: Preparation (no changes applied)
+Everything below is in the repo; nothing has touched a node. The imperative
+etcd steps of the first draft are gone: a node joins the cluster from its own
+systemd unit.
 
-1. **Backup etcd** on node1:
-   ```bash
-   sudo ETCDCTL_API=3 etcdctl snapshot save /tmp/etcd-backup-$(date +%Y%m%d).db \
-     --endpoints=https://127.0.0.1:2379 \
-     --cacert=/var/lib/kubernetes/secrets/ca.pem \
-     --cert=/var/lib/kubernetes/secrets/etcd.pem \
-     --key=/var/lib/kubernetes/secrets/etcd-key.pem
-   ```
-2. **Backup Longhorn volumes** via Longhorn UI at NodePort 30506
-3. **Record cluster state**:
-   ```bash
-   kubectl get nodes -o wide
-   kubectl get pods -A
-   kubectl get pv,pvc -A
-   ```
-4. **Back up CFSSL CA key**: copy `/var/lib/cfssl/ca-key.pem` from node1 to safe location
+| Piece | Where |
+|-------|-------|
+| VIP | `shared/keepalived.nix` — VRRP 51, unicast with `check_unicast_src`, `nopreempt`, priority node1 > node2 > node3, `/healthz` track script as `keepalived_script`; VRRP accepted from the two peers only and dropped from the pod CIDR |
+| etcd growth | `shared/kube-etcd-cluster.nix` — `ExecStartPre`: waits for certmgr's `etcd.pem`; empty data dir → removes a stale registration of this node, `member add --learner` against a reachable peer, writes `ETCD_INITIAL_CLUSTER` from the live member list to `/run/etcd/join.env`; `ExecStartPost`: repairs a legacy `etcd.local` peer URL, `member promote` once in sync (`TimeoutStartSec=20min`, the switch waits). 2379/2380 reachable from the two peers only, never from pods: any cert the cluster CA signed is etcd root |
+| control plane | `shared/kubernetes.nix` — `roles = [master node]` everywhere, `masterAddress = 192.168.0.2` (cfssl), `apiserverAddress = https://api.kube:6443` (VIP), `advertiseAddress = ip`, SANs for VIP + all node IPs, `--etcd-servers` all three, cfssl `mkForce` off on node2/3 |
+| shared secrets | `secrets/kube.yaml` (sops, recipients admin + node1-3): `sa_key` → `/run/secrets/kube_sa_key` for apiserver + controller-manager; `apitoken` → copied into node1's cfssl state at each cfssl start, symlinked as node2/3's certmgr token. node1 also keeps `--service-account-key-file=…/service-account.pem` so tokens from the old key stay valid |
+| DNS | `api.kube → 192.168.0.10` in `shared/server-common.nix` and `hosts/local/local.nix` |
+| tests | `tests/nix/kube-ha.bats` (config pins, one flake eval), `tests/nix/kube-etcd-join.bats` (join/promote scripts against a stub etcdctl) |
+| reboot-nodes | waits for `etcd` active on the rebooted node (its post-start has promoted/updated it) before uncordon |
 
-### Phase 2: Create keepalived module + update specialArgs
+### Rollout — the manual steps
 
-**2a. Create `shared/keepalived.nix`:**
-```nix
-{ config, pkgs, lib, ip, netInterface ? "eno1", kubeApiVIP, kubeNodeIPs, ... }:
-let
-  priority = { "192.168.0.2" = 101; "192.168.0.4" = 100; "192.168.0.6" = 99; }.${ip};
-in {
-  services.keepalived = {
-    enable = true;
-    openFirewall = true;                       # VRRP is IP proto 112, not a port
-    enableScriptSecurity = true;
-    vrrpInstances.kube-api = {
-      interface = netInterface;
-      state = "BACKUP";                        # nopreempt needs every node BACKUP
-      virtualRouterId = 51;
-      inherit priority;
-      noPreempt = true;                        # a rebuild restart must not bounce the VIP
-      unicastSrcIp = ip;
-      unicastPeers = lib.filter (p: p != ip) kubeNodeIPs;
-      virtualIps = [ { addr = "${kubeApiVIP}/24"; } ];
-      trackScripts = [ "chk_apiserver" ];
-    };
-    vrrpScripts.chk_apiserver = {
-      script = "${pkgs.curl}/bin/curl -sfk --max-time 2 https://127.0.0.1:6443/healthz";
-      user = "root";                           # the module creates no keepalived_script user
-      interval = 2; fall = 3; rise = 2; weight = -50;
-    };
-  };
-}
-```
-
-**2b. Update `lib/mkServer.nix` specialArgs** (that is where `kubeMasterIP` lives today):
-```nix
-kubeMasterIP = "192.168.0.2";         # cfssl host, etcd cert CN — unchanged
-kubeMasterHostname = "api.kube";      # now the VIP's name
-kubeMasterAPIServerPort = 6443;
-kubeApiVIP = "192.168.0.10";
-kubeNodeIPs = [ "192.168.0.2" "192.168.0.4" "192.168.0.6" ];
-```
-
-Add `./shared/keepalived.nix` to `kubeNode` in `flake.nix`.
-
-**2c. Update `shared/server-common.nix`:**
-- extraHosts: `api.kube` → VIP; add `node1` → `192.168.0.2` (it becomes `masterAddress`)
-- Firewall: 6443 on every node, 8888 (cfssl) on node1 only; etcd 2379/2380 via `services.etcd.openFirewall`
-
-**2d. Secrets** (`secrets/secrets.yaml`, decrypted by each node's host key):
 ```bash
-openssl genrsa -out sa.key 4096                      # k8s/sa.key
-ssh node1 sudo cat /var/lib/cfssl/apitoken.secret    # k8s/apitoken.secret
-```
-In `shared/kubernetes.nix`:
-```nix
-sops.secrets."k8s/sa.key" = { owner = "kubernetes"; mode = "0400"; };
-sops.secrets."k8s/apitoken.secret" = { owner = "root"; mode = "0400"; };
-```
+# 0. desktop still resolves api.kube to node1; keep it that way until node1 holds the VIP
+cd ~/.local/dotfiles
 
-**2e. Also point at the VIP:** `hosts/local/local.nix:89` (`api.kube`), and the five
-KubeServer manifests that embed `192.168.0.2` (`config/game-servers/{minecraft,valheim}`,
-`config/openvpn`, `config/GOTG/{api,importer}`).
+# 1. snapshot etcd (node1; sudo password)
+ssh -t node1 'sudo ETCDCTL_API=3 etcdctl snapshot save /var/lib/etcd-pre-ha.db \
+  --endpoints=https://127.0.0.1:2379 --cacert=/var/lib/kubernetes/secrets/ca.pem \
+  --cert=/var/lib/kubernetes/secrets/etcd.pem --key=/var/lib/kubernetes/secrets/etcd-key.pem'
 
-### Phase 3: Rewrite kubernetes.nix for multi-master
+# 2. node1 first (deploy-nodes already orders master first), then node2, node3.
+#    Each switch: node1 — etcd renamed, listens on its IP, peer URL repaired, VIP up,
+#    SA key swapped, apiserver cert re-issued with the new SANs;
+#    node2/3 — certmgr issues the control-plane certs, etcd joins as a learner and
+#    is promoted before the switch returns, apiserver/scheduler/controller-manager start.
+deploy-nodes
 
-Replace `isMaster` conditional with all-nodes-are-master design:
-
-```nix
-{ config, pkgs, lib, hostname, ip, kubeMasterIP, kubeMasterHostname, kubeMasterAPIServerPort,
-  kubeApiVIP, kubeNodeIPs, ... }:
-let
-  isCfsslHost = ip == kubeMasterIP;
-  saKey = config.sops.secrets."k8s/sa.key".path;
-in {
-  environment.systemPackages = with pkgs; [ kompose kubectl kubernetes ];
-
-  sops.secrets."k8s/sa.key" = { owner = "kubernetes"; mode = "0400"; };
-  sops.secrets."k8s/apitoken.secret" = { mode = "0400"; };
-
-  services.kubernetes = {
-    roles = [ "master" "node" ];
-    masterAddress = "node1";              # certmgr remote (cfssl) and etcd cert CN; NOT the VIP
-    apiserverAddress = "https://${kubeMasterHostname}:${toString kubeMasterAPIServerPort}";  # VIP
-    easyCerts = true;
-    pki.cfsslAPIExtraSANs = lib.mkIf isCfsslHost ([ kubeMasterIP ] ++ kubeNodeIPs);
-
-    apiserver = {
-      securePort = kubeMasterAPIServerPort;
-      advertiseAddress = ip;              # adds this node's IP to the apiserver AND etcd cert SANs
-      bindAddress = "0.0.0.0";
-      etcd.servers = lib.mkForce (map (n: "https://${n}:2379") kubeNodeIPs);
-      extraSANs = [ kubeMasterHostname kubeApiVIP ] ++ kubeNodeIPs;
-      extraOpts = "--allow-privileged=true";
-      serviceAccountKeyFile = saKey;        # identical on every master, or tokens fail 2/3 of the time
-      serviceAccountSigningKeyFile = saKey;
-    };
-    controllerManager.serviceAccountKeyFile = saKey;
-
-    proxy.enable = true;
-    addons.dns.enable = true;
-    kubelet = {
-      enable = true;
-      nodeIp = ip;
-      extraOpts = "--anonymous-auth=true";
-    };
-  };
-
-  # cfssl only on node1; the others get the token from sops and the CA from
-  # certmgr's trust-on-bootstrap against node1.
-  services.cfssl.enable = lib.mkForce isCfsslHost;
-  systemd.services.cfssl.preStart = lib.mkIf (!isCfsslHost) (lib.mkForce "");
-  systemd.services.kube-certmgr-bootstrap.preStart = lib.mkIf (!isCfsslHost) (lib.mkBefore ''
-    install -m 600 ${config.sops.secrets."k8s/apitoken.secret".path} \
-      ${config.services.kubernetes.secretsPath}/apitoken.secret
-  '');
-
-  # pki.nix pins etcd to loopback at normal priority: mkForce is required for the
-  # five URL lists. Never also set systemd.services.etcd.environment.
-  services.etcd = {
-    name = hostname;                      # default is masterAddress on every node
-    listenClientUrls = lib.mkForce [ "https://127.0.0.1:2379" "https://${ip}:2379" ];
-    listenPeerUrls = lib.mkForce [ "https://${ip}:2380" ];
-    advertiseClientUrls = lib.mkForce [ "https://${ip}:2379" ];
-    initialAdvertisePeerUrls = lib.mkForce [ "https://${ip}:2380" ];
-    initialCluster = lib.mkForce (map (n: "node${n}=https://${n}:2380") [ ... ]);  # see Phase 4
-    initialClusterState = "existing";     # "new" only for node1's first start
-    openFirewall = true;
-  };
-
-  systemd.services.kube-controller-manager.serviceConfig = {
-    Restart = "on-failure";
-    StartLimitBurst = 5;
-    StartLimitIntervalSec = 10;
-  };
-}
+# 3. point the desktop at the VIP
+sudo nixos-rebuild switch --flake '.?submodules=1#local'
 ```
 
-Removed from the first draft: `pki.certs.etcd.hosts = mkForce …` (`pki.certs` is
-`types.attrs`, the override would discard the cert's `name`/`cert`/`key`), and the
-`systemd.services.etcd.environment` `mkForce` (conflicts with `services.etcd.*`).
-`shared/kube-cert-renew.nix` loses its ssh token sync; the sops copy replaces it.
+Verify:
 
-### Phase 4: Rolling deployment — etcd migration (CRITICAL)
-
-This is imperative and cannot be purely declarative. **Do not skip steps.**
-
-**4.1. Deploy node1 first:**
-- Set `initialClusterState = "new"` and `initialCluster` containing only node1
-- `sudo nixos-rebuild switch --flake .#node1`
-- Verify etcd:
-  ```bash
-  sudo ETCDCTL_API=3 etcdctl member list \
-    --endpoints=https://192.168.0.2:2379 \
-    --cacert=/var/lib/kubernetes/secrets/ca.pem \
-    --cert=/var/lib/kubernetes/secrets/etcd.pem \
-    --key=/var/lib/kubernetes/secrets/etcd-key.pem
-  ```
-
-**4.2. Add node2 as a learner (imperative on node1):**
 ```bash
-sudo ETCDCTL_API=3 etcdctl member add node2 --learner \
-  --peer-urls=https://192.168.0.4:2380 \
-  --endpoints=https://192.168.0.2:2379 \
-  --cacert=/var/lib/kubernetes/secrets/ca.pem \
-  --cert=/var/lib/kubernetes/secrets/etcd.pem \
-  --key=/var/lib/kubernetes/secrets/etcd-key.pem
-```
-A learner does not vote, so the 1-member cluster keeps serving while node2 syncs
-(a voter added to a 1-member cluster stalls it until the new member starts). Deploy
-node2 with `initialClusterState = "existing"` and the 2-entry `initialCluster`;
-node2's `/var/lib/etcd` must be empty. Then promote once it has caught up:
-```bash
-sudo ETCDCTL_API=3 etcdctl member promote <node2-id> ...
+ssh node1 'sudo etcdctl member list -w table --endpoints=https://127.0.0.1:2379 \
+  --cacert=/var/lib/kubernetes/secrets/ca.pem --cert=/var/lib/kubernetes/secrets/etcd.pem --key=/var/lib/kubernetes/secrets/etcd-key.pem'
+# three members, IS LEARNER false
+ip -4 addr show to 192.168.0.10            # on the node holding the VIP
+kubectl get --raw /healthz                 # via api.kube = VIP
+kubectl -n kube-system get lease kube-controller-manager kube-scheduler -o wide
 ```
 
-> **WARNING:** between this promote and node3's, quorum is 2 of 2 — no fault
-> tolerance. Do 4.3 in the same sitting.
+Failover test (one node at a time, node1 included): `reboot-nodes --force <node>`;
+`kubectl get nodes` keeps working, the lease holder moves, VIP moves within ~6 s.
 
-**4.3. Add node3 the same way** (`member add node3 --learner`, deploy with the
-3-entry `initialCluster`, `member promote`). Now 3 voters, quorum 2. Verify:
-```bash
-sudo ETCDCTL_API=3 etcdctl endpoint health --cluster ...
-```
+### Recovery notes
 
-**4.4. Final deploy:**
-Set all nodes to 3-node `initialCluster` with `initialClusterState = "existing"`. Rebuild all:
-```bash
-sudo nixos-rebuild switch --flake .#node1
-sudo nixos-rebuild switch --flake .#node2
-sudo nixos-rebuild switch --flake .#node3
-```
+- A node whose `/var/lib/etcd` is lost re-joins on its own at boot (pre-start sees
+  no `member` dir). Remove the stale member first: `etcdctl member remove <id>`.
+- All three data dirs lost: write `/run/etcd/join.env` by hand on one node with
+  `ETCD_INITIAL_CLUSTER=<that node only>` and `ETCD_INITIAL_CLUSTER_STATE=new`,
+  restore the snapshot, then let the other two join.
+- The sops `apitoken` is now the source of truth; re-encrypting a new one rotates
+  it on all nodes at the next switch. Do **not** rotate `sa_key` casually
+  (invalidates every token not also signed by node1's legacy key).
 
-**Rollback:** If etcd clustering fails at any step:
-1. Stop etcd on new nodes: `sudo systemctl stop etcd`
-2. Remove failed members on node1: `etcdctl member remove <ID>`
-3. Revert kubernetes.nix to single-master config
-4. Rebuild node1
+### Still to do
 
-### Phase 5: Certificate regeneration
-
-1. Delete old CFSSL cert on node1 and restart:
-   ```bash
-   sudo rm /var/lib/cfssl/cfssl.pem /var/lib/cfssl/cfssl-key.pem /var/lib/cfssl/cfssl.csr
-   sudo systemctl restart cfssl
-   ```
-2. Delete kubernetes certs on all nodes and restart certmgr:
-   ```bash
-   # On each node:
-   sudo rm /var/lib/kubernetes/secrets/*.pem
-   sudo systemctl restart certmgr
-   ```
-3. Verify etcd peer communication: `etcdctl endpoint health --cluster`
-4. Verify API server via VIP: `curl -sk https://192.168.0.10:6443/healthz`
-
-### Phase 6: Longhorn replica count upgrade
-
-In `~/Documents/Kubernetes/`:
-
-**longhorn/settings.yaml:**
-```yaml
-default-replica-count: "3"
-```
-
-**longhorn/storage-class.yaml:**
-- `longhorn-default`: `numberOfReplicas: "3"`
-- `longhorn-retain`: `numberOfReplicas: "3"`
-- `longhorn-single`: stays at `"1"` (media/cost optimization)
-
-Apply via Argo CD sync or `kubectl apply`.
-
-### Phase 7: Failover verification
-
-For each node (one at a time):
-1. Shut down the node
-2. Verify VIP migrates: `ping 192.168.0.10`
-3. Verify `kubectl get nodes` works from remaining nodes
-4. Verify pods reschedule to healthy nodes
-5. Verify Longhorn volumes remain accessible
-6. Bring node back up
-7. Verify etcd member rejoins: `etcdctl member list`
-8. Verify node becomes `Ready`: `kubectl get nodes`
+- Drop node1's extra `--service-account-key-file=…/service-account.pem` once every
+  token minted under the old key is gone (projected tokens: ≤1 h; legacy Secret
+  tokens: regenerate), so a leaked old key no longer verifies on node1.
+- Longhorn `longhorn-default`/`longhorn-retain` classes to 3 replicas (KubeServer repo).
+- Five KubeServer manifests pin `192.168.0.2`: `config/game-servers/{minecraft,valheim}`,
+  `config/openvpn`, `config/GOTG/{api,importer}`.
 
 ## Risks
 
