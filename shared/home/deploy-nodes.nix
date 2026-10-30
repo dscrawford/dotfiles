@@ -65,9 +65,10 @@ let
         # and `host` is not a nix trusted-user, so pushing them is refused.
         # Only content-addressed paths (derivations, fetched sources) cross
         # the wire, and the node substitutes the rest from cache.nixos.org.
-        if ! nixos-rebuild switch --flake "$FLAKE?submodules=1#$n" --target-host "$n" --build-host "$n" \
-          --ask-elevate-password --no-reexec; then
-          rc=$?
+        rc=0
+        nixos-rebuild switch --flake "$FLAKE?submodules=1#$n" --target-host "$n" --build-host "$n" \
+          --ask-elevate-password --no-reexec || rc=$?
+        if [ "$rc" -ne 0 ]; then
           echo "deploy-nodes: switch on $n failed (exit $rc)" >&2
           if [ "$rc" -eq 4 ]; then
             echo "  activation completed but some units failed; inspect with: ssh $n systemctl --failed" >&2
