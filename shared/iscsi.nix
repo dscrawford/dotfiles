@@ -2,25 +2,6 @@
 { config, pkgs, ... }:
 
 {
-  # open-iscsi 2.1.12 dropped node.session.conn_reopen_log_freq from its idbm
-  # tables, so iscsiadm refuses to parse node records that 2.1.11 wrote
-  # ("Unknown parameter name"), and every Longhorn engine login fails after
-  # the upgrade (2026-09-02). Upstream restored it a month after the release
-  # (open-iscsi#542); carry that until nixpkgs ships a tag containing it.
-  nixpkgs.overlays = [
-    (final: prev: {
-      openiscsi = prev.openiscsi.overrideAttrs (old: {
-        patches = (old.patches or [ ]) ++ [
-          (prev.fetchpatch {
-            name = "open-iscsi-542-reopen-log-freq.patch";
-            url = "https://github.com/open-iscsi/open-iscsi/commit/8112cdd9514df076dc64ca3d4e85283aa701ce7e.patch";
-            hash = "sha256-aC22Efw30iLvyYHtA9uWiGjFDRWSvvjM2AaE0kASJR8=";
-          })
-        ];
-      });
-    })
-  ];
-
   boot = {
     kernelModules = [ "iscsi_tcp" ];
     supportedFilesystems = [ "nfs" "nfs4" ];
