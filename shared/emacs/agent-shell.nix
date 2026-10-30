@@ -160,6 +160,60 @@ in
          :event 'tool-call-update
          :on-event #'my/agent-shell--surface-task-complete))
       (add-hook 'agent-shell-mode-hook #'my/agent-shell-subscribe-task-complete)
+      ;; Upstream renders every GIF frame but never starts the animation timer.
+      ;; Animate only while the image is on screen in a focused frame, so
+      ;; background sessions cost nothing.
+      (defvar-local my/agent-shell--gif-markers nil)
+      (defvar my/agent-shell--gif-sync-timer nil)
+      (defun my/agent-shell--gif-visible-p (pos)
+        (seq-some (lambda (win)
+                    (and (frame-focus-state (window-frame win))
+                         (pos-visible-in-window-p pos win)))
+                  (get-buffer-window-list (current-buffer) nil 'visible)))
+      (defun my/agent-shell--gif-at (pos)
+        (let ((img (get-text-property pos 'display)))
+          (and (consp img) (eq (car img) 'image)
+               (ignore-errors (image-multi-frame-p img))
+               img)))
+      (defun my/agent-shell--sync-gifs ()
+        (setq my/agent-shell--gif-markers
+              (seq-filter
+               (lambda (m)
+                 (when-let* ((img (my/agent-shell--gif-at m)))
+                   (let ((timer (image-animate-timer img))
+                         (visible (my/agent-shell--gif-visible-p m)))
+                     (cond ((and visible (not timer))
+                            (image-animate img 0 t (marker-position m)))
+                           ((and timer (not visible))
+                            (cancel-timer timer))))
+                   t))
+               my/agent-shell--gif-markers)))
+      (defun my/agent-shell--sync-all-gifs ()
+        (setq my/agent-shell--gif-sync-timer nil)
+        (dolist (buf (buffer-list))
+          (with-current-buffer buf
+            (when my/agent-shell--gif-markers
+              (my/agent-shell--sync-gifs)))))
+      (defun my/agent-shell--schedule-gif-sync (&rest _)
+        (unless my/agent-shell--gif-sync-timer
+          (setq my/agent-shell--gif-sync-timer
+                (run-at-time 0 nil #'my/agent-shell--sync-all-gifs))))
+      (defun my/agent-shell--collect-gifs (&rest _)
+        (let ((pos (point-min)))
+          (while (< pos (point-max))
+            (when (and (my/agent-shell--gif-at pos)
+                       (not (seq-some (lambda (m) (= m pos)) my/agent-shell--gif-markers)))
+              (push (copy-marker pos) my/agent-shell--gif-markers))
+            (setq pos (next-single-property-change pos 'display nil (point-max)))))
+        (when my/agent-shell--gif-markers
+          (my/agent-shell--schedule-gif-sync)))
+      (defun my/agent-shell--gif-hooks ()
+        (add-hook 'window-scroll-functions #'my/agent-shell--schedule-gif-sync nil t))
+      (add-hook 'agent-shell-mode-hook #'my/agent-shell--gif-hooks)
+      (add-hook 'window-configuration-change-hook #'my/agent-shell--schedule-gif-sync)
+      (add-function :after after-focus-change-function #'my/agent-shell--schedule-gif-sync)
+      (with-eval-after-load 'agent-shell
+        (advice-add 'agent-shell--render-markdown :after #'my/agent-shell--collect-gifs))
       ;; Clipboard image support (not upstream). MIME types are checked first so
       ;; text clipboard falls through to yank. The guard sits INSIDE
       ;; with-eval-after-load so it covers the deferred load too: this body pokes
