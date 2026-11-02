@@ -15,9 +15,8 @@
       powerManagement.enable = false;
       open = false;
       nvidiaSettings = true;
-      # Tracks the new-feature branch (610.43.03), not a frozen version — a
-      # flake update can move it. Drop to .production if 610.x misbehaves.
-      package = config.boot.kernelPackages.nvidiaPackages.latest;
+      # Production branch (595.x): the 615 new-feature branch was unstable here.
+      package = config.boot.kernelPackages.nvidiaPackages.production;
     };
   };
 

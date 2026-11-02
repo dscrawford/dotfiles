@@ -35,6 +35,9 @@
           "default.clock.quantum" = 1024;
           "default.clock.min-quantum" = 1024;
           "default.clock.max-quantum" = 2048;
+          # x11-bell segfaults PipeWire when Xwayland :0 exits after login,
+          # and EasyEffects aborts on the resulting core error.
+          "module.x11.bell" = false;
         };
         "context.data-loops" = [
           {
