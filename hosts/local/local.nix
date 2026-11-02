@@ -86,8 +86,8 @@
   };
 
   networking.hosts = {
-    "192.168.0.10" = [ "api.kube" ];
-    "192.168.0.2" = [ "node1" ];
+    # Back to "192.168.0.10" = [ "api.kube" ]; once deploy-nodes has brought the VIP up.
+    "192.168.0.2" = [ "api.kube" "node1" ];
     "192.168.0.4" = [ "node2" ];
     "192.168.0.6" = [ "node3" ];
   };
