@@ -121,6 +121,9 @@ export function createScooterClient(config, { fetchImpl = fetch, log = () => {} 
     steer: (id, text) => json("POST", `${conv(id)}/messages`, { body: { text } }),
     cancel: (id) => json("POST", `${conv(id)}/cancel`, { body: {} }),
     openIntegrityStream: (id, signal) => call("GET", `${conv(id)}/events.integrity`, { signal, extraHeaders: { Accept: "text/event-stream" } }),
+    links: async (id) => (await json("GET", `${conv(id)}/links`))?.links ?? [],
+    openListStream: (signal) =>
+      call("GET", `/conversations/events?scope=${encodeURIComponent(config.scope)}`, { signal, extraHeaders: { Accept: "text/event-stream" } }),
   };
 }
 
