@@ -84,11 +84,15 @@ What carries over:
 | typing while a turn runs | steering, posted as an interrupting message |
 | model picker | `C-c C-v` |
 | context usage | the context indicator |
+| images (attached, sent by the agent, in tool results such as `view_image`) | inline images, fetched through the bridge with your cookie |
+| `@image.png` mentions, `yank-media`/clipboard images in the prompt | uploaded the way the web UI attaches them (png, jpeg, gif, webp) |
 
-Not yet carried over: image attachments, web services, links and sandbox controls
+Not yet carried over: web services, links and sandbox controls
 (`M-x my/scooter-open-in-browser` opens the conversation in the web UI). Local MCP
 servers from `agent-shell-mcp-servers` don't apply, since the agent runs remotely.
 Loading a conversation replays its last 30 user turns (`SCOOTER_REPLAY_TURNS`).
+Images over 5 MiB (`SCOOTER_IMAGE_MAX_BYTES`) are refused in prompts and shown as a
+placeholder in output. agent-shell shows a user's own images in replayed turns as `[image]`.
 
 Tests: `tests/scooter-acp/run.sh` (protocol, fake Scooter) and
 `tests/scooter-acp/emacs-e2e.sh` (the pinned agent-shell driving the bridge).

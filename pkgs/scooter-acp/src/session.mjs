@@ -95,7 +95,7 @@ export function createSession({ id, client, peer, config, log, model }) {
       if (!userEcho) {
         for (const u of updates) {
           if (u.sessionUpdate === "user_message_chunk" && !replay && !turn) continue;
-          send(await withImages(await u));
+          send(await (replay ? u : withImages(u)));
         }
       }
       track(e, replay);
