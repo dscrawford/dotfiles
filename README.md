@@ -51,6 +51,48 @@ default model via `LOCAL_LLM_MODEL_OVERRIDES`; opus hints deliberately stay
 remote. See `claude/skills/local-llm-routing/` for the usage pattern and
 `tests/local-llm-mcp/run.sh` for the test suite.
 
+### Scooter in Emacs (`pkgs/scooter-acp`)
+
+`scooter-acp` is an ACP agent that forwards to a [Scooter](https://github.com/chadac-me/scooter)
+server, so agent-shell can open, continue and follow Scooter conversations instead of
+the web UI. It is a client of Scooter's HTTP API: the agent still runs in the cluster,
+in the conversation's sandbox.
+
+```nix
+# any Home Manager module
+{ my.scooter.url = "https://scooter.example.com"; }
+```
+
+Then in Emacs:
+
+1. `M-x my/scooter-set-cookie` and paste the `_oauth2_proxy` cookie value from the
+   browser's devtools (Application → Cookies). It is saved to `~/.config/scooter/cookie`
+   (mode 600). The bridge writes refreshed cookies back to that file; when the
+   session finally expires, requests fail with an error naming the file to update.
+2. `C-c j` (`my/scooter`) opens Scooter, which `C-c s` also lists in the agent picker.
+   On start you pick an existing conversation (newest first) or a new one.
+
+What carries over:
+
+| Scooter | agent-shell |
+|---|---|
+| assistant text, reasoning | message and thought chunks |
+| tool calls and results | tool call blocks |
+| approval interrupts | permission prompt (answer from either Emacs or the web UI) |
+| runs started from the web UI, Slack, webhooks | pushed into the open buffer (`session/push`) |
+| Stop | `C-c C-c` |
+| typing while a turn runs | steering, posted as an interrupting message |
+| model picker | `C-c C-v` |
+| context usage | the context indicator |
+
+Not yet carried over: image attachments, web services, links and sandbox controls
+(`M-x my/scooter-open-in-browser` opens the conversation in the web UI). Local MCP
+servers from `agent-shell-mcp-servers` don't apply, since the agent runs remotely.
+Loading a conversation replays its last 30 user turns (`SCOOTER_REPLAY_TURNS`).
+
+Tests: `tests/scooter-acp/run.sh` (protocol, fake Scooter) and
+`tests/scooter-acp/emacs-e2e.sh` (the pinned agent-shell driving the bridge).
+
 ## Usage
 
 ### NixOS Setup
@@ -167,7 +209,7 @@ nix flake update nixpkgs
 ├── hosts/
 │   ├── local/               # NixOS desktop (NVIDIA, Sway, PipeWire, Steam)
 │   └── node1..3/            # Kubernetes cluster nodes
-├── pkgs/                    # Local packages (claude-code, ruflo, local-llm-mcp, ...)
+├── pkgs/                    # Local packages (claude-code, ruflo, local-llm-mcp, scooter-acp, ...)
 ├── claude/                  # Claude Code settings, hooks, agents, skills
 ├── docs/                    # Runbooks and research notes
 ├── tests/                   # Hook, Emacs, and MCP-server tests

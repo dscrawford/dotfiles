@@ -28,6 +28,7 @@ let
     (chunk (import ./python.nix { }))
     ""
     (chunk agentShell.agentShell)
+    (chunk (import ./scooter.nix { inherit pkgs config; }))
     ""
     (chunk (import ./pair.nix { }))
     ""
