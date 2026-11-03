@@ -1,5 +1,7 @@
+import { createCards } from "./cards.mjs";
 import { createFollower } from "./follower.mjs";
 import { hasPendingImages, resolveImages } from "./images.mjs";
+import { INVALID_PARAMS, RpcError } from "./jsonrpc.mjs";
 import { sseFrames } from "./scooter.mjs";
 import { createTranslator, userTurnStarts } from "./translate.mjs";
 
@@ -11,6 +13,7 @@ export function createSession({ id, client, peer, config, log, model }) {
   const translate = createTranslator();
   const interrupts = new Map();
   const asked = new Map();
+  const cards = createCards();
   let running = false;
   let turn;
   let live = false;
@@ -30,19 +33,15 @@ export function createSession({ id, client, peer, config, log, model }) {
 
   const ask = (intr) => {
     if (asked.has(intr.id)) return;
-    const options = Array.isArray(intr.metadata?.options) ? intr.metadata.options : [];
-    if (!options.length) return;
-    const req = peer.request("session/request_permission", {
-      sessionId: id,
-      toolCall: { toolCallId: intr.toolCallId ?? intr.id, title: intr.message ?? "Scooter needs your choice", status: "pending" },
-      options: options.map((o) => ({ optionId: o.optionId, name: o.name ?? o.optionId, kind: o.kind ?? "allow_once" })),
-    });
+    if (!Array.isArray(intr.metadata?.options) || !intr.metadata.options.length) return;
+    const req = peer.request("session/request_permission", { sessionId: id, ...cards.permission(intr) });
     asked.set(intr.id, req.id);
     req.promise
       .then((res) => {
+        asked.delete(intr.id);
         if (!interrupts.has(intr.id)) return;
-        const optionId = res?.outcome?.outcome === "selected" ? res.outcome.optionId : undefined;
-        return client.resume(id, intr.id, optionId);
+        const entry = cards.resume(intr, res?.outcome?.outcome === "selected" ? res.outcome.optionId : undefined);
+        return entry ? client.resume(id, intr.id, entry) : ask(intr);
       })
       .catch((e) => log("permission answer failed", id, e?.message ?? e));
   };
@@ -69,7 +68,10 @@ export function createSession({ id, client, peer, config, log, model }) {
         interrupts.delete(key);
         const reqId = asked.get(key);
         asked.delete(key);
-        if (reqId !== undefined) peer.notify("$/cancel_request", { requestId: reqId });
+        if (reqId !== undefined) {
+          peer.notify("$/cancel_request", { requestId: reqId });
+          send({ sessionUpdate: "tool_call_update", toolCallId: e.toolCallId, status: "completed" });
+        }
       }
     } else if ((e.type === "RUN_FINISHED" || e.type === "RUN_ERROR") && !isExt(e)) {
       running = false;
@@ -161,6 +163,12 @@ export function createSession({ id, client, peer, config, log, model }) {
       if (images.length) await (await client.sendPrompt(id, text, this.model, { images, priority: PRIORITY_INTERRUPT })).body?.cancel();
       else await client.steer(id, text);
       return { outcome: "injected" };
+    },
+    answer(toolCallId, answers) {
+      const intr = [...interrupts.values()].find((i) => (i.toolCallId ?? i.id) === toolCallId);
+      if (!intr) throw new RpcError(INVALID_PARAMS, "that request was already answered");
+      cards.answer(intr, answers);
+      return {};
     },
     async cancel() {
       await client.cancel(id);

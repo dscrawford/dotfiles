@@ -250,4 +250,5 @@ in
            :expanded t
            :above-last-prompt (not (shell-maker-busy))))
         t)))
+  ${import ./scooter-cards.nix { }}
 ''

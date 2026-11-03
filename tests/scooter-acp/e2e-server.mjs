@@ -1,4 +1,5 @@
 import { startFakeScooter } from "./fake-scooter.mjs";
+import { cardScript, cardTrigger } from "./e2e-cards.mjs";
 const fake = await startFakeScooter();
 fake.conv("old");
 Object.assign(fake.conv("old"), { title: "Fix the login redirect" });
@@ -23,7 +24,7 @@ const describe = (content) =>
     ? content.map((p) => (p.type === "image" ? `IMAGE-RECEIVED ${p.mimeType} ${p.data === PNG ? "intact" : "corrupt"}` : p.text)).join(" ")
     : content;
 let n = 0;
-fake.setScript((body) => run(body.threadId, `p${++n}`, describe(body.messages[0].content), Array.isArray(body.messages[0].content) ? describe(body.messages[0].content) : "LIVE-ANSWER", [
+fake.setScript((body) => cardScript(body) ?? run(body.threadId, `p${++n}`, describe(body.messages[0].content), Array.isArray(body.messages[0].content) ? describe(body.messages[0].content) : "LIVE-ANSWER", [
   { type: "TOOL_CALL_START", toolCallId: `t${n}`, toolCallName: "shell" },
   { type: "TOOL_CALL_ARGS", toolCallId: `t${n}`, delta: '{"command":"ls /workspace"}' },
   { type: "TOOL_CALL_END", toolCallId: `t${n}` },
@@ -45,6 +46,7 @@ setInterval(() => {
   if (existsSync(process.env.TRIGGER_FILE)) {
     const what = readFileSync(process.env.TRIGGER_FILE, "utf8");
     rmSync(process.env.TRIGGER_FILE);
+    if (cardTrigger(fake, what)) return;
     if (what === "link") return fake.addLink("old", { source: "jira", resourceType: "issue", url: "https://jira.example/browse/OPS-1" });
     for (const e of run("old", "w1", "WEB-QUESTION", "WEB-ANSWER", serviceCall)) fake.append("old", e);
   }

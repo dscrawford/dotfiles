@@ -78,7 +78,7 @@ What carries over:
 |---|---|
 | assistant text, reasoning | message and thought chunks |
 | tool calls and results | tool call blocks |
-| approval interrupts | permission prompt (answer from either Emacs or the web UI) |
+| approval interrupts and cards | permission prompt with the card (questions, AWS grants, commit identities); questions are answered in the minibuffer; answer from either Emacs or the web UI |
 | runs started from the web UI, Slack, webhooks | pushed into the open buffer (`session/push`) |
 | Stop | `C-c C-c` |
 | typing while a turn runs | steering, posted as an interrupting message |
@@ -90,7 +90,8 @@ What carries over:
 | images (attached, sent by the agent, in tool results such as `view_image`) | inline images, fetched through the bridge with your cookie |
 | `@image.png` mentions, `yank-media`/clipboard images in the prompt | uploaded the way the web UI attaches them (png, jpeg, gif, webp) |
 
-For anything else, `M-x my/scooter-open-in-browser` opens the conversation in the web UI. Local MCP
+For anything else, `M-x my/scooter-open-in-browser` opens the conversation in the web
+UI; approval cards of unknown kinds offer it as a choice. Local MCP
 servers from `agent-shell-mcp-servers` don't apply, since the agent runs remotely.
 Loading a conversation replays its last 30 user turns (`SCOOTER_REPLAY_TURNS`).
 Images over 5 MiB (`SCOOTER_IMAGE_MAX_BYTES`) are refused in prompts and shown as a

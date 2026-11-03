@@ -117,13 +117,8 @@ export function createScooterClient(config, { fetchImpl = fetch, log = () => {} 
       }
       return res;
     },
-    resume: (id, interruptId, optionId) =>
-      fireAndForget("/agui", {
-        threadId: id,
-        runId: crypto.randomUUID(),
-        messages: [],
-        resume: [optionId ? { interruptId, status: "resolved", payload: { optionId } } : { interruptId, status: "cancelled" }],
-      }),
+    resume: (id, interruptId, entry) =>
+      fireAndForget("/agui", { threadId: id, runId: crypto.randomUUID(), messages: [], resume: [{ interruptId, ...entry }] }),
     asset: async (path) => {
       const res = await call("GET", path, { extraHeaders: { Accept: "image/*" } });
       if (!res.ok) {
