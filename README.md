@@ -85,10 +85,16 @@ What carries over:
 | model picker | `C-c C-v` |
 | context usage | the context indicator |
 
-Not yet carried over: image attachments, web services, links and sandbox controls
+Not yet carried over: image attachments, web services and links
 (`M-x my/scooter-open-in-browser` opens the conversation in the web UI). Local MCP
 servers from `agent-shell-mcp-servers` don't apply, since the agent runs remotely.
 Loading a conversation replays its last 30 user turns (`SCOOTER_REPLAY_TURNS`).
+
+Sandbox controls: `C-c C-b` (`my/scooter-sandbox`) shows the sandbox's status, size and
+visibility, then offers resize, suspend/resume, restart, compact, rename, star and
+private/shared. Restart, compact and making a private conversation shared ask first.
+Suspend, restart and compact are refused while a turn runs (cancel it with `C-c C-c`).
+A new size applies on the next restart.
 
 Tests: `tests/scooter-acp/run.sh` (protocol, fake Scooter) and
 `tests/scooter-acp/emacs-e2e.sh` (the pinned agent-shell driving the bridge).

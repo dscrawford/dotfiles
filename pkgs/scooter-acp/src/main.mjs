@@ -1,5 +1,6 @@
 import { registerAgent } from "./agent.mjs";
 import { createPeer } from "./jsonrpc.mjs";
+import { registerSandbox } from "./sandbox.mjs";
 import { createScooterClient, readConfig } from "./scooter.mjs";
 
 const VERSION = "0.1.0";
@@ -9,6 +10,7 @@ const config = readConfig();
 const client = createScooterClient(config, { log });
 const peer = createPeer({ input: process.stdin, output: process.stdout, log });
 const agent = registerAgent({ peer, client, config, log, version: VERSION });
+registerSandbox({ peer, client, sessions: agent.sessions });
 
 peer.onClose(() => {
   agent.closeAll();

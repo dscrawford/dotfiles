@@ -81,6 +81,7 @@ export function createFollower({ client, id, onEvents, onGone = () => {}, log = 
       stopped = true;
       controller.abort();
     },
+    resync: () => serialize(() => catchUp(false)),
     settled: () => queue,
   };
 }

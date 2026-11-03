@@ -13,6 +13,7 @@ export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = 
   const convs = new Map();
   const requests = [];
   let script = () => [];
+  let routes = () => undefined;
 
   const conv = (id) => {
     if (!convs.has(id)) convs.set(id, { id, title: id, events: [], checksums: [], streams: new Set(), lastActivityAt: Date.now(), model: null });
@@ -47,6 +48,8 @@ export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = 
     requests.push(entry);
     if (req.headers.cookie !== cookie && req.headers.cookie !== refreshTo) return json(res, 401, { error: "no session" });
     const refresh = refreshTo && req.headers.cookie !== refreshTo ? { "Set-Cookie": `${refreshTo}; Path=/; HttpOnly` } : {};
+    const routed = await routes({ method: req.method, path: url.pathname, body: async () => (entry.body = await body(req)) });
+    if (routed) return json(res, routed.status ?? 200, routed.json);
 
     if (req.method === "GET" && url.pathname === "/conversations") {
       return json(res, 200, [...convs.values()].map((c) => ({ id: c.id, title: c.title, lastActivityAt: c.lastActivityAt, parentId: c.parentId })), refresh);
@@ -103,6 +106,7 @@ export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = 
         conv,
         append,
         setScript: (fn) => (script = fn),
+        setRoutes: (fn) => (routes = fn),
         dropStreams: () => {
           for (const c of convs.values()) for (const s of c.streams) s.destroy();
         },
