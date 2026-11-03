@@ -99,6 +99,8 @@ export function createScooterClient(config, { fetchImpl = fetch, log = () => {} 
     getConversation: (id) => json("GET", conv(id)),
     createConversation: (body) => json("POST", "/conversations", { body }),
     history: (id) => json("GET", `${conv(id)}/history`),
+    webServices: (id) => json("GET", `${conv(id)}/web-services?refresh=1`),
+    webServiceAction: (id, name, action) => json("POST", `${conv(id)}/web-services/${encodeURIComponent(name)}/${action}`),
     models: (id) => json("GET", `/models${id ? `?conversation=${encodeURIComponent(id)}` : ""}`),
     sendPrompt: async (id, text, model) => {
       const res = await call("POST", "/agui", {

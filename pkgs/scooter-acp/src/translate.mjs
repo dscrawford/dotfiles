@@ -1,3 +1,5 @@
+import { serviceNotices } from "./webservices.mjs";
+
 const MAX_RESULT_CHARS = 20000;
 
 const KIND_WORDS = [
@@ -74,9 +76,11 @@ export function createTranslator() {
         const t = tools.get(event.toolCallId);
         if (!t?.args) return [];
         const rawInput = parseArgs(t.args);
+        t.input = rawInput;
         return [{ sessionUpdate: "tool_call_update", toolCallId: event.toolCallId, title: toolTitle(t.name, rawInput), rawInput }];
       }
-      case "TOOL_CALL_RESULT":
+      case "TOOL_CALL_RESULT": {
+        const notices = serviceNotices(tools.get(event.toolCallId)?.input);
         tools.delete(event.toolCallId);
         return [
           {
@@ -85,7 +89,9 @@ export function createTranslator() {
             status: "completed",
             content: [{ type: "content", content: text(clip(String(event.content ?? ""))) }],
           },
+          ...notices.map((n) => ({ sessionUpdate: "agent_message_chunk", content: text(`\n\n> ${n}\n\n`) })),
         ];
+      }
       case "SYSTEM_MESSAGE": {
         const who = event.sender ? `${event.source} (${event.sender})` : event.source;
         return [{ sessionUpdate: "agent_message_chunk", content: text(`\n\n> **${who}:** ${String(event.text ?? "").replace(/\n/g, "\n> ")}\n\n`) }];

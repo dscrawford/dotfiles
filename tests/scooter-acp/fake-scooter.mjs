@@ -80,6 +80,14 @@ export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = 
         entry.body = await body(req);
         return json(res, 202, { ok: true });
       }
+      if (req.method === "GET" && tail === "web-services") return json(res, 200, { services: c.services ?? [] });
+      const svc = tail.match(/^web-services\/([^/]+)\/(start|stop)$/);
+      if (req.method === "POST" && svc) {
+        const s = (c.services ?? []).find((x) => x.name === decodeURIComponent(svc[1]));
+        if (!s) return json(res, 404, { error: "unknown web service" });
+        s.running = svc[2] === "start";
+        return json(res, 202, { ok: true });
+      }
     }
     if (req.method === "POST" && url.pathname === "/agui") {
       entry.body = await body(req);
