@@ -1,4 +1,5 @@
 import { createFollower } from "./follower.mjs";
+import { PRIORITY_INTERRUPT, withImages } from "./images.mjs";
 import { hasPendingImages, resolveImages } from "./images.mjs";
 import { sseFrames } from "./scooter.mjs";
 import { createTranslator, userTurnStarts } from "./translate.mjs";

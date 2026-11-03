@@ -12,6 +12,7 @@ function canonical(event) {
 export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = {}) {
   const convs = new Map();
   const requests = [];
+  const assets = new Map();
   let script = () => [];
 
   const conv = (id) => {
@@ -76,6 +77,11 @@ export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = 
         entry.body = await body(req);
         return json(res, 202, { ok: true });
       }
+      if (req.method === "GET" && assets.has(url.pathname)) {
+        const a = assets.get(url.pathname);
+        res.writeHead(200, { "Content-Type": a.mimeType, "Content-Length": String(a.data.length) });
+        return res.end(a.data);
+      }
       if (req.method === "POST" && tail === "messages") {
         entry.body = await body(req);
         return json(res, 202, { ok: true });
@@ -103,6 +109,11 @@ export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = 
         conv,
         append,
         setScript: (fn) => (script = fn),
+        addAsset: (id, assetId, mimeType, data) => {
+          const path = `/conversations/${id}/assets/${assetId}`;
+          assets.set(path, { mimeType, data });
+          return path;
+        },
         dropStreams: () => {
           for (const c of convs.values()) for (const s of c.streams) s.destroy();
         },
