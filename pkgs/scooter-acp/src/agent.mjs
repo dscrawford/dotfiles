@@ -1,4 +1,5 @@
 import { INVALID_PARAMS, RpcError } from "./jsonrpc.mjs";
+import { promptImages } from "./images.mjs";
 import { createSession } from "./session.mjs";
 
 const PAGE_SIZE = 50;
@@ -57,7 +58,7 @@ export function registerAgent({ peer, client, config, log, version }) {
     agentInfo: { name: "scooter-acp", title: `Scooter (${new URL(config.url).host})`, version },
     agentCapabilities: {
       loadSession: true,
-      promptCapabilities: { embeddedContext: true },
+      promptCapabilities: { embeddedContext: true, image: true },
       sessionCapabilities: { list: {}, resume: {} },
     },
     authMethods: [],
@@ -96,11 +97,12 @@ export function registerAgent({ peer, client, config, log, version }) {
 
   peer.on("session/prompt", async ({ sessionId, prompt }) => {
     const text = promptText(prompt);
-    if (!text.trim()) throw new RpcError(INVALID_PARAMS, "empty prompt");
-    return session(sessionId).prompt(text);
+    const images = promptImages(prompt, config.imageMaxBytes);
+    if (!text.trim() && !images.length) throw new RpcError(INVALID_PARAMS, "empty prompt");
+    return session(sessionId).prompt(text, images);
   });
 
-  peer.on("_session/steering", async ({ sessionId, prompt }) => session(sessionId).steer(promptText(prompt)));
+  peer.on("_session/steering", async ({ sessionId, prompt }) => session(sessionId).steer(promptText(prompt), promptImages(prompt, config.imageMaxBytes)));
 
   peer.on("session/cancel", async ({ sessionId }) => {
     await sessions.get(sessionId)?.cancel();

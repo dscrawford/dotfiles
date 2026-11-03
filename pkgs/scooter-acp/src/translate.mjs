@@ -1,3 +1,5 @@
+import { messageImageBlocks, splitResultImages } from "./images.mjs";
+
 const MAX_RESULT_CHARS = 20000;
 
 const KIND_WORDS = [
@@ -76,16 +78,23 @@ export function createTranslator() {
         const rawInput = parseArgs(t.args);
         return [{ sessionUpdate: "tool_call_update", toolCallId: event.toolCallId, title: toolTitle(t.name, rawInput), rawInput }];
       }
-      case "TOOL_CALL_RESULT":
+      case "TOOL_CALL_RESULT": {
         tools.delete(event.toolCallId);
+        const split = splitResultImages(event.content);
+        const blocks = split ? [...(split.text ? [text(clip(split.text))] : []), ...split.images] : [text(clip(String(event.content ?? "")))];
         return [
           {
             sessionUpdate: "tool_call_update",
             toolCallId: event.toolCallId,
             status: "completed",
-            content: [{ type: "content", content: text(clip(String(event.content ?? ""))) }],
+            content: blocks.map((content) => ({ type: "content", content })),
           },
         ];
+      }
+      case "MESSAGE_IMAGES": {
+        const kind = roles.get(event.messageId) === "user" ? "user_message_chunk" : "agent_message_chunk";
+        return messageImageBlocks(event.images).map((content) => ({ sessionUpdate: kind, content, messageId: event.messageId }));
+      }
       case "SYSTEM_MESSAGE": {
         const who = event.sender ? `${event.source} (${event.sender})` : event.source;
         return [{ sessionUpdate: "agent_message_chunk", content: text(`\n\n> **${who}:** ${String(event.text ?? "").replace(/\n/g, "\n> ")}\n\n`) }];

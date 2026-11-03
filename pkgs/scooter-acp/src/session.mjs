@@ -1,6 +1,9 @@
 import { createFollower } from "./follower.mjs";
+import { hasPendingImages, resolveImages } from "./images.mjs";
 import { sseFrames } from "./scooter.mjs";
 import { createTranslator, userTurnStarts } from "./translate.mjs";
+
+const PRIORITY_INTERRUPT = 10;
 
 const isExt = (e) => typeof e.runId === "string" && e.runId.startsWith("ext-");
 
@@ -80,17 +83,23 @@ export function createSession({ id, client, peer, config, log, model }) {
       const starts = userTurnStarts(events);
       if (config.replayTurns >= 0 && starts.length > config.replayTurns) firstShown = config.replayTurns === 0 ? events.length : starts[starts.length - config.replayTurns];
     }
-    events.forEach((e, i) => {
+    const withImages = (u) => (hasPendingImages(u) ? resolveImages(u, client.asset, log) : u);
+    const translated = events.map((e, i) => {
       const updates = translate(e);
+      if (i < firstShown) return [];
+      return replay ? updates.map(withImages) : updates;
+    });
+    for (const [i, e] of events.entries()) {
+      const updates = translated[i];
       const userEcho = !replay && turn?.kind === "prompt" && updates.some((u) => u.sessionUpdate === "user_message_chunk");
-      if (i >= firstShown && !userEcho) {
+      if (!userEcho) {
         for (const u of updates) {
           if (u.sessionUpdate === "user_message_chunk" && !replay && !turn) continue;
-          send(u);
+          send(await withImages(await u));
         }
       }
       track(e, replay);
-    });
+    }
   };
 
   const watchRunStream = async (res, mine) => {
@@ -132,14 +141,14 @@ export function createSession({ id, client, peer, config, log, model }) {
         for (const intr of interrupts.values()) ask(intr);
       }, 0);
     },
-    async prompt(text) {
+    async prompt(text, images = []) {
       if (turn?.kind === "push") endTurn("end_turn");
       const done = new Promise((resolve) => {
         turn = { kind: "prompt", resolve, started: false };
       });
       const mine = turn;
       try {
-        const res = await client.sendPrompt(id, text, this.model);
+        const res = await client.sendPrompt(id, text, this.model, { images });
         void watchRunStream(res, mine);
       } catch (e) {
         if (turn === mine) turn = undefined;
@@ -147,9 +156,10 @@ export function createSession({ id, client, peer, config, log, model }) {
       }
       return done;
     },
-    async steer(text) {
+    async steer(text, images = []) {
       if (!turn && !running) return { outcome: "promptRequired" };
-      await client.steer(id, text);
+      if (images.length) await (await client.sendPrompt(id, text, this.model, { images, priority: PRIORITY_INTERRUPT })).body?.cancel();
+      else await client.steer(id, text);
       return { outcome: "injected" };
     },
     async cancel() {

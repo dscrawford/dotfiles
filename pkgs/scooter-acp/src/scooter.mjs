@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 
+import { readCapped } from "./images.mjs";
 import { AUTH_REQUIRED, RpcError } from "./jsonrpc.mjs";
 
 export function readConfig(env = process.env) {
@@ -12,6 +13,7 @@ export function readConfig(env = process.env) {
     bearer: env.SCOOTER_TOKEN?.trim() || undefined,
     scope: env.SCOOTER_LIST_SCOPE || "mine",
     replayTurns: Number(env.SCOOTER_REPLAY_TURNS ?? 30),
+    imageMaxBytes: Number(env.SCOOTER_IMAGE_MAX_BYTES ?? 5 * 1024 * 1024),
   };
 }
 
@@ -100,9 +102,10 @@ export function createScooterClient(config, { fetchImpl = fetch, log = () => {} 
     createConversation: (body) => json("POST", "/conversations", { body }),
     history: (id) => json("GET", `${conv(id)}/history`),
     models: (id) => json("GET", `/models${id ? `?conversation=${encodeURIComponent(id)}` : ""}`),
-    sendPrompt: async (id, text, model) => {
+    sendPrompt: async (id, text, model, { images = [], priority } = {}) => {
+      const content = images.length ? [...(text ? [{ type: "text", text }] : []), ...images] : text;
       const res = await call("POST", "/agui", {
-        body: { threadId: id, runId: crypto.randomUUID(), messages: [{ id: crypto.randomUUID(), role: "user", content: text }] },
+        body: { threadId: id, runId: crypto.randomUUID(), messages: [{ id: crypto.randomUUID(), role: "user", content }], ...(priority ? { priority } : {}) },
         extraHeaders: model ? { "X-Agent-Model": model } : undefined,
       });
       if (!res.ok) {
@@ -118,6 +121,19 @@ export function createScooterClient(config, { fetchImpl = fetch, log = () => {} 
         messages: [],
         resume: [optionId ? { interruptId, status: "resolved", payload: { optionId } } : { interruptId, status: "cancelled" }],
       }),
+    asset: async (path) => {
+      const res = await call("GET", path, { extraHeaders: { Accept: "image/*" } });
+      if (!res.ok) {
+        await res.body?.cancel();
+        throw new Error(`HTTP ${res.status}`);
+      }
+      const mimeType = (res.headers.get("content-type") ?? "").split(";")[0].trim();
+      if (!mimeType.startsWith("image/")) {
+        await res.body?.cancel();
+        throw new Error(`not an image (${mimeType || "no content type"})`);
+      }
+      return { mimeType, data: (await readCapped(res, config.imageMaxBytes)).toString("base64") };
+    },
     steer: (id, text) => json("POST", `${conv(id)}/messages`, { body: { text } }),
     cancel: (id) => json("POST", `${conv(id)}/cancel`, { body: {} }),
     openIntegrityStream: (id, signal) => call("GET", `${conv(id)}/events.integrity`, { signal, extraHeaders: { Accept: "text/event-stream" } }),
