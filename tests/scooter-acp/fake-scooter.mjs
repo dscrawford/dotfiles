@@ -12,10 +12,11 @@ function canonical(event) {
 export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = {}) {
   const convs = new Map();
   const requests = [];
+  const listStreams = new Set();
   let script = () => [];
 
   const conv = (id) => {
-    if (!convs.has(id)) convs.set(id, { id, title: id, events: [], checksums: [], streams: new Set(), lastActivityAt: Date.now(), model: null });
+    if (!convs.has(id)) convs.set(id, { id, title: id, events: [], checksums: [], streams: new Set(), lastActivityAt: Date.now(), model: null, links: [] });
     return convs.get(id);
   };
 
@@ -26,6 +27,14 @@ export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = 
     c.events.push(event);
     c.checksums.push(checksum);
     for (const s of c.streams) s.write(`data: ${JSON.stringify({ kind: "event", event, prevChecksum: prev, checksum })}\n\n`);
+  };
+
+  const row = (c) => ({ id: c.id, title: c.title, lastActivityAt: c.lastActivityAt, parentId: c.parentId, sources: [...new Set(c.links.map((l) => l.source))].sort(), links: c.links });
+
+  const addLink = (id, link) => {
+    const c = conv(id);
+    c.links.push(link);
+    for (const s of listStreams) s.write(`data: ${JSON.stringify({ kind: "upsert", conversation: row(c) })}\n\n`);
   };
 
   const body = (req) =>
@@ -49,7 +58,14 @@ export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = 
     const refresh = refreshTo && req.headers.cookie !== refreshTo ? { "Set-Cookie": `${refreshTo}; Path=/; HttpOnly` } : {};
 
     if (req.method === "GET" && url.pathname === "/conversations") {
-      return json(res, 200, [...convs.values()].map((c) => ({ id: c.id, title: c.title, lastActivityAt: c.lastActivityAt, parentId: c.parentId })), refresh);
+      return json(res, 200, [...convs.values()].map(row), refresh);
+    }
+    if (req.method === "GET" && url.pathname === "/conversations/events") {
+      res.writeHead(200, { "Content-Type": "text/event-stream" });
+      res.write(`data: ${JSON.stringify({ kind: "snapshot", conversations: [...convs.values()].map(row) })}\n\n`);
+      listStreams.add(res);
+      req.on("close", () => listStreams.delete(res));
+      return;
     }
     if (req.method === "POST" && url.pathname === "/conversations") {
       const c = conv(`c${convs.size + 1}`);
@@ -63,6 +79,7 @@ export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = 
       const c = conv(parts[1]);
       const tail = parts.slice(2).join("/");
       if (req.method === "GET" && tail === "") return json(res, 200, { id: c.id, model: c.model });
+      if (req.method === "GET" && tail === "links") return json(res, 200, { links: c.links });
       if (req.method === "GET" && tail === "history") return json(res, 200, { events: c.events, checksum: c.checksums.at(-1) ?? EMPTY });
       if (req.method === "GET" && tail === "events.integrity") {
         res.writeHead(200, { "Content-Type": "text/event-stream" });
@@ -111,12 +128,15 @@ export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = 
         conv,
         append,
         setScript: (fn) => (script = fn),
+        addLink,
+        listStreamCount: () => listStreams.size,
         dropStreams: () => {
           for (const c of convs.values()) for (const s of c.streams) s.destroy();
         },
         streamCount: (id) => conv(id).streams.size,
         close: () => {
           for (const c of convs.values()) for (const s of c.streams) s.end();
+          for (const s of listStreams) s.end();
           server.closeAllConnections?.();
           return new Promise((r) => server.close(r));
         },

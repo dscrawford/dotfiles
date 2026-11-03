@@ -1,4 +1,5 @@
 import { INVALID_PARAMS, RpcError } from "./jsonrpc.mjs";
+import { registerLinks, titleWithLinks } from "./links.mjs";
 import { createSession } from "./session.mjs";
 
 const PAGE_SIZE = 50;
@@ -34,6 +35,7 @@ function modelOption(models, current) {
 
 export function registerAgent({ peer, client, config, log, version }) {
   const sessions = new Map();
+  const links = registerLinks({ peer, client, log });
 
   const session = (sessionId) => {
     const s = sessions.get(sessionId);
@@ -49,6 +51,7 @@ export function registerAgent({ peer, client, config, log, version }) {
     const s = createSession({ id: sessionId, client, peer, config, log, model: conv?.model ?? undefined });
     sessions.set(sessionId, s);
     await s.attach({ replay });
+    void links.watch(sessionId);
     return { configOptions: await configOptions(sessionId, s.model) };
   };
 
@@ -71,6 +74,7 @@ export function registerAgent({ peer, client, config, log, version }) {
     const s = createSession({ id: conv.id, client, peer, config, log, model: conv.model ?? undefined });
     sessions.set(conv.id, s);
     await s.attach({ replay: false });
+    void links.watch(conv.id);
     return { sessionId: conv.id, configOptions: await configOptions(conv.id, s.model) };
   });
 
@@ -84,7 +88,7 @@ export function registerAgent({ peer, client, config, log, version }) {
       sessions: page.map((r) => ({
         sessionId: r.id,
         cwd: cwd ?? "/workspace",
-        title: r.title || r.id,
+        title: titleWithLinks(r),
         ...(r.lastActivityAt ? { updatedAt: new Date(r.lastActivityAt).toISOString() } : {}),
       })),
       ...(offset + PAGE_SIZE < rows.length ? { nextCursor: String(offset + PAGE_SIZE) } : {}),
@@ -121,6 +125,7 @@ export function registerAgent({ peer, client, config, log, version }) {
   peer.on("session/close", async ({ sessionId }) => {
     sessions.get(sessionId)?.close();
     sessions.delete(sessionId);
+    links.unwatch(sessionId);
     return {};
   });
 
@@ -128,6 +133,7 @@ export function registerAgent({ peer, client, config, log, version }) {
     closeAll() {
       for (const s of sessions.values()) s.close();
       sessions.clear();
+      links.stop();
     },
     sessions,
   };
