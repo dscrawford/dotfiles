@@ -37,10 +37,29 @@
     (unless (e2e-has buf "WEB-QUESTION") (error "Pushed run lost its prompt:\n%s" (e2e-text buf)))
     (e2e-wait (lambda () (with-current-buffer buf (not (shell-maker-busy)))) "the push to end")))
 
+(defun e2e-links ()
+  (let ((buf (e2e-start :session-id "old"))
+        opened copied)
+    (e2e-wait (lambda () (e2e-has buf "HISTORY-ANSWER")) "history replay")
+    (cl-letf (((symbol-function 'completing-read) (lambda (_p cands &rest _) (caar cands)))
+              ((symbol-function 'browse-url) (lambda (url &rest _) (setq opened url)))
+              ((symbol-function 'kill-new) (lambda (s &rest _) (setq copied s))))
+      (with-current-buffer buf (my/scooter-links))
+      (e2e-wait (lambda () opened) "my/scooter-links to open a link")
+      (with-current-buffer buf (my/scooter-links t))
+      (e2e-wait (lambda () copied) "my/scooter-links to copy a link"))
+    (unless (equal opened "https://github.com/o/r/pull/7") (error "Opened %S" opened))
+    (unless (equal copied opened) (error "Copied %S" copied))
+    (sleep-for 1)
+    (with-temp-file (getenv "TRIGGER_FILE") (insert "link"))
+    (e2e-wait (lambda () (e2e-has buf "jira: jira issue")) "the live link notice")
+    (when (e2e-has buf "Unhandled") (error "Link notice fell through:\n%s" (e2e-text buf)))))
+
 (condition-case err
     (progn
       (e2e-new-session-prompt)
       (e2e-load-history-then-push)
+      (e2e-links)
       (princ "agent-shell e2e: ok\n")
       (kill-emacs 0))
   (error

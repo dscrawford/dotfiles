@@ -84,8 +84,9 @@ What carries over:
 | typing while a turn runs | steering, posted as an interrupting message |
 | model picker | `C-c C-v` |
 | context usage | the context indicator |
+| linked resources (PRs, issues, Slack threads) | `M-x my/scooter-links` (`C-u` copies the URL); a "Linked" notice when one is added; sources in the picker's titles |
 
-Not yet carried over: image attachments, web services, links and sandbox controls
+Not yet carried over: image attachments, web services and sandbox controls
 (`M-x my/scooter-open-in-browser` opens the conversation in the web UI). Local MCP
 servers from `agent-shell-mcp-servers` don't apply, since the agent runs remotely.
 Loading a conversation replays its last 30 user turns (`SCOOTER_REPLAY_TURNS`).

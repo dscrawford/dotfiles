@@ -21,10 +21,13 @@ fake.setScript((body) => run(body.threadId, `p${++n}`, body.messages[0].content,
   { type: "TOOL_CALL_END", toolCallId: `t${n}` },
   { type: "TOOL_CALL_RESULT", toolCallId: `t${n}`, messageId: "m", content: "dotfiles scooter" },
 ]));
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
+fake.addLink("old", { source: "github", resourceType: "pull_request", url: "https://github.com/o/r/pull/7", title: "o/r#7 Fix login" });
 setInterval(() => {
   if (existsSync(process.env.TRIGGER_FILE)) {
+    const what = readFileSync(process.env.TRIGGER_FILE, "utf8");
     rmSync(process.env.TRIGGER_FILE);
+    if (what === "link") return fake.addLink("old", { source: "jira", resourceType: "issue", url: "https://jira.example/browse/OPS-1" });
     for (const e of run("old", "w1", "WEB-QUESTION", "WEB-ANSWER")) fake.append("old", e);
   }
 }, 100);

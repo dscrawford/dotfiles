@@ -52,6 +52,7 @@ in
      :buffer-name "Scooter"
      :shell-prompt "Scooter> "
      :shell-prompt-regexp "Scooter> "
+     :notification-handler #'my/scooter--on-notification
      :client-maker
      (lambda (buffer)
        (agent-shell--make-acp-client
@@ -89,4 +90,46 @@ in
         (setq my/scooter--base-agent-configs agent-shell-agent-configs
               agent-shell-agent-configs #'my/scooter--agent-configs))))
   (global-set-key (kbd "C-c j") #'my/scooter)
+
+  (defun my/scooter--link-line (link)
+    (format "%s: %s" (map-elt link 'source) (map-elt link 'label)))
+
+  (defun my/scooter--pick-link (links copy)
+    (let* ((candidates (mapcar (lambda (l) (cons (my/scooter--link-line l) l))
+                               (seq-filter (lambda (l) (map-elt l 'url)) links)))
+           (url (and candidates
+                     (map-elt (cdr (assoc (completing-read (if copy "Copy Scooter link: " "Open Scooter link: ")
+                                                           candidates nil t)
+                                          candidates))
+                              'url))))
+      (cond ((not url) (message "No links on this Scooter conversation"))
+            (copy (kill-new url) (message "Copied %s" url))
+            (t (browse-url url)))))
+
+  (defun my/scooter--links-received (copy result)
+    (run-at-time 0 nil #'my/scooter--pick-link (append (map-elt result 'links) nil) copy))
+
+  (defun my/scooter-links (&optional copy)
+    "Open a resource linked to this Scooter conversation.
+  With prefix arg COPY, copy its URL instead."
+    (interactive "P")
+    (my/scooter-request "_scooter/links"
+                        :on-success (apply-partially #'my/scooter--links-received copy)))
+
+  (defvar-local my/scooter--link-notices 0)
+  (defun my/scooter--on-notification (args)
+    "Show scooter-acp's _scooter/links_changed as a notice in the shell buffer."
+    (let ((state (map-elt args :state))
+          (notification (map-elt args :acp-notification)))
+      (when (equal (map-elt notification 'method) "_scooter/links_changed")
+        (with-current-buffer (map-elt state :buffer)
+          (agent-shell--update-fragment
+           :state state
+           :block-id (format "scooter-links-%d" (cl-incf my/scooter--link-notices))
+           :label-left (propertize "Linked" 'font-lock-face 'agent-shell-section-heading)
+           :body (mapconcat (lambda (l) (format "- [%s](%s)" (my/scooter--link-line l) (or (map-elt l 'url) "")))
+                            (map-nested-elt notification '(params added)) "\n")
+           :expanded t
+           :above-last-prompt (not (shell-maker-busy))))
+        t)))
 ''
