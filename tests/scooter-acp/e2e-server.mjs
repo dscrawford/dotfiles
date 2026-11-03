@@ -14,8 +14,16 @@ const run = (threadId, runId, q, a, extra = []) => [
   { type: "RUN_FINISHED", threadId, runId },
 ];
 for (const e of run("old", "h1", "HISTORY-QUESTION", "HISTORY-ANSWER")) fake.append("old", e);
+const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+const shot = fake.addAsset("old", "shot", "image/png", Buffer.from(PNG, "base64"));
+fake.append("old", { type: "TEXT_MESSAGE_START", messageId: "ah1", role: "assistant" });
+fake.append("old", { type: "MESSAGE_IMAGES", messageId: "ah1", images: [{ assetId: "shot", mimeType: "image/png", url: shot }] });
+const describe = (content) =>
+  Array.isArray(content)
+    ? content.map((p) => (p.type === "image" ? `IMAGE-RECEIVED ${p.mimeType} ${p.data === PNG ? "intact" : "corrupt"}` : p.text)).join(" ")
+    : content;
 let n = 0;
-fake.setScript((body) => run(body.threadId, `p${++n}`, body.messages[0].content, "LIVE-ANSWER", [
+fake.setScript((body) => run(body.threadId, `p${++n}`, describe(body.messages[0].content), Array.isArray(body.messages[0].content) ? describe(body.messages[0].content) : "LIVE-ANSWER", [
   { type: "TOOL_CALL_START", toolCallId: `t${n}`, toolCallName: "shell" },
   { type: "TOOL_CALL_ARGS", toolCallId: `t${n}`, delta: '{"command":"ls /workspace"}' },
   { type: "TOOL_CALL_END", toolCallId: `t${n}` },

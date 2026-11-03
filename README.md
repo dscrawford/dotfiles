@@ -87,11 +87,14 @@ What carries over:
 | web services (Services panel) | `M-x my/scooter-web-services`: pick one, then browse, copy its URL, or start/stop it |
 | `scooter-service start/stop` run by the agent | a one-line notice under the tool call |
 | linked resources (PRs, issues, Slack threads) | `M-x my/scooter-links` (`C-u` copies the URL); a "Linked" notice when one is added; sources in the picker's titles |
+| images (attached, sent by the agent, in tool results such as `view_image`) | inline images, fetched through the bridge with your cookie |
+| `@image.png` mentions, `yank-media`/clipboard images in the prompt | uploaded the way the web UI attaches them (png, jpeg, gif, webp) |
 
-Not yet carried over: image attachments
-(`M-x my/scooter-open-in-browser` opens the conversation in the web UI). Local MCP
+For anything else, `M-x my/scooter-open-in-browser` opens the conversation in the web UI. Local MCP
 servers from `agent-shell-mcp-servers` don't apply, since the agent runs remotely.
 Loading a conversation replays its last 30 user turns (`SCOOTER_REPLAY_TURNS`).
+Images over 5 MiB (`SCOOTER_IMAGE_MAX_BYTES`) are refused in prompts and shown as a
+placeholder in output. agent-shell shows a user's own images in replayed turns as `[image]`.
 
 Sandbox controls: `C-c C-b` (`my/scooter-sandbox`) shows the sandbox's status, size and
 visibility, then offers resize, suspend/resume, restart, compact, rename, star and
