@@ -87,6 +87,79 @@ in
       (let* ((candidates (mapcar #'my/scooter--web-service-candidate services))
              (pick (completing-read "Web service: " candidates nil t)))
         (my/scooter-web-service-act (cdr (assoc pick candidates))))))
+  (defun my/scooter--sandbox-done (action result)
+    (let-alist result
+      (message "Scooter: %s"
+               (pcase action
+                 ("resize" (format "sandbox size %s applies on the next restart" .size))
+                 ("compact" (if .compacted (format "compacted %s turns" .summarizedTurns)
+                              (or .reason "nothing to compact")))
+                 (_ (format "%s done" action))))))
+
+  (defun my/scooter--sandbox-call (action &optional params)
+    (my/scooter-request (concat "_scooter/sandbox/" action)
+                        :params params
+                        :on-success (apply-partially #'my/scooter--sandbox-done action)))
+
+  (defun my/scooter--sandbox-describe (status)
+    (let-alist status
+      (format "%s: %s%s, %s, %s%s"
+              (or .conversation.title "Scooter")
+              (or .conversation.status "unknown")
+              (if .ready.ready " (ready)" "")
+              (or .conversation.visibility "shared")
+              (if .resources.resources.limits.cpu
+                  (format "%s CPU, %s" .resources.resources.limits.cpu .resources.resources.limits.memory)
+                "default size")
+              (if .resources.pendingRestart ", restart pending" ""))))
+
+  (defun my/scooter--sandbox-actions (status)
+    (let-alist status
+      (delq nil (list (and .sizes.sizes "resize")
+                      (if (equal .conversation.status "running") "suspend" "resume")
+                      "restart" "compact" "rename"
+                      (if .conversation.starred "unstar" "star")
+                      (if (equal .conversation.visibility "private") "make shared" "make private")))))
+
+  (defun my/scooter--sandbox-run (choice status)
+    (let-alist status
+      (pcase choice
+        ("resize"
+         (my/scooter--sandbox-call
+          "resize" `((size . ,(completing-read "Sandbox size: "
+                                               (mapcar (lambda (s) (symbol-name (car s))) .sizes.sizes)
+                                               nil t nil nil .sizes.default)))))
+        ((or "suspend" "resume") (my/scooter--sandbox-call choice))
+        ("restart"
+         (when (yes-or-no-p "Restart the sandbox? Processes running in it are lost. ")
+           (my/scooter--sandbox-call "restart")))
+        ("compact"
+         (when (yes-or-no-p "Compact the conversation into a summary? ")
+           (my/scooter--sandbox-call "compact")))
+        ("rename"
+         (my/scooter--sandbox-call "rename" `((title . ,(read-string "Title: " .conversation.title)))))
+        ("star" (my/scooter--sandbox-call "star" '((starred . t))))
+        ("unstar" (my/scooter--sandbox-call "star" '((starred . :false))))
+        ("make shared"
+         (when (yes-or-no-p "Make this private conversation shared? What it fetched while private becomes visible. ")
+           (my/scooter--sandbox-call "visibility" '((visibility . "shared")))))
+        ("make private" (my/scooter--sandbox-call "visibility" '((visibility . "private")))))))
+
+  (defun my/scooter--sandbox-menu (buffer status)
+    (with-current-buffer buffer
+      (my/scooter--sandbox-run
+       (completing-read (concat (my/scooter--sandbox-describe status) " > ")
+                        (my/scooter--sandbox-actions status) nil t)
+       status)))
+
+  (defun my/scooter--sandbox-menu-later (buffer status)
+    (run-at-time 0 nil #'my/scooter--sandbox-menu buffer status))
+
+  (defun my/scooter-sandbox ()
+    "Show this Scooter conversation's sandbox and pick an action for it."
+    (interactive)
+    (my/scooter-request "_scooter/sandbox/status"
+                        :on-success (apply-partially #'my/scooter--sandbox-menu-later (current-buffer))))
 
   (defun my/scooter-make-agent-config ()
     (agent-shell-make-agent-config
@@ -132,6 +205,8 @@ in
                   (eq agent-shell-agent-configs #'my/scooter--agent-configs))
         (setq my/scooter--base-agent-configs agent-shell-agent-configs
               agent-shell-agent-configs #'my/scooter--agent-configs))))
+  (with-eval-after-load 'agent-shell
+    (define-key agent-shell-mode-map (kbd "C-c C-b") #'my/scooter-sandbox))
   (global-set-key (kbd "C-c j") #'my/scooter)
 
   (defun my/scooter--link-line (link)

@@ -159,6 +159,8 @@ export function createSession({ id, client, peer, config, log, model }) {
       follower.stop();
       endTurn("cancelled");
     },
+    busy: () => running || turn !== undefined,
+    resync: () => follower.resync(),
     settled: () => follower.settled(),
   };
 }

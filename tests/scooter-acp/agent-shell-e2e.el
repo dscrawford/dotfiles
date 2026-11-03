@@ -81,11 +81,23 @@
     (with-temp-file (getenv "TRIGGER_FILE") (insert "link"))
     (e2e-wait (lambda () (e2e-has buf "jira: jira issue")) "the live link notice")
     (when (e2e-has buf "Unhandled") (error "Link notice fell through:\n%s" (e2e-text buf)))))
+(defun e2e-sandbox-compact ()
+  (let ((buf (seq-find (lambda (b) (equal (map-nested-elt (buffer-local-value 'agent-shell--state b) '(:session :id)) "old"))
+                       (match-buffers '(derived-mode . agent-shell-mode))))
+        (asked nil))
+    (with-current-buffer buf
+      (unless (eq (key-binding (kbd "C-c C-b")) #'my/scooter-sandbox) (error "C-c C-b is not my/scooter-sandbox"))
+      (cl-letf (((symbol-function 'completing-read) (lambda (prompt &rest _) (setq asked prompt) "compact"))
+                ((symbol-function 'yes-or-no-p) #'always))
+        (call-interactively #'my/scooter-sandbox)
+        (e2e-wait (lambda () (e2e-has "*Messages*" "Scooter: compacted 3 turns")) "the compaction result")))
+    (unless (string-prefix-p "Fix the login redirect: running" asked) (error "Unexpected sandbox prompt: %s" asked))))
 
 (condition-case err
     (progn
       (e2e-new-session-prompt)
       (e2e-load-history-then-push)
+      (e2e-sandbox-compact)
       (e2e-web-services)
       (e2e-links)
       (princ "agent-shell e2e: ok\n")

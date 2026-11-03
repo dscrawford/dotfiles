@@ -41,4 +41,10 @@ setInterval(() => {
     for (const e of run("old", "w1", "WEB-QUESTION", "WEB-ANSWER", serviceCall)) fake.append("old", e);
   }
 }, 100);
+fake.setRoutes(({ method, path }) => {
+  if (method === "GET" && path === "/conversations/old") return { json: { id: "old", title: "Fix the login redirect", status: "running", visibility: "shared" } };
+  if (method !== "POST" || path !== "/conversations/old/compact") return undefined;
+  fake.append("old", { type: "COMPACTION_MARKER", summary: "s", summarizedTurns: 3, keptRuns: 1, ts: Date.now() });
+  return { status: 202, json: { ok: true, compacted: true, summarizedTurns: 3, keptRuns: 1 } };
+});
 console.log(fake.url);

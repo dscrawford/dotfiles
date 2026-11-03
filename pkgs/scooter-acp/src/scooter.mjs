@@ -82,7 +82,7 @@ export function createScooterClient(config, { fetchImpl = fetch, log = () => {} 
   const json = async (method, path, opts) => {
     const res = await call(method, path, opts);
     const text = await res.text();
-    if (!res.ok) throw new RpcError(-32000, `Scooter ${method} ${path} failed: HTTP ${res.status} ${text.slice(0, 200)}`);
+    if (!res.ok) throw new RpcError(-32000, `Scooter ${method} ${path} failed: HTTP ${res.status} ${text.slice(0, 200)}`, { status: res.status, body: text });
     return text ? JSON.parse(text) : null;
   };
 
@@ -95,6 +95,7 @@ export function createScooterClient(config, { fetchImpl = fetch, log = () => {} 
   const conv = (id) => `/conversations/${encodeURIComponent(id)}`;
 
   return {
+    request: (method, path, body) => json(method, path, { body }),
     listConversations: () => json("GET", `/conversations?scope=${encodeURIComponent(config.scope)}`),
     getConversation: (id) => json("GET", conv(id)),
     createConversation: (body) => json("POST", "/conversations", { body }),
