@@ -102,6 +102,8 @@ export function registerAgent({ peer, client, config, log, version }) {
 
   peer.on("_session/steering", async ({ sessionId, prompt }) => session(sessionId).steer(promptText(prompt)));
 
+  peer.on("_scooter/answer", async ({ sessionId, toolCallId, answers }) => session(sessionId).answer(toolCallId, answers));
+
   peer.on("session/cancel", async ({ sessionId }) => {
     await sessions.get(sessionId)?.cancel();
   });

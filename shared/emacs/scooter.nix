@@ -89,4 +89,6 @@ in
         (setq my/scooter--base-agent-configs agent-shell-agent-configs
               agent-shell-agent-configs #'my/scooter--agent-configs))))
   (global-set-key (kbd "C-c j") #'my/scooter)
+
+  ${import ./scooter-cards.nix { }}
 ''

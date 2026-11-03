@@ -78,14 +78,15 @@ What carries over:
 |---|---|
 | assistant text, reasoning | message and thought chunks |
 | tool calls and results | tool call blocks |
-| approval interrupts | permission prompt (answer from either Emacs or the web UI) |
+| approval interrupts and cards | permission prompt with the card (questions, AWS grants, commit identities); questions are answered in the minibuffer; answer from either Emacs or the web UI |
 | runs started from the web UI, Slack, webhooks | pushed into the open buffer (`session/push`) |
 | Stop | `C-c C-c` |
 | typing while a turn runs | steering, posted as an interrupting message |
 | model picker | `C-c C-v` |
 | context usage | the context indicator |
 
-Not yet carried over: image attachments, web services, links and sandbox controls
+Not yet carried over: image attachments, web services, links, sandbox controls and
+the details of other approval card kinds, which get an "Open in browser" choice
 (`M-x my/scooter-open-in-browser` opens the conversation in the web UI). Local MCP
 servers from `agent-shell-mcp-servers` don't apply, since the agent runs remotely.
 Loading a conversation replays its last 30 user turns (`SCOOTER_REPLAY_TURNS`).

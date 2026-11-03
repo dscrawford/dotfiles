@@ -111,13 +111,8 @@ export function createScooterClient(config, { fetchImpl = fetch, log = () => {} 
       }
       return res;
     },
-    resume: (id, interruptId, optionId) =>
-      fireAndForget("/agui", {
-        threadId: id,
-        runId: crypto.randomUUID(),
-        messages: [],
-        resume: [optionId ? { interruptId, status: "resolved", payload: { optionId } } : { interruptId, status: "cancelled" }],
-      }),
+    resume: (id, interruptId, entry) =>
+      fireAndForget("/agui", { threadId: id, runId: crypto.randomUUID(), messages: [], resume: [{ interruptId, ...entry }] }),
     steer: (id, text) => json("POST", `${conv(id)}/messages`, { body: { text } }),
     cancel: (id) => json("POST", `${conv(id)}/cancel`, { body: {} }),
     openIntegrityStream: (id, signal) => call("GET", `${conv(id)}/events.integrity`, { signal, extraHeaders: { Accept: "text/event-stream" } }),

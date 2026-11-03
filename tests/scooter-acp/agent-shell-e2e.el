@@ -2,6 +2,7 @@
 
 (require 'agent-shell)
 (load (getenv "SCOOTER_EL"))
+(load (expand-file-name "agent-shell-cards-e2e.el" (file-name-directory load-file-name)))
 
 (defun e2e-wait (pred what)
   (let ((deadline (+ (float-time) 20)))
@@ -41,6 +42,7 @@
     (progn
       (e2e-new-session-prompt)
       (e2e-load-history-then-push)
+      (e2e-cards)
       (princ "agent-shell e2e: ok\n")
       (kill-emacs 0))
   (error
