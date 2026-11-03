@@ -45,6 +45,49 @@ in
       (unless id (user-error "No Scooter session in this buffer"))
       (browse-url (format "%s/?thread=%s" my/scooter-url id))))
 
+  (defun my/scooter--web-service-candidate (service)
+    (cons (format "%-24s %-8s %s"
+                  (map-elt service 'displayName)
+                  (if (map-elt service 'running) "running" "stopped")
+                  (map-elt service 'url))
+          service))
+
+  (defun my/scooter-web-service-act (service)
+    "Browse, copy, start or stop SERVICE from _scooter/web-services/list."
+    (let* ((name (map-elt service 'name))
+           (url (map-elt service 'url))
+           (running (map-elt service 'running))
+           (toggle (if running "stop" "start"))
+           (choice (car (read-multiple-choice
+                         (format "%s (%s)" (map-elt service 'displayName) url)
+                         `((?b "browse" "open in the browser")
+                           (?c "copy" "copy the URL to the kill ring")
+                           (?s ,toggle ,(format "%s the service" toggle)))))))
+      (pcase choice
+        (?b (browse-url url))
+        (?c (kill-new url) (message "Copied %s" url))
+        (?s (my/scooter-request (format "_scooter/web-services/%s" toggle)
+                                :params `((name . ,name))
+                                :on-success (apply-partially #'message "Scooter: %s %s requested" toggle name))))))
+
+  (defun my/scooter-web-services ()
+    "Pick a web service of this Scooter conversation to open, copy, start or stop."
+    (interactive)
+    (my/scooter-request
+     "_scooter/web-services/list"
+     :on-success
+     (lambda (result)
+       (let ((services (append (map-elt result 'services) nil)))
+         (if services
+             (run-at-time 0 nil #'my/scooter--web-services-pick (current-buffer) services)
+           (message "This Scooter conversation declares no web services"))))))
+
+  (defun my/scooter--web-services-pick (buffer services)
+    (with-current-buffer buffer
+      (let* ((candidates (mapcar #'my/scooter--web-service-candidate services))
+             (pick (completing-read "Web service: " candidates nil t)))
+        (my/scooter-web-service-act (cdr (assoc pick candidates))))))
+
   (defun my/scooter-make-agent-config ()
     (agent-shell-make-agent-config
      :identifier 'scooter

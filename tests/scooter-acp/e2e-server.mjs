@@ -22,10 +22,20 @@ fake.setScript((body) => run(body.threadId, `p${++n}`, body.messages[0].content,
   { type: "TOOL_CALL_RESULT", toolCallId: `t${n}`, messageId: "m", content: "dotfiles scooter" },
 ]));
 import { existsSync, rmSync } from "node:fs";
+fake.conv("old").services = [
+  { name: "vite", displayName: "Vite dev", url: "/c/old/vite/", running: false },
+  { name: "docs", displayName: "Docs", url: "/c/old/docs/", running: true },
+];
+const serviceCall = [
+  { type: "TOOL_CALL_START", toolCallId: "ws", toolCallName: "bash" },
+  { type: "TOOL_CALL_ARGS", toolCallId: "ws", delta: JSON.stringify({ command: "scooter-service start vite" }) },
+  { type: "TOOL_CALL_END", toolCallId: "ws" },
+  { type: "TOOL_CALL_RESULT", toolCallId: "ws", messageId: "mws", content: "started" },
+];
 setInterval(() => {
   if (existsSync(process.env.TRIGGER_FILE)) {
     rmSync(process.env.TRIGGER_FILE);
-    for (const e of run("old", "w1", "WEB-QUESTION", "WEB-ANSWER")) fake.append("old", e);
+    for (const e of run("old", "w1", "WEB-QUESTION", "WEB-ANSWER", serviceCall)) fake.append("old", e);
   }
 }, 100);
 console.log(fake.url);
