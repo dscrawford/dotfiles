@@ -22,6 +22,22 @@ in
     (set-file-modes my/scooter-cookie-file #o600)
     (message "Saved Scooter cookie to %s" my/scooter-cookie-file))
 
+  (cl-defun my/scooter-request (method &key params on-success)
+    "Send extension METHOD to this buffer's scooter-acp with PARAMS plus sessionId.
+  ON-SUCCESS gets the decoded result."
+    (let ((state (agent-shell--state)))
+      (unless (eq (map-nested-elt state '(:agent-config :identifier)) 'scooter)
+        (user-error "Not a Scooter agent-shell buffer"))
+      (acp-send-request
+       :client (map-elt state :client)
+       :request `((:method . ,method)
+                  (:params . ((sessionId . ,(map-nested-elt state '(:session :id)))
+                              ,@params)))
+       :buffer (current-buffer)
+       :on-success (or on-success #'ignore)
+       :on-failure (lambda (acp-error _raw)
+                     (message "Scooter %s failed: %s" method (map-elt acp-error 'message))))))
+
   (defun my/scooter-open-in-browser ()
     "Open the current Scooter conversation in the web UI."
     (interactive)
