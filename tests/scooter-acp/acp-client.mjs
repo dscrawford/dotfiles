@@ -49,6 +49,7 @@ export function startBridge(env) {
     stderr: () => stderr,
     answer: (method, fn) => autoAnswers.set(method, fn),
     reply: (id, result) => write({ id, result }),
+    fail: (id, error) => write({ id, error }),
     request(method, params = {}) {
       const id = nextId++;
       write({ id, method, params });

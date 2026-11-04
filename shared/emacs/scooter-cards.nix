@@ -1,6 +1,7 @@
 # shared/emacs/scooter-cards.nix
-# Scooter approval cards that need input: the bridge offers scooter:answer and
-# scooter:browser options; this collects the answers or opens the web UI.
+# Scooter approval cards that need input. Questions arrive as an inline
+# elicitation form; this drops the form when the web UI answers first, and
+# handles the scooter:answer and scooter:browser card options used without forms.
 { }:
 
 ''
@@ -47,7 +48,25 @@
                                 :on-success (apply-partially #'my/scooter-cards--answered respond args)))))
        (t (apply respond args)))))
 
+  (defun my/scooter-cards--drop-answered-form (event)
+    "Settle the form of a question that was answered elsewhere, such as the web UI."
+    (let* ((data (map-elt event :data))
+           (state (agent-shell--state))
+           (form (and (equal (map-nested-elt data '(:tool-call :status)) "completed")
+                      (agent-shell-elicitation--pending-for-tool-call-p
+                       :state state :tool-call-id (map-elt data :tool-call-id)))))
+      (when form
+        (agent-shell-elicitation--respond :state state :id (car form) :action 'cancel))))
+
+  (defun my/scooter-cards--watch-forms ()
+    (when (eq (map-nested-elt (agent-shell--state) '(:agent-config :identifier)) 'scooter)
+      (agent-shell-subscribe-to
+       :shell-buffer (current-buffer)
+       :event 'tool-call-update
+       :on-event #'my/scooter-cards--drop-answered-form)))
+
   (with-eval-after-load 'agent-shell
     (my/guard "scooter-cards"
-      (advice-add 'agent-shell--send-permission-response :around #'my/scooter-cards--respond)))
+      (advice-add 'agent-shell--send-permission-response :around #'my/scooter-cards--respond)
+      (add-hook 'agent-shell-mode-hook #'my/scooter-cards--watch-forms)))
 ''

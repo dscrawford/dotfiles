@@ -35,10 +35,10 @@ const APPROVE = [
   { optionId: "deny", name: "Deny", kind: "reject_once" },
 ];
 
-async function raise(interrupt) {
+async function raise(interrupt, { clientCapabilities = {}, method = "session/request_permission" } = {}) {
   fake = await startFakeScooter();
   bridge = startBridge({ SCOOTER_URL: fake.url, SCOOTER_COOKIE: "_oauth2_proxy=good" });
-  await bridge.request("initialize", { protocolVersion: 1, clientCapabilities: {} });
+  await bridge.request("initialize", { protocolVersion: 1, clientCapabilities });
   fake.setScript((body) =>
     body.resume
       ? [
@@ -53,7 +53,7 @@ async function raise(interrupt) {
   );
   const { sessionId } = await bridge.request("session/new", { cwd: "/tmp", mcpServers: [] });
   const done = bridge.request("session/prompt", { sessionId, prompt: [{ type: "text", text: "go" }] });
-  const ask = await bridge.waitFor(() => bridge.requests.find((r) => r.method === "session/request_permission"));
+  const ask = await bridge.waitFor(() => bridge.requests.find((r) => r.method === method));
   return { sessionId, ask, done };
 }
 
@@ -158,4 +158,92 @@ test("a known kind with data it cannot read falls back to the raw card", async (
   const { ask } = await raise({ id: "req-y", message: "Grant?", metadata: { kind: "aws.permissions", data: { nope: 1 }, options: APPROVE } });
   assert.match(detail(ask), /Emacs has no card for aws\.permissions requests/);
   assert.deepEqual(ask.params.options.map((o) => o.optionId), ["approve", "deny", "scooter:browser"]);
+});
+
+const FORMS = { clientCapabilities: { elicitation: { form: {} } }, method: "elicitation/create" };
+const QUESTION_INTERRUPT = {
+  id: "toolu_f",
+  toolCallId: "toolu_f",
+  message: "The agent has a question",
+  metadata: { kind: "ask-user.questions", data: { questions: QUESTIONS }, options: [{ optionId: "answer", name: "Answer", kind: "allow_once" }] },
+};
+
+test("a client with forms gets every question in one inline elicitation form", async () => {
+  const { sessionId, ask, done } = await raise(QUESTION_INTERRUPT, FORMS);
+  assert.equal(asks().length, 0);
+  assert.equal(ask.params.sessionId, sessionId);
+  assert.equal(ask.params.mode, "form");
+  assert.equal(ask.params.toolCallId, "toolu_f");
+  const call = bridge.updates.find((u) => u.sessionUpdate === "tool_call" && u.toolCallId === "toolu_f");
+  assert.equal(call.status, "pending");
+  assert.deepEqual(call.rawInput.questions.map((q) => q.question), QUESTIONS.map((q) => q.question));
+  const { properties, required } = ask.params.requestedSchema;
+  assert.deepEqual(Object.keys(properties), ["q0", "q0_other", "q1", "q1_other", "q2"]);
+  assert.deepEqual(required, ["q0", "q1", "q2"]);
+  assert.deepEqual(properties.q0, {
+    type: "string",
+    title: "DB",
+    description: "Which database?",
+    oneOf: [{ const: "Postgres", title: "Postgres", description: "Relational" }, { const: "SQLite", title: "SQLite" }],
+  });
+  assert.equal(properties.q1.type, "array");
+  assert.deepEqual(properties.q1.items.anyOf.map((o) => o.const), ["Cache", "Search", "Queue"]);
+  assert.deepEqual(properties.q1_other._meta, { _askUserQuestionCustomAnswer: { questionId: "q1" } });
+  assert.equal(properties.q2.type, "string");
+  assert.equal(properties.q2.oneOf, undefined);
+
+  bridge.reply(ask.id, { action: "accept", content: { q0: "SQLite", q1: ["Queue", "Cache"], q1_other: "Queue, Cache, my own", q2: "billing" } });
+  assert.equal((await done).stopReason, "end_turn");
+  assert.deepEqual(resumed(), [
+    {
+      interruptId: "toolu_f",
+      status: "resolved",
+      payload: { optionId: "answer", result: { answers: { "Which database?": "SQLite", "Which extras?": "Queue, Cache, my own", "Name the service": "billing" } } },
+    },
+  ]);
+  const settled = bridge.updates.find((u) => u.sessionUpdate === "tool_call_update" && u.toolCallId === "toolu_f" && u.status === "completed");
+  assert.match(settled.content[0].content.text, /Which database\?: SQLite\nWhich extras\?: Queue, Cache, my own/);
+});
+
+test("a typed answer replaces the pick of a single-choice question", async () => {
+  const { ask, done } = await raise({ ...QUESTION_INTERRUPT, metadata: { ...QUESTION_INTERRUPT.metadata, data: { questions: QUESTIONS.slice(0, 1) } } }, FORMS);
+  bridge.reply(ask.id, { action: "accept", content: { q0_other: "MySQL" } });
+  await done;
+  assert.deepEqual(resumed()[0].payload.result.answers, { "Which database?": "MySQL" });
+});
+
+test("declining the form dismisses the question", async () => {
+  const { ask } = await raise(QUESTION_INTERRUPT, FORMS);
+  bridge.reply(ask.id, { action: "decline" });
+  await bridge.waitFor(() => resumed());
+  assert.deepEqual(resumed(), [{ interruptId: "toolu_f", status: "cancelled" }]);
+});
+
+test("an incomplete form is asked again rather than resumed", async () => {
+  const { ask } = await raise(QUESTION_INTERRUPT, FORMS);
+  bridge.reply(ask.id, { action: "accept", content: { q0: "SQLite" } });
+  const again = await bridge.waitFor(() => bridge.requests.filter((r) => r.method === "elicitation/create")[1]);
+  assert.equal(resumed(), undefined);
+  bridge.reply(again.id, { action: "cancel" });
+  await bridge.waitFor(() => resumed());
+  assert.deepEqual(resumed(), [{ interruptId: "toolu_f", status: "cancelled" }]);
+});
+
+test("a client that refuses the form falls back to the answer card", async () => {
+  const { ask } = await raise(QUESTION_INTERRUPT, FORMS);
+  bridge.fail(ask.id, { code: -32601, message: "method not found" });
+  const card = await bridge.waitFor(() => asks()[0]);
+  assert.deepEqual(card.params.options.map((o) => o.optionId), ["scooter:answer", "scooter:dismiss", "scooter:browser"]);
+});
+
+test("a non-question interrupt stays a permission card even when forms are supported", async () => {
+  const { ask } = await raise({ id: "req-c2", message: "Identity", metadata: { kind: "commits.identity", data: { name: "Ada", email: "ada@example.com" }, options: APPROVE } }, { clientCapabilities: FORMS.clientCapabilities });
+  assert.equal(ask.method, "session/request_permission");
+});
+
+test("a question answered in the web UI completes the tool call behind the form", async () => {
+  const { ask } = await raise(QUESTION_INTERRUPT, FORMS);
+  fake.append("c1", { type: "PERMISSION_RESOLVED", toolCallId: "toolu_f", optionId: "answer" });
+  await bridge.waitFor(() => bridge.requests.find((r) => r.method === "$/cancel_request" && r.params.requestId === ask.id));
+  await bridge.waitFor(() => bridge.updates.find((u) => u.sessionUpdate === "tool_call_update" && u.toolCallId === "toolu_f" && u.status === "completed"));
 });
