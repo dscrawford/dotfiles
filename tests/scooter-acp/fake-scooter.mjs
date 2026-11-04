@@ -31,7 +31,8 @@ export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = 
     for (const s of c.streams) s.write(`data: ${JSON.stringify({ kind: "event", event, prevChecksum: prev, checksum })}\n\n`);
   };
 
-  const row = (c) => ({ id: c.id, title: c.title, lastActivityAt: c.lastActivityAt, parentId: c.parentId, sources: [...new Set(c.links.map((l) => l.source))].sort(), links: c.links });
+  const SIDEBAR = ["starred", "status", "visibility", "runStartedAt", "awaitingInputAt", "lastReplyAt"];
+  const row = (c) => ({ id: c.id, title: c.title, lastActivityAt: c.lastActivityAt, parentId: c.parentId, ...Object.fromEntries(SIDEBAR.filter((k) => c[k] !== undefined).map((k) => [k, c[k]])), sources: [...new Set(c.links.map((l) => l.source))].sort(), links: c.links });
 
   const addLink = (id, link) => {
     const c = conv(id);

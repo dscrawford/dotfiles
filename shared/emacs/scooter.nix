@@ -186,9 +186,57 @@ in
       (call-interactively #'my/scooter-set-cookie))
     (agent-shell--dwim :config (my/scooter-make-agent-config) :new-shell t))
 
+  (defun my/scooter--session-status (state)
+    "The web UI's status dot for a conversation in STATE, as text."
+    (pcase state
+      ("waiting" (propertize "waiting on you" 'face 'warning))
+      ("working" (propertize "working" 'face 'success))
+      ("idle" (propertize "running" 'face 'shadow))
+      ("failed" (propertize "failed" 'face 'error))
+      ((or "suspended" "ended") (propertize state 'face 'shadow))
+      (_ "")))
+
+  (defun my/scooter--session-starred-p (session)
+    (eq t (map-nested-elt session '(_meta scooter starred))))
+
+  (defun my/scooter--session-choices (choices)
+    "Offer the conversations in the web UI's sidebar, in its order.
+  Starred first, then most recently active, labelled with the star, title,
+  status and date. Scooter conversations don't live in a local directory,
+  so the directory column and the Downloads/temp shell choices are dropped."
+    (let* ((sessions (seq-filter (lambda (c) (consp (cdr c))) choices))
+           (sessions (append (seq-filter (lambda (c) (my/scooter--session-starred-p (cdr c))) sessions)
+                             (seq-remove (lambda (c) (my/scooter--session-starred-p (cdr c))) sessions)))
+           (title-width (apply #'max 10 (mapcar (lambda (c) (length (agent-shell--session-title (cdr c))))
+                                                sessions))))
+      (append
+       (delq nil
+             (mapcar (lambda (c)
+                       (pcase (cdr c)
+                         (:new-shell (cons "New Scooter conversation" :new-shell))
+                         (:other-shell c)))
+                     choices))
+       (mapcar
+        (lambda (c)
+          (let ((session (cdr c)))
+            (cons (concat
+                   (if (my/scooter--session-starred-p session) (propertize "★ " 'face 'warning) "  ")
+                   (propertize (string-pad (agent-shell--session-title session) (1+ title-width))
+                               'face 'agent-shell-session-title)
+                   (string-pad (my/scooter--session-status
+                                (map-nested-elt session '(_meta scooter state)))
+                               15)
+                   (propertize (agent-shell--format-session-date
+                                (or (map-elt session 'updatedAt) ""))
+                               'face 'agent-shell-session-date))
+                  session)))
+        sessions))))
+
   (defun my/scooter--replay-full-history ()
-    "Show loaded Scooter conversations in full; scooter-acp caps the replay."
+    "Show loaded Scooter conversations in full; scooter-acp caps the replay.
+  Also list conversations the way the web UI does when picking one."
     (when (eq (map-nested-elt (agent-shell--state) '(:agent-config :identifier)) 'scooter)
+      (setq-local agent-shell-session-choices-function #'my/scooter--session-choices)
       (setq-local agent-shell-session-restore-verbosity 'full)))
   (add-hook 'agent-shell-mode-hook #'my/scooter--replay-full-history)
 

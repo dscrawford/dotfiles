@@ -3,6 +3,7 @@ import { cardScript, cardTrigger } from "./e2e-cards.mjs";
 const fake = await startFakeScooter();
 fake.conv("old");
 Object.assign(fake.conv("old"), { title: "Fix the login redirect" });
+Object.assign(fake.conv("pinned"), { title: "Pinned", starred: true, status: "running", awaitingInputAt: 1, lastActivityAt: 0 });
 const run = (threadId, runId, q, a, extra = []) => [
   { type: "RUN_STARTED", threadId, runId },
   { type: "TEXT_MESSAGE_START", messageId: `u${runId}`, role: "user" },

@@ -34,6 +34,22 @@ function modelOption(models, current) {
   ];
 }
 
+// The web UI's byStarredThenRecent.
+export function sidebarOrder(a, b) {
+  return (b.starred ? 1 : 0) - (a.starred ? 1 : 0) || (b.lastActivityAt ?? 0) - (a.lastActivityAt ?? 0);
+}
+
+// What a web UI sidebar row shows next to the title: the star and the status
+// dot. "Unread" is tracked per browser, so the server can't report it.
+export function sidebarState(r) {
+  let state = null;
+  if (r.awaitingInputAt) state = "waiting";
+  else if (r.runStartedAt) state = "working";
+  else if (["failed", "suspended", "ended"].includes(r.status)) state = r.status;
+  else if (r.status === "running") state = "idle";
+  return { title: r.title || r.id, starred: !!r.starred, state, sources: r.sources ?? [], visibility: r.visibility ?? "shared" };
+}
+
 export function registerAgent({ peer, client, config, log, version }) {
   const sessions = new Map();
   const links = registerLinks({ peer, client, log });
@@ -79,10 +95,11 @@ export function registerAgent({ peer, client, config, log, version }) {
     return { sessionId: conv.id, configOptions: await configOptions(conv.id, s.model) };
   });
 
+  // The same rows, in the same order, as the web UI's sidebar: the caller's
+  // scope, no subagents, starred first, then most recently active. A Scooter
+  // conversation has no local directory, so the requested cwd is only echoed.
   peer.on("session/list", async ({ cursor, cwd }) => {
-    const rows = (await client.listConversations())
-      .filter((r) => !r.parentId)
-      .sort((a, b) => (b.lastActivityAt ?? 0) - (a.lastActivityAt ?? 0));
+    const rows = (await client.listConversations()).filter((r) => !r.parentId).sort(sidebarOrder);
     const offset = Number(cursor ?? 0) || 0;
     const page = rows.slice(offset, offset + PAGE_SIZE);
     return {
@@ -91,6 +108,7 @@ export function registerAgent({ peer, client, config, log, version }) {
         cwd: cwd ?? "/workspace",
         title: titleWithLinks(r),
         ...(r.lastActivityAt ? { updatedAt: new Date(r.lastActivityAt).toISOString() } : {}),
+        _meta: { scooter: sidebarState(r) },
       })),
       ...(offset + PAGE_SIZE < rows.length ? { nextCursor: String(offset + PAGE_SIZE) } : {}),
     };

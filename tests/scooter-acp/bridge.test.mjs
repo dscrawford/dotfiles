@@ -48,20 +48,22 @@ test("initialize advertises load, list, resume and steering", async () => {
   assert.equal(init._meta.steering.supported, true);
 });
 
-test("session/list returns top-level conversations, newest first, paged", async () => {
+test("session/list returns the web sidebar: top-level, starred then newest, paged", async () => {
   await setup();
-  Object.assign(fake.conv("old"), { title: "Old", lastActivityAt: 1000 });
-  Object.assign(fake.conv("new"), { title: "New", lastActivityAt: 2000 });
+  Object.assign(fake.conv("old"), { title: "Old", lastActivityAt: 1000, status: "suspended" });
+  Object.assign(fake.conv("new"), { title: "New", lastActivityAt: 2000, status: "running", runStartedAt: 1900 });
+  Object.assign(fake.conv("pinned"), { title: "Pinned", lastActivityAt: 500, starred: true, status: "running", awaitingInputAt: 400 });
   Object.assign(fake.conv("child"), { parentId: "new", lastActivityAt: 3000 });
   const { sessions, nextCursor } = await bridge.request("session/list", { cwd: "/home/d/proj" });
-  assert.deepEqual(sessions.map((s) => [s.sessionId, s.title, s.cwd]), [["new", "New", "/home/d/proj"], ["old", "Old", "/home/d/proj"]]);
-  assert.equal(sessions[0].updatedAt, new Date(2000).toISOString());
+  assert.deepEqual(sessions.map((s) => [s.sessionId, s.title, s.cwd]), [["pinned", "Pinned", "/home/d/proj"], ["new", "New", "/home/d/proj"], ["old", "Old", "/home/d/proj"]]);
+  assert.deepEqual(sessions.map((s) => [s._meta.scooter.starred, s._meta.scooter.state]), [[true, "waiting"], [false, "working"], [false, "suspended"]]);
+  assert.equal(sessions[1].updatedAt, new Date(2000).toISOString());
   assert.equal(nextCursor, undefined);
   for (let i = 0; i < 60; i++) fake.conv(`bulk${i}`);
   const page1 = await bridge.request("session/list", {});
   assert.equal(page1.sessions.length, 50);
   const page2 = await bridge.request("session/list", { cursor: page1.nextCursor });
-  assert.equal(page2.sessions.length, 12);
+  assert.equal(page2.sessions.length, 13);
 });
 
 test("a prompt streams the run and ends the turn without echoing the user", async () => {

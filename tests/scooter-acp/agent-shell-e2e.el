@@ -110,8 +110,36 @@
         (e2e-wait (lambda () (e2e-has "*Messages*" "Scooter: compacted 3 turns")) "the compaction result")))
     (unless (string-prefix-p "Fix the login redirect: running" asked) (error "Unexpected sandbox prompt: %s" asked))))
 
+(defun e2e-picker ()
+  "The session picker lists the web UI's conversations, starred first, with no directory."
+  (let ((buf (e2e-start :session-strategy 'new))
+        choices)
+    (e2e-wait (lambda () (map-nested-elt (buffer-local-value 'agent-shell--state buf) '(:session :id))) "session/new")
+    (with-current-buffer buf
+      (unless (eq agent-shell-session-choices-function #'my/scooter--session-choices)
+        (error "Scooter buffers don't use my/scooter--session-choices"))
+      (agent-shell--list-sessions
+       :state agent-shell--state :cwd "/home/someone/some-project" :buffer buf
+       :on-success (lambda (sessions)
+                     (setq choices (my/scooter--session-choices
+                                    (append '(("New shell" . :new-shell)
+                                              ("New Downloads shell" . :downloads-shell)
+                                              ("New temp shell" . :temp-shell))
+                                            (mapcar (lambda (s) (cons "label" s))
+                                                    (agent-shell--sort-sessions-by-recency sessions))))))
+       :on-failure (lambda (e _) (error "session/list failed: %S" e))))
+    (e2e-wait (lambda () choices) "session/list")
+    (let ((tokens (mapcar #'cdr choices))
+          (labels (mapcar (lambda (c) (substring-no-properties (car c))) choices)))
+      (unless (equal (car choices) '("New Scooter conversation" . :new-shell)) (error "First choice: %S" (car choices)))
+      (when (seq-some #'keywordp (cdr tokens)) (error "Directory choices kept: %S" labels))
+      (unless (equal (map-elt (cadr tokens) 'sessionId) "pinned") (error "Starred not first: %S" labels))
+      (unless (string-match-p "\\`★ Pinned +waiting on you" (cadr labels)) (error "Pinned label: %S" (cadr labels)))
+      (when (seq-some (lambda (l) (string-match-p "some-project" l)) labels) (error "Directory in labels: %S" labels)))))
+
 (condition-case err
     (progn
+      (e2e-picker)
       (e2e-new-session-prompt)
       (e2e-load-history-then-push)
       (e2e-sandbox-compact)

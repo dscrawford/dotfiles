@@ -70,7 +70,13 @@ Then in Emacs:
    (mode 600). The bridge writes refreshed cookies back to that file; when the
    session finally expires, requests fail with an error naming the file to update.
 2. `C-c j` (`my/scooter`) opens Scooter, which `C-c s` also lists in the agent picker.
-   On start you pick an existing conversation (newest first) or a new one.
+   On start you pick an existing conversation or a new one. The picker lists the
+   conversations the web UI's sidebar shows, in its order (starred first, then most
+   recently active), with each one's status (working, waiting on you, suspended, ...).
+   It doesn't depend on the directory you start it from.
+
+   ![Picking a conversation](docs/images/scooter-acp/01-picker.png)
+   ![A conversation loaded from Scooter](docs/images/scooter-acp/02-history.png)
 
 What carries over:
 
@@ -105,6 +111,8 @@ A new size applies on the next restart.
 
 Tests: `tests/scooter-acp/run.sh` (protocol, fake Scooter) and
 `tests/scooter-acp/emacs-e2e.sh` (the pinned agent-shell driving the bridge).
+`tests/scooter-acp/screenshots/screenshots.sh` regenerates the screenshots in
+`docs/images/scooter-acp/` from a GUI Emacs under Xvfb and a demo fake Scooter.
 
 ## Usage
 
