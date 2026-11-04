@@ -58,9 +58,12 @@ server, so agent-shell can open, continue and follow Scooter conversations inste
 the web UI. It is a client of Scooter's HTTP API: the agent still runs in the cluster,
 in the conversation's sandbox.
 
+`my.scooter.url` defaults to `https://scooter.dcraw.net`. Point it at another
+server, or set it to `""` to leave Scooter out of agent-shell:
+
 ```nix
 # any Home Manager module
-{ my.scooter.url = "https://scooter.example.com"; }
+{ my.scooter.url = ""; }
 ```
 
 Then in Emacs:
@@ -70,6 +73,11 @@ Then in Emacs:
    (mode 600). The bridge writes refreshed cookies back to that file; when the
    session finally expires, requests fail with an error naming the file to update.
 2. `C-c j` (`my/scooter`) opens Scooter, which `C-c s` also lists in the agent picker.
+   There it has its own icon: the 🛴 mark as a one-colour silhouette (white on dark
+   themes, black on light ones, from Noto Emoji), in `shared/emacs/icons/`.
+
+   ![Scooter in the agent-shell agent picker](docs/images/scooter-acp/00-agent-picker.png)
+
    On start you pick an existing conversation or a new one. The picker lists the
    conversations the web UI's sidebar shows, in its order (starred first, then most
    recently active), with each one's status (working, waiting on you, suspended, ...).

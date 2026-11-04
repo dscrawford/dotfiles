@@ -1,13 +1,13 @@
 # shared/home/scooter.nix
 # Where the Scooter agent-shell bridge (pkgs/scooter-acp, wired in
-# emacs/scooter.nix) points. Empty url keeps Scooter out of the agent picker.
+# emacs/scooter.nix) points. Set url to "" to keep Scooter out of the agent picker.
 { lib, config, ... }:
 
 {
   options.my.scooter = {
     url = lib.mkOption {
       type = lib.types.str;
-      default = "";
+      default = "https://scooter.dcraw.net";
       example = "https://scooter.example.com";
       description = "Scooter UI origin; the bridge calls its /conversations and /agui API.";
     };
