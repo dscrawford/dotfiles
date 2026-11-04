@@ -55,6 +55,8 @@ nix run nixpkgs#bats -- tests/nix/generators.bats        # generator output pinn
 nix run nixpkgs#bats -- tests/hooks/          # prompt-router, tool-output-filter, comment-density, session-guard, pr-guard
 ./tests/local-llm-mcp/run.sh                             # node --test, Ollama mocked
 ./tests/ruflo-mcp/run.sh                                 # node --test, fake MCP server
+./tests/scooter-acp/run.sh                               # node --test, fake Scooter server
+./tests/scooter-acp/emacs-e2e.sh                         # pinned agent-shell -> scooter-acp -> fake Scooter
 ./tests/emacs/scroll-nav-run.sh                          # ERT, elisp extracted from the nix modules
 ```
 

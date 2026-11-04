@@ -22,6 +22,7 @@ in
     # (emacs/agent-shell.nix), the CLI from ~/.claude.json user scope.
     ./ollama.nix
     ./llm-routing.nix
+    ./scooter.nix
     ./bash.nix
     ./tmux.nix
     ./git.nix
