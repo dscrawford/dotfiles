@@ -94,7 +94,7 @@ What carries over:
 |---|---|
 | assistant text, reasoning | message and thought chunks |
 | tool calls and results | tool call blocks |
-| approval interrupts and cards | permission prompt with the card (questions, AWS grants, commit identities); questions are answered in the minibuffer; answer from either Emacs or the web UI |
+| approval interrupts and cards | questions render as one inline agent-shell form (all questions at once, with an "Other" free-text choice); other cards (AWS grants, commit identities) stay permission prompts; answer from either Emacs or the web UI |
 | runs started from the web UI, Slack, webhooks | pushed into the open buffer (`session/push`) |
 | Stop | `C-c C-c` |
 | typing while a turn runs | steering, posted as an interrupting message |
@@ -105,6 +105,8 @@ What carries over:
 | linked resources (PRs, issues, Slack threads) | `M-x my/scooter-links` (`C-u` copies the URL); a "Linked" notice when one is added; sources in the picker's titles |
 | images (attached, sent by the agent, in tool results such as `view_image`) | inline images, fetched through the bridge with your cookie |
 | `@image.png` mentions, `yank-media`/clipboard images in the prompt | uploaded the way the web UI attaches them (png, jpeg, gif, webp) |
+
+![Scooter questions answered inline, all at once](docs/images/scooter-acp/05-questions.png)
 
 For anything else, `M-x my/scooter-open-in-browser` opens the conversation in the web
 UI; approval cards of unknown kinds offer it as a choice. Local MCP

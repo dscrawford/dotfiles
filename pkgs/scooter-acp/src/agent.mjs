@@ -52,6 +52,7 @@ export function sidebarState(r) {
 
 export function registerAgent({ peer, client, config, log, version }) {
   const sessions = new Map();
+  let forms = false;
   const links = registerLinks({ peer, client, log });
 
   const session = (sessionId) => {
@@ -65,30 +66,33 @@ export function registerAgent({ peer, client, config, log, version }) {
   const open = async (sessionId, { replay }) => {
     sessions.get(sessionId)?.close();
     const conv = await client.getConversation(sessionId);
-    const s = createSession({ id: sessionId, client, peer, config, log, model: conv?.model ?? undefined });
+    const s = createSession({ id: sessionId, client, peer, config, log, model: conv?.model ?? undefined, forms: () => forms });
     sessions.set(sessionId, s);
     await s.attach({ replay });
     void links.watch(sessionId);
     return { configOptions: await configOptions(sessionId, s.model) };
   };
 
-  peer.on("initialize", async () => ({
-    protocolVersion: 1,
-    agentInfo: { name: "scooter-acp", title: `Scooter (${new URL(config.url).host})`, version },
-    agentCapabilities: {
-      loadSession: true,
-      promptCapabilities: { embeddedContext: true, image: true },
-      sessionCapabilities: { list: {}, resume: {} },
-    },
-    authMethods: [],
-    _meta: { steering: { supported: true } },
-  }));
+  peer.on("initialize", async ({ clientCapabilities } = {}) => {
+    forms = !!clientCapabilities?.elicitation?.form;
+    return {
+      protocolVersion: 1,
+      agentInfo: { name: "scooter-acp", title: `Scooter (${new URL(config.url).host})`, version },
+      agentCapabilities: {
+        loadSession: true,
+        promptCapabilities: { embeddedContext: true, image: true },
+        sessionCapabilities: { list: {}, resume: {} },
+      },
+      authMethods: [],
+      _meta: { steering: { supported: true } },
+    };
+  });
 
   peer.on("authenticate", async () => ({}));
 
   peer.on("session/new", async () => {
     const conv = await client.createConversation({});
-    const s = createSession({ id: conv.id, client, peer, config, log, model: conv.model ?? undefined });
+    const s = createSession({ id: conv.id, client, peer, config, log, model: conv.model ?? undefined, forms: () => forms });
     sessions.set(conv.id, s);
     await s.attach({ replay: false });
     void links.watch(conv.id);

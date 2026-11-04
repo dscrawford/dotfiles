@@ -24,6 +24,10 @@ in
 
   agentShell =
     ''
+      ;; Upstream keeps elicitation forms behind this experimental defvar; set
+      ;; before the require so `initialize' advertises elicitation.form, which
+      ;; is what makes agents ask questions as an in-buffer form.
+      (setq agent-shell-elicitation--experimental-feature-enabled t)
       (my/guard "agent-shell" (require 'agent-shell))
       (global-set-key (kbd "C-c s") 'agent-shell)
       ;; Type a prompt while the agent is mid-turn: queued when busy, sent

@@ -9,7 +9,7 @@ const PRIORITY_INTERRUPT = 10;
 
 const isExt = (e) => typeof e.runId === "string" && e.runId.startsWith("ext-");
 
-export function createSession({ id, client, peer, config, log, model }) {
+export function createSession({ id, client, peer, config, log, model, forms = () => false }) {
   const translate = createTranslator();
   const interrupts = new Map();
   const asked = new Map();
@@ -31,9 +31,44 @@ export function createSession({ id, client, peer, config, log, model }) {
     }
   };
 
+  const askForm = (intr, form) => {
+    send({ sessionUpdate: "tool_call", ...form.toolCall });
+    const req = peer.request("elicitation/create", { sessionId: id, ...form.params });
+    asked.set(intr.id, req.id);
+    req.promise
+      .then(
+        (res) => {
+          asked.delete(intr.id);
+          if (!interrupts.has(intr.id)) return;
+          let resolved;
+          try {
+            resolved = cards.formResolved(intr, res);
+          } catch (e) {
+            log("form answer incomplete, asking again", id, e?.message ?? e);
+            return askForm(intr, form);
+          }
+          const { entry, text } = resolved;
+          send({ sessionUpdate: "tool_call_update", toolCallId: form.toolCall.toolCallId, status: "completed", content: [{ type: "content", content: { type: "text", text } }] });
+          return client.resume(id, intr.id, entry);
+        },
+        (e) => {
+          asked.delete(intr.id);
+          log("form refused, falling back to a card", id, e?.message ?? e);
+          if (interrupts.has(intr.id)) askCard(intr);
+        },
+      )
+      .catch((e) => log("form answer failed", id, e?.message ?? e));
+  };
+
   const ask = (intr) => {
     if (asked.has(intr.id)) return;
     if (!Array.isArray(intr.metadata?.options) || !intr.metadata.options.length) return;
+    const form = forms() && cards.form(intr);
+    if (form) askForm(intr, form);
+    else askCard(intr);
+  };
+
+  const askCard = (intr) => {
     const req = peer.request("session/request_permission", { sessionId: id, ...cards.permission(intr) });
     asked.set(intr.id, req.id);
     req.promise

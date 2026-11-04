@@ -148,6 +148,7 @@
       (e2e-web-services)
       (e2e-links)
       (e2e-cards)
+      (e2e-forms)
       (princ "agent-shell e2e: ok\n")
       (kill-emacs 0))
   (error

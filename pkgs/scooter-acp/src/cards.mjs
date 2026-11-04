@@ -42,6 +42,44 @@ export function answerOf(q, picks) {
   return [...labels.filter((l) => given.includes(l)), ...given.filter((g) => !labels.includes(g))].join(", ");
 }
 
+const CUSTOM_ANSWER_META = "_askUserQuestionCustomAnswer";
+const fieldKey = (i) => `q${i}`;
+const customKey = (i) => `q${i}_other`;
+
+function questionFields(q, i) {
+  const options = q.options.map((o) => ({ const: o.label, title: o.label, ...(o.description ? { description: o.description } : {}) }));
+  const base = { title: q.header || q.question, description: q.question };
+  if (!options.length) return [[fieldKey(i), { type: "string", ...base }]];
+  const select = q.multiSelect ? { type: "array", ...base, items: { anyOf: options } } : { type: "string", ...base, oneOf: options };
+  const other = { type: "string", title: "Other", _meta: { [CUSTOM_ANSWER_META]: { questionId: fieldKey(i) } } };
+  return [[fieldKey(i), select], [customKey(i), other]];
+}
+
+export function questionSchema(qs) {
+  return {
+    type: "object",
+    properties: Object.fromEntries(qs.flatMap(questionFields)),
+    required: qs.map((_, i) => fieldKey(i)),
+  };
+}
+
+export function formPicks(qs, content) {
+  return qs.map((_, i) => content?.[customKey(i)] ?? content?.[fieldKey(i)]);
+}
+
+function collect(questions, answers) {
+  if (!Array.isArray(answers) || answers.length !== questions.length) {
+    throw new RpcError(INVALID_PARAMS, `expected ${questions.length} answers`);
+  }
+  const out = {};
+  questions.forEach((q, i) => {
+    const a = answerOf(q, answers[i]);
+    if (!a) throw new RpcError(INVALID_PARAMS, `no answer to: ${q.question}`);
+    out[q.question] = a;
+  });
+  return out;
+}
+
 function statementsOf(policy) {
   const raw = policy?.Statement;
   const list = Array.isArray(raw) ? raw : raw && typeof raw === "object" ? [raw] : [];
@@ -117,19 +155,29 @@ export function createCards() {
       return { toolCall, options: card.options };
     },
 
+    form(intr) {
+      const card = describe(intr);
+      if (!card.questions) return undefined;
+      const toolCallId = intr.toolCallId ?? intr.id;
+      const title = intr.message ?? "Scooter has a question";
+      return {
+        toolCall: { toolCallId, title, kind: "other", status: "pending", rawInput: card.rawInput },
+        params: { mode: "form", toolCallId, message: title, requestedSchema: questionSchema(card.questions) },
+      };
+    },
+
+    formResolved(intr, response) {
+      if (response?.action !== "accept") return { entry: { status: "cancelled" }, text: "Dismissed" };
+      const { questions, answerWith } = describe(intr);
+      const answers = collect(questions, formPicks(questions, response.content));
+      const text = Object.entries(answers).map(([q, a]) => `${q}: ${a}`).join("\n");
+      return { entry: { status: "resolved", payload: { optionId: answerWith, result: { answers } } }, text };
+    },
+
     answer(intr, answers) {
       const card = describe(intr);
       if (!card.questions) throw new RpcError(INVALID_PARAMS, `interrupt ${intr.id} takes no answers`);
-      if (!Array.isArray(answers) || answers.length !== card.questions.length) {
-        throw new RpcError(INVALID_PARAMS, `expected ${card.questions.length} answers`);
-      }
-      const out = {};
-      card.questions.forEach((q, i) => {
-        const a = answerOf(q, answers[i]);
-        if (!a) throw new RpcError(INVALID_PARAMS, `no answer to: ${q.question}`);
-        out[q.question] = a;
-      });
-      results.set(intr.id, { answers: out });
+      results.set(intr.id, { answers: collect(card.questions, answers) });
     },
 
     resume(intr, optionId) {

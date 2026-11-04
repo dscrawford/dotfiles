@@ -52,3 +52,47 @@
     (e2e-wait (lambda () (map-nested-elt (buffer-local-value 'agent-shell--state buf) '(:session :id))) "session/new")
     (e2e-cards-answer-questions buf)
     (e2e-cards-web-dismisses buf)))
+
+(defun e2e-forms-pending (buf)
+  "The (id . form) of BUF's open question form, or nil."
+  (seq-find (lambda (entry) (eq (map-elt (cdr entry) :status) 'pending))
+            (map-elt (buffer-local-value 'agent-shell--state buf) :elicitations)))
+
+(defun e2e-forms-ask (buf)
+  (agent-shell-insert :text "ask me" :submit t :no-focus t :shell-buffer buf)
+  (e2e-wait (lambda () (e2e-forms-pending buf)) "the question form")
+  (when (e2e-cards-pending buf) (error "Questions still went to a permission card")))
+
+(defun e2e-forms-submit (buf values)
+  (let* ((state (buffer-local-value 'agent-shell--state buf))
+         (form (e2e-forms-pending buf)))
+    (agent-shell-elicitation--put state (car form)
+                                  (agent-shell-elicitation--assoc-put (cdr form) :values values))
+    (with-current-buffer buf
+      (agent-shell-elicitation--respond :state state :id (car form) :action 'accept))))
+
+(defun e2e-forms-answer-inline (buf)
+  (e2e-forms-ask buf)
+  (dolist (s '("DB" "Which database?" "Postgres" "Relational" "Extras" "Which extras?" "Queue" "Name the service" "Submit" "Decline"))
+    (unless (e2e-has buf s) (error "Inline form lacks %S:\n%s" s (e2e-text buf))))
+  (e2e-forms-submit buf '(("q0" . "Postgres") ("q1" . ("Queue" "Cache")) ("q2" . "billing")))
+  (e2e-wait (lambda () (e2e-has buf "ANSWERED")) "the answered run")
+  (let ((want "ANSWERED {\"Which database?\":\"Postgres\",\"Which extras?\":\"Cache, Queue\",\"Name the service\":\"billing\"}"))
+    (unless (e2e-has buf want) (error "Wrong answers sent:\n%s" (e2e-text buf))))
+  (e2e-wait (lambda () (with-current-buffer buf (not (shell-maker-busy)))) "the answered turn to end"))
+
+(defun e2e-forms-web-answer-drops-form (buf)
+  (e2e-forms-ask buf)
+  (with-temp-file (getenv "TRIGGER_FILE") (insert "answer-in-web"))
+  (e2e-wait (lambda () (e2e-has buf "WEB-ANSWERED")) "the web answer")
+  (e2e-wait (lambda () (not (e2e-forms-pending buf))) "the form to settle")
+  (e2e-wait (lambda () (with-current-buffer buf (not (shell-maker-busy)))) "the web-answered turn to end"))
+
+(defun e2e-forms ()
+  (setq agent-shell-elicitation--experimental-feature-enabled t)
+  (unwind-protect
+      (let ((buf (e2e-start :session-strategy 'new)))
+        (e2e-wait (lambda () (map-nested-elt (buffer-local-value 'agent-shell--state buf) '(:session :id))) "session/new")
+        (e2e-forms-answer-inline buf)
+        (e2e-forms-web-answer-drops-form buf))
+    (setq agent-shell-elicitation--experimental-feature-enabled nil)))
