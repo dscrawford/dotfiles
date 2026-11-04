@@ -73,7 +73,9 @@ Then in Emacs:
    On start you pick an existing conversation or a new one. The picker lists the
    conversations the web UI's sidebar shows, in its order (starred first, then most
    recently active), with each one's status (working, waiting on you, suspended, ...).
-   It doesn't depend on the directory you start it from.
+   It doesn't depend on the directory you start it from. A Scooter buffer is named after
+   its conversation (`Scooter Agent @ <title>`), and its header shows the title where
+   other agents show the project.
 
    ![Picking a conversation](docs/images/scooter-acp/01-picker.png)
    ![A conversation loaded from Scooter](docs/images/scooter-acp/02-history.png)

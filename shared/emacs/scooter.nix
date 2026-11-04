@@ -232,12 +232,41 @@ in
                   session)))
         sessions))))
 
+  (defun my/scooter--conversation-name ()
+    "This Scooter buffer's conversation title, without linked sources, or nil."
+    (when-let* ((state (agent-shell--state))
+                ((eq (map-nested-elt state '(:agent-config :identifier)) 'scooter))
+                (title (map-nested-elt state '(:session :title)))
+                (title (string-trim
+                        (replace-regexp-in-string
+                         " \\[[^]]*\\]\\'" "" (car (split-string title "\n")))))
+                ((not (string-empty-p title))))
+      (truncate-string-to-width title 60 nil nil "…")))
+
+  (defun my/scooter--project-name (orig)
+    "Show the conversation, not the local project, in Scooter headers."
+    (or (ignore-errors (my/scooter--conversation-name)) (funcall orig)))
+  (advice-add 'agent-shell--project-name :around #'my/scooter--project-name)
+
+  (defun my/scooter--name-buffer (_event)
+    "Name the buffer after its conversation rather than the local project.
+  Keeps the \"Scooter Agent @ \" prefix that agent-shell-workspace parses."
+    (when-let* ((name (my/scooter--conversation-name)))
+      (shell-maker-set-buffer-name
+       (current-buffer)
+       (generate-new-buffer-name (agent-shell--format-buffer-name "Scooter" name) (buffer-name)))
+      (agent-shell--update-header-and-mode-line)))
+
   (defun my/scooter--replay-full-history ()
     "Show loaded Scooter conversations in full; scooter-acp caps the replay.
-  Also list conversations the way the web UI does when picking one."
+  Also list conversations the way the web UI does when picking one, and name
+  the buffer after the conversation."
     (when (eq (map-nested-elt (agent-shell--state) '(:agent-config :identifier)) 'scooter)
       (setq-local agent-shell-session-choices-function #'my/scooter--session-choices)
-      (setq-local agent-shell-session-restore-verbosity 'full)))
+      (setq-local agent-shell-session-restore-verbosity 'full)
+      (agent-shell-subscribe-to :shell-buffer (current-buffer)
+                                :event 'session-title-changed
+                                :on-event #'my/scooter--name-buffer)))
   (add-hook 'agent-shell-mode-hook #'my/scooter--replay-full-history)
 
   (defvar my/scooter--base-agent-configs nil)

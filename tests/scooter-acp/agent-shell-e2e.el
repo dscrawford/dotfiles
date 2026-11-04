@@ -47,6 +47,8 @@
   (let ((buf (e2e-start :session-id "old")))
     (e2e-wait (lambda () (e2e-has buf "HISTORY-ANSWER")) "history replay")
     (unless (e2e-has buf "HISTORY-QUESTION") (error "Replay dropped the user turn:\n%s" (e2e-text buf)))
+    (e2e-wait (lambda () (string-prefix-p "Scooter Agent @ Fix the login redirect" (buffer-name buf)))
+              (format "the buffer to be named after the conversation, not %S" (buffer-name buf)))
     (e2e-wait (lambda () (file-exists-p (e2e-image-cache-file))) "the replayed image")
     (sleep-for 0.5)
     (with-temp-file (getenv "TRIGGER_FILE") (insert "web"))
