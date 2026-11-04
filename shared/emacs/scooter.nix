@@ -161,9 +161,25 @@ in
     (my/scooter-request "_scooter/sandbox/status"
                         :on-success (apply-partially #'my/scooter--sandbox-menu-later (current-buffer))))
 
+  ;; agent-shell fetches :icon-name from LobeHub or an https URL. Scooter's mark
+  ;; is the 🛴 emoji, drawn as a one-colour silhouette (Noto Emoji, OFL) to sit
+  ;; with LobeHub's monochrome icons: white on dark themes, black on light ones.
+  (defvar my/scooter-icons
+    '((dark . "${./icons/scooter-dark.png}")
+      (light . "${./icons/scooter-light.png}")))
+
+  (defun my/scooter--fetch-icon (orig icon-name)
+    "Serve the bundled Scooter icon for ICON-NAME \"scooter\"; else call ORIG."
+    (if (equal icon-name "scooter")
+        (alist-get (if (eq (frame-parameter nil 'background-mode) 'light) 'light 'dark)
+                   my/scooter-icons)
+      (funcall orig icon-name)))
+  (advice-add 'agent-shell--fetch-agent-icon :around #'my/scooter--fetch-icon)
+
   (defun my/scooter-make-agent-config ()
     (agent-shell-make-agent-config
      :identifier 'scooter
+     :icon-name "scooter"
      :mode-line-name "Scooter"
      :buffer-name "Scooter"
      :shell-prompt "Scooter> "
