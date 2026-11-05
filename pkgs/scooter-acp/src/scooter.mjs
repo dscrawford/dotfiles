@@ -14,13 +14,22 @@ export function readConfig(env = process.env) {
     scope: env.SCOOTER_LIST_SCOPE || "mine",
     replayTurns: Number(env.SCOOTER_REPLAY_TURNS ?? 30),
     imageMaxBytes: Number(env.SCOOTER_IMAGE_MAX_BYTES ?? 5 * 1024 * 1024),
+    requestTimeoutMs: Number(env.SCOOTER_REQUEST_TIMEOUT_MS ?? 15000),
   };
 }
 
 function cookieFromFile(path) {
-  const raw = readFileSync(path, "utf8").trim();
+  let raw;
+  try {
+    raw = readFileSync(path, "utf8").trim();
+  } catch (e) {
+    if (e.code === "ENOENT") return undefined;
+    throw e;
+  }
   return raw.includes("=") ? raw : `_oauth2_proxy=${raw}`;
 }
+
+const isRefused = (res) => res.status === 401 || res.status === 403 || (res.status >= 300 && res.status < 400);
 
 function mergeSetCookies(cookie, setCookies) {
   const jar = new Map(
@@ -62,16 +71,25 @@ export function createScooterClient(config, { fetchImpl = fetch, log = () => {} 
     }
   };
 
-  const call = async (method, path, { body, signal, extraHeaders } = {}) => {
-    const res = await fetchImpl(config.url + path, {
-      method,
-      headers: headers({ ...(body !== undefined ? { "Content-Type": "application/json" } : {}), ...extraHeaders }),
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-      redirect: "manual",
-      signal,
-    });
+  const call = async (method, path, { body, signal, extraHeaders, stream = Boolean(signal) } = {}) => {
+    const deadline = stream ? undefined : AbortSignal.timeout(config.requestTimeoutMs);
+    let res;
+    try {
+      res = await fetchImpl(config.url + path, {
+        method,
+        headers: headers({ ...(body !== undefined ? { "Content-Type": "application/json" } : {}), ...extraHeaders }),
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+        redirect: "manual",
+        signal: signal ?? deadline,
+      });
+    } catch (e) {
+      if (deadline?.aborted) {
+        throw new RpcError(-32000, `Scooter ${method} ${path} did not answer within ${config.requestTimeoutMs}ms (${config.url})`);
+      }
+      throw new RpcError(-32000, `Scooter ${method} ${path} unreachable: ${e?.cause?.message ?? e?.message ?? e} (${config.url})`);
+    }
     keepRefreshedCookie(res);
-    if (res.status === 401 || res.status === 403 || (res.status >= 300 && res.status < 400)) {
+    if (isRefused(res)) {
       await res.body?.cancel();
       throw new RpcError(
         AUTH_REQUIRED,
@@ -110,6 +128,7 @@ export function createScooterClient(config, { fetchImpl = fetch, log = () => {} 
       const res = await call("POST", "/agui", {
         body: { threadId: id, runId: crypto.randomUUID(), messages: [{ id: crypto.randomUUID(), role: "user", content }], ...(priority ? { priority } : {}) },
         extraHeaders: model ? { "X-Agent-Model": model } : undefined,
+        stream: true,
       });
       if (!res.ok) {
         await res.body?.cancel();
