@@ -1,3 +1,5 @@
+// A fake Scooter for the agent-shell e2e (emacs-e2e.sh): the slice of the HTTP
+// API scooter-mode uses, with an integrity-checksummed event log per conversation.
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 
@@ -62,6 +64,7 @@ export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = 
     const routed = await routes({ method: req.method, path: url.pathname, body: async () => (entry.body = await body(req)) });
     if (routed) return json(res, routed.status ?? 200, routed.json);
 
+    if (req.method === "GET" && url.pathname === "/whoami") return json(res, 200, { id: "me" });
     if (req.method === "GET" && url.pathname === "/conversations") {
       return json(res, 200, [...convs.values()].map(row), refresh);
     }
@@ -104,8 +107,12 @@ export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = 
         return res.end(a.data);
       }
       if (req.method === "POST" && tail === "messages") {
+        // scooter acp sends prompts here unless it carries a model pick or images.
         entry.body = await body(req);
-        return json(res, 202, { ok: true });
+        json(res, 202, { ok: true });
+        const events = script({ threadId: c.id, messages: [{ role: "user", content: entry.body.text }] }, req.headers) ?? [];
+        for (const e of events) append(c.id, e);
+        return;
       }
       if (req.method === "GET" && tail === "web-services") return json(res, 200, { services: c.services ?? [] });
       const svc = tail.match(/^web-services\/([^/]+)\/(start|stop)$/);
