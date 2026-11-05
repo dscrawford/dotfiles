@@ -139,8 +139,32 @@
       (unless (string-match-p "\\`★ Pinned +waiting on you" (cadr labels)) (error "Pinned label: %S" (cadr labels)))
       (when (seq-some (lambda (l) (string-match-p "some-project" l)) labels) (error "Directory in labels: %S" labels)))))
 
+(setenv "SCOOTER_BROWSER"
+        (expand-file-name "fake-browser.mjs" (file-name-directory load-file-name)))
+
+(defun e2e-session-started (buf what)
+  (e2e-wait (lambda () (map-nested-elt (buffer-local-value 'agent-shell--state buf) '(:session :id))) what))
+
+(defun e2e-login-on-start (stored)
+  "Start a session with STORED in the cookie file (nil: no file); expect a sign-in."
+  (if stored
+      (with-temp-file my/scooter-cookie-file (insert stored))
+    (delete-file my/scooter-cookie-file))
+  (e2e-session-started (e2e-start :session-strategy 'new) (format "session/new after replacing %S" stored))
+  (unless (string-match-p "_oauth2_proxy=good"
+                          (with-temp-buffer (insert-file-contents my/scooter-cookie-file) (buffer-string)))
+    (error "Sign-in didn't replace cookie %S" stored)))
+
+(defun e2e-no-login-when-valid ()
+  (cl-letf (((symbol-function 'my/scooter-login)
+             (lambda () (error "Signed in again with a valid cookie"))))
+    (e2e-session-started (e2e-start :session-strategy 'new) "session/new with a valid cookie")))
+
 (condition-case err
     (progn
+      (e2e-login-on-start nil)
+      (e2e-login-on-start "_oauth2_proxy=stale\n")
+      (e2e-no-login-when-valid)
       (e2e-picker)
       (e2e-new-session-prompt)
       (e2e-load-history-then-push)

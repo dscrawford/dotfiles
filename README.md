@@ -68,15 +68,21 @@ server, or set it to `""` to leave Scooter out of agent-shell:
 
 Then in Emacs:
 
-1. `M-x my/scooter-set-cookie` and paste the `_oauth2_proxy` cookie value from the
-   browser's devtools (Application → Cookies). It is saved to `~/.config/scooter/cookie`
-   (mode 600). The bridge writes refreshed cookies back to that file; when the
-   session finally expires, requests fail with an error naming the file to update.
-2. `C-c j` (`my/scooter`) opens Scooter, which `C-c s` also lists in the agent picker.
+1. `C-c j` (`my/scooter`) opens Scooter, which `C-c s` also lists in the agent picker.
    There it has its own icon: the 🛴 mark as a one-colour silhouette (white on dark
    themes, black on light ones, from Noto Emoji), in `shared/emacs/icons/`.
 
    ![Scooter in the agent-shell agent picker](docs/images/scooter-acp/00-agent-picker.png)
+
+   Starting a session checks the saved cookie. If it's missing or Scooter refuses it,
+   the sign-in happens in your default browser. With Firefox that is your own profile:
+   a session you already have there is reused without opening a window, otherwise the
+   sign-in page opens in a tab and the bridge picks the cookie up from Firefox once
+   you're through. Any other default falls back to a Chromium-based browser with a
+   dedicated profile (`~/.config/scooter/browser-profile`); `SCOOTER_BROWSER` names
+   that binary and `SCOOTER_LOGIN_BROWSER=firefox|chromium` forces either path. The
+   cookie is saved to `~/.config/scooter/cookie` (mode 600), and the bridge writes
+   refreshed cookies back to that file. `M-x my/scooter-login` signs in by hand.
 
    On start you pick an existing conversation or a new one. The picker lists the
    conversations the web UI's sidebar shows, in its order (starred first, then most

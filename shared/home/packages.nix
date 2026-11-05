@@ -127,7 +127,7 @@ in
     mpv
     pwvucontrol
     alacritty
-    (pkgs.callPackage ./discord.nix { })
+    vesktop
     fastfetch
     # pycharm-oss dropped: unmaintained in nixpkgs and flagged insecure
     # (NIXPKGS-2026-2269) after the 2026-08 channel bump.

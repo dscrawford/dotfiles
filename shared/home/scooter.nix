@@ -16,9 +16,11 @@
       type = lib.types.str;
       default = "${config.xdg.configHome}/scooter/cookie";
       description = ''
-        File holding the oauth2-proxy session cookie (`_oauth2_proxy=…`, or the
-        bare value). Written by `M-x my/scooter-set-cookie`; the bridge rewrites
-        it when oauth2-proxy refreshes the session.
+        File holding the oauth2-proxy session cookie (`name=value`). Written by
+        `M-x my/scooter-login`, which runs when a session starts without a
+        working cookie: through your Firefox profile when Firefox is the default
+        browser, else a Chromium profile kept beside this file. The bridge
+        rewrites it when oauth2-proxy refreshes the session.
       '';
     };
   };

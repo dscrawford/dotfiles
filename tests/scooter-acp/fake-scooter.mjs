@@ -57,7 +57,7 @@ export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = 
     const parts = url.pathname.split("/").filter(Boolean);
     const entry = { method: req.method, path: url.pathname + url.search, headers: req.headers };
     requests.push(entry);
-    if (req.headers.cookie !== cookie && req.headers.cookie !== refreshTo) return json(res, 401, { error: "no session" });
+    if (![cookie, refreshTo].filter(Boolean).includes(req.headers.cookie)) return json(res, 401, { error: "no session" });
     const refresh = refreshTo && req.headers.cookie !== refreshTo ? { "Set-Cookie": `${refreshTo}; Path=/; HttpOnly` } : {};
     const routed = await routes({ method: req.method, path: url.pathname, body: async () => (entry.body = await body(req)) });
     if (routed) return json(res, routed.status ?? 200, routed.json);

@@ -11,7 +11,7 @@
       # Steam/gamescope) under sessionData.desktops. F3 switches session.
       # WLR_RENDERER=vulkan: NVIDIA's GLES reports GL_RGB as its read format,
       # so GLES2 screencopy offers only 24-bit BGR888 over SHM — which
-      # Chromium/Electron (Discord) rejects, killing portal screenshare.
+      # Chromium/Electron (Vesktop) rejects, killing portal screenshare.
       settings.default_session.command =
         "${pkgs.tuigreet}/bin/tuigreet --time"
         + " --sessions ${config.services.displayManager.sessionData.desktops}/share/wayland-sessions"
