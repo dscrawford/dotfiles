@@ -12,15 +12,50 @@ in
   (defvar my/scooter-cookie-file ${builtins.toJSON cfg.cookieFile})
   (defvar my/scooter-acp-command "${bridge}/bin/scooter-acp")
 
-  (defun my/scooter-set-cookie (cookie)
-    "Save the oauth2-proxy session COOKIE copied from the browser's devtools."
-    (interactive (list (read-passwd "Scooter _oauth2_proxy cookie: ")))
-    (make-directory (file-name-directory my/scooter-cookie-file) t)
-    (with-file-modes #o600
-      (with-temp-file my/scooter-cookie-file
-        (insert (string-trim cookie) "\n")))
-    (set-file-modes my/scooter-cookie-file #o600)
-    (message "Saved Scooter cookie to %s" my/scooter-cookie-file))
+  (defun my/scooter--environment ()
+    (list (concat "SCOOTER_URL=" my/scooter-url)
+          (concat "SCOOTER_COOKIE_FILE=" my/scooter-cookie-file)))
+
+  (defun my/scooter--cookie-refused-p ()
+    "Non-nil if Scooter turns away the saved cookie, or there is none.
+  Any other failure is left for the bridge to report once the session starts."
+    (let ((process-environment (append (my/scooter--environment)
+                                       '("SCOOTER_REQUEST_TIMEOUT_MS=5000")
+                                       process-environment)))
+      (eql 77 (call-process my/scooter-acp-command nil nil nil "--check-auth"))))
+
+  (defun my/scooter-login ()
+    "Sign in to Scooter in a browser window and save the session cookie.
+  Waits for the sign-in; \\[keyboard-quit] cancels it."
+    (interactive)
+    (let* ((process-environment (append (my/scooter--environment) process-environment))
+           (output (generate-new-buffer " *scooter-login*"))
+           (proc (make-process :name "scooter-login"
+                               :buffer output
+                               :command (list my/scooter-acp-command "--login")
+                               :connection-type 'pipe
+                               :noquery t
+                               :sentinel #'ignore)))
+      (unwind-protect
+          (progn
+            (message "Sign in to Scooter in the browser window (C-g cancels)...")
+            (while (process-live-p proc)
+              (accept-process-output proc 0.2))
+            (unless (zerop (process-exit-status proc))
+              (user-error "Scooter sign-in failed: %s"
+                          (string-trim (with-current-buffer output (buffer-string)))))
+            (message "Signed in to Scooter"))
+        (when (process-live-p proc)
+          (signal-process proc 'SIGTERM))
+        (kill-buffer output))))
+
+  (defun my/scooter--ensure-signed-in (start &rest args)
+    "Sign in before STARTing a Scooter session that would be refused."
+    (when (and (eq (map-elt (plist-get args :config) :identifier) 'scooter)
+               (my/scooter--cookie-refused-p))
+      (my/scooter-login))
+    (apply start args))
+  (advice-add 'agent-shell--start :around #'my/scooter--ensure-signed-in)
 
   (cl-defun my/scooter-request (method &key params on-success)
     "Send extension METHOD to this buffer's scooter-acp with PARAMS plus sessionId.
@@ -189,8 +224,7 @@ in
      (lambda (buffer)
        (agent-shell--make-acp-client
         :command my/scooter-acp-command
-        :environment-variables (list (concat "SCOOTER_URL=" my/scooter-url)
-                                     (concat "SCOOTER_COOKIE_FILE=" my/scooter-cookie-file))
+        :environment-variables (my/scooter--environment)
         :context-buffer buffer))))
 
   (defun my/scooter ()
@@ -198,8 +232,6 @@ in
     (interactive)
     (when (string-empty-p my/scooter-url)
       (user-error "Set my.scooter.url in the dotfiles, or SCOOTER_URL"))
-    (unless (file-exists-p my/scooter-cookie-file)
-      (call-interactively #'my/scooter-set-cookie))
     (agent-shell--dwim :config (my/scooter-make-agent-config) :new-shell t))
 
   (defun my/scooter--session-status (state)

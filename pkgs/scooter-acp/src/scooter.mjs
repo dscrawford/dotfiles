@@ -115,6 +115,16 @@ export function createScooterClient(config, { fetchImpl = fetch, log = () => {} 
   const conv = (id) => `/conversations/${encodeURIComponent(id)}`;
 
   return {
+    checkAuth: async () => {
+      const res = await fetchImpl(`${config.url}/conversations?scope=${encodeURIComponent(config.scope)}`, {
+        headers: headers(),
+        redirect: "manual",
+        signal: AbortSignal.timeout(config.requestTimeoutMs),
+      });
+      keepRefreshedCookie(res);
+      await res.body?.cancel();
+      return !isRefused(res);
+    },
     request: (method, path, body) => json(method, path, { body }),
     listConversations: () => json("GET", `/conversations?scope=${encodeURIComponent(config.scope)}`),
     getConversation: (id) => json("GET", conv(id)),

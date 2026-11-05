@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, test } from "node:test";
+import { fileURLToPath } from "node:url";
 
 import { startBridge } from "./acp-client.mjs";
 import { startFakeScooter } from "./fake-scooter.mjs";
@@ -218,4 +220,40 @@ test("session/new names the origin when Scooter is unreachable", async () => {
   bridge = startBridge({ SCOOTER_URL: "http://127.0.0.1:1", SCOOTER_COOKIE: "_oauth2_proxy=good" });
   await bridge.request("initialize", { protocolVersion: 1, clientCapabilities: {} });
   await assert.rejects(bridge.request("session/new", { cwd: "/tmp", mcpServers: [] }), /POST \/conversations unreachable: .*\(http:\/\/127\.0\.0\.1:1\)/);
+});
+
+test("a missing cookie file surfaces as an auth error naming the file", async () => {
+  fake = await startFakeScooter();
+  const file = join(mkdtempSync(join(tmpdir(), "scooter-")), "cookie");
+  bridge = startBridge({ SCOOTER_URL: fake.url, SCOOTER_COOKIE_FILE: file });
+  await bridge.request("initialize", { protocolVersion: 1, clientCapabilities: {} });
+  await assert.rejects(bridge.request("session/new", { cwd: "/tmp", mcpServers: [] }), new RegExp(`refresh the session cookie in ${file}`));
+});
+
+const MAIN = fileURLToPath(new URL("../../pkgs/scooter-acp/src/main.mjs", import.meta.url));
+
+const checkAuth = (env) =>
+  new Promise((resolve) => {
+    execFile(process.execPath, [MAIN, "--check-auth"], { timeout: 10000, env: { ...process.env, ...env } }, (e) => resolve(e ? e.code : 0));
+  });
+
+const cookieFile = (content) => {
+  const file = join(mkdtempSync(join(tmpdir(), "scooter-")), "cookie");
+  if (content) writeFileSync(file, content);
+  return file;
+};
+
+test("--check-auth exits 0 for an accepted cookie", async () => {
+  fake = await startFakeScooter();
+  assert.equal(await checkAuth({ SCOOTER_URL: fake.url, SCOOTER_COOKIE_FILE: cookieFile("_oauth2_proxy=good\n") }), 0);
+});
+
+test("--check-auth exits 77 for a rejected or missing cookie", async () => {
+  fake = await startFakeScooter();
+  assert.equal(await checkAuth({ SCOOTER_URL: fake.url, SCOOTER_COOKIE_FILE: cookieFile("_oauth2_proxy=stale\n") }), 77);
+  assert.equal(await checkAuth({ SCOOTER_URL: fake.url, SCOOTER_COOKIE_FILE: cookieFile() }), 77);
+});
+
+test("--check-auth exits 1 when Scooter is unreachable, so a good cookie isn't asked for again", async () => {
+  assert.equal(await checkAuth({ SCOOTER_URL: "http://127.0.0.1:1", SCOOTER_COOKIE_FILE: cookieFile("_oauth2_proxy=good\n") }), 1);
 });
