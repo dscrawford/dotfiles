@@ -161,6 +161,34 @@
              (lambda () (error "Signed in again with a valid cookie"))))
     (e2e-session-started (e2e-start :session-strategy 'new) "session/new with a valid cookie")))
 
+(defun e2e-reauth-mid-session ()
+  "Scooter refuses the cookie under open buffers: one sign-in serves them all, nothing restarts."
+  (let* ((buf (e2e-start :session-strategy 'new))
+         (old (seq-find (lambda (b) (equal (map-nested-elt (buffer-local-value 'agent-shell--state b) '(:session :id)) "old"))
+                        (match-buffers '(derived-mode . agent-shell-mode))))
+         (sign-ins 0)
+         (count-sign-in (lambda (&rest args)
+                          (when (equal (plist-get args :name) "scooter-login") (cl-incf sign-ins)))))
+    (e2e-session-started buf "session/new before the cookie expires")
+    (setenv "FAKE_BROWSER_COOKIE" "_oauth2_proxy=renewed")
+    (advice-add 'make-process :before count-sign-in)
+    (unwind-protect
+        (progn
+          (with-temp-file (getenv "TRIGGER_FILE") (insert "expire"))
+          (e2e-wait (lambda () (not (file-exists-p (getenv "TRIGGER_FILE")))) "the session to expire")
+          (agent-shell-insert :text "after expiry" :submit t :no-focus t :shell-buffer buf)
+          (e2e-wait (lambda () (e2e-has buf "LIVE-ANSWER")) "the prompt refused mid-session to go through")
+          (e2e-wait (lambda () (with-current-buffer buf (not (shell-maker-busy)))) "the turn after sign-in to end")
+          (with-temp-file (getenv "TRIGGER_FILE") (insert "after-reauth"))
+          (e2e-wait (lambda () (e2e-has old "STREAM-BACK-AFTER-REAUTH")) "the event stream to reconnect after sign-in"))
+      (advice-remove 'make-process count-sign-in))
+    (unless (string-match-p "_oauth2_proxy=renewed"
+                            (with-temp-buffer (insert-file-contents my/scooter-cookie-file) (buffer-string)))
+      (error "Mid-session sign-in didn't save the new cookie"))
+    (unless (= sign-ins 1) (error "Expected one shared sign-in for every buffer, got %d" sign-ins))
+    (dolist (b (match-buffers '(derived-mode . agent-shell-mode)))
+      (when (e2e-has b "Unhandled") (error "_scooter/login fell through in %s:\n%s" (buffer-name b) (e2e-text b))))))
+
 (condition-case err
     (progn
       (e2e-login-on-start nil)
@@ -174,6 +202,7 @@
       (e2e-links)
       (e2e-cards)
       (e2e-forms)
+      (e2e-reauth-mid-session)
       (e2e-sandbox-files)
       (princ "agent-shell e2e: ok\n")
       (kill-emacs 0))

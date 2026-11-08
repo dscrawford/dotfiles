@@ -13,7 +13,18 @@ function canonical(event) {
   return JSON.stringify(sorted);
 }
 
-export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = {}) {
+const SIGN_IN = '<!DOCTYPE html><html><body><a href="/oauth2/start">Sign in</a></body></html>';
+
+function refuse(res, refusal) {
+  if (refusal === 302) {
+    res.writeHead(302, { Location: "/oauth2/sign_in?rd=%2F" });
+    return res.end();
+  }
+  res.writeHead(refusal === "html" ? 200 : refusal, { "Content-Type": "text/html; charset=utf-8" });
+  res.end(SIGN_IN);
+}
+
+export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo, refusal = 401 } = {}) {
   const convs = new Map();
   const requests = [];
   const listStreams = new Set();
@@ -62,7 +73,7 @@ export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = 
     const parts = url.pathname.split("/").filter(Boolean);
     const entry = { method: req.method, path: url.pathname + url.search, headers: req.headers };
     requests.push(entry);
-    if (![cookie, refreshTo].filter(Boolean).includes(req.headers.cookie)) return json(res, 401, { error: "no session" });
+    if (![cookie, refreshTo].filter(Boolean).includes(req.headers.cookie)) return refusal === 401 ? json(res, 401, { error: "no session" }) : refuse(res, refusal);
     const refresh = refreshTo && req.headers.cookie !== refreshTo ? { "Set-Cookie": `${refreshTo}; Path=/; HttpOnly` } : {};
     const routed = await routes({ method: req.method, path: url.pathname, body: async () => (entry.body = await body(req)) });
     if (routed) return json(res, routed.status ?? 200, routed.json);
@@ -152,6 +163,13 @@ export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = 
         conv,
         append,
         setScript: (fn) => (script = fn),
+        expireSession: (next, how = refusal) => {
+          cookie = next;
+          refreshTo = undefined;
+          refusal = how;
+          for (const c of convs.values()) for (const s of c.streams) s.destroy();
+          for (const s of listStreams) s.destroy();
+        },
         addLink,
         listStreamCount: () => listStreams.size,
         setRoutes: (fn) => (routes = fn),

@@ -24,30 +24,85 @@ in
                                        process-environment)))
       (eql 77 (call-process my/scooter-acp-command nil nil nil "--check-auth"))))
 
+  (defvar my/scooter--login-process nil)
+  (defvar my/scooter--login-callbacks nil
+    "Functions waiting on `my/scooter--login-process', called with nil or the failure.")
+
+  (defun my/scooter--login-finished (proc _event)
+    (unless (process-live-p proc)
+      (let ((failure (unless (and (eq (process-status proc) 'exit) (zerop (process-exit-status proc)))
+                       (with-current-buffer (process-buffer proc)
+                         (let ((output (string-trim (buffer-string))))
+                           (if (string-empty-p output) "sign-in cancelled" output)))))
+            (callbacks (reverse my/scooter--login-callbacks)))
+        (setq my/scooter--login-process nil
+              my/scooter--login-callbacks nil)
+        (kill-buffer (process-buffer proc))
+        (dolist (callback callbacks)
+          (with-demoted-errors "Scooter sign-in callback: %S"
+            (funcall callback failure))))))
+
+  (defun my/scooter--login-start (on-done)
+    "Sign in to Scooter in the browser, joining a sign-in already under way.
+  ON-DONE gets nil once the cookie is saved, else the failure as a string.
+  Returns the sign-in process."
+    (push on-done my/scooter--login-callbacks)
+    (unless (process-live-p my/scooter--login-process)
+      (let ((process-environment (append (my/scooter--environment) process-environment)))
+        (setq my/scooter--login-process
+              (make-process :name "scooter-login"
+                            :buffer (generate-new-buffer " *scooter-login*")
+                            :command (list my/scooter-acp-command "--login")
+                            :connection-type 'pipe
+                            :noquery t
+                            :sentinel #'my/scooter--login-finished))))
+    my/scooter--login-process)
+
   (defun my/scooter-login ()
     "Sign in to Scooter in a browser window and save the session cookie.
   Waits for the sign-in; \\[keyboard-quit] cancels it."
     (interactive)
-    (let* ((process-environment (append (my/scooter--environment) process-environment))
-           (output (generate-new-buffer " *scooter-login*"))
-           (proc (make-process :name "scooter-login"
-                               :buffer output
-                               :command (list my/scooter-acp-command "--login")
-                               :connection-type 'pipe
-                               :noquery t
-                               :sentinel #'ignore)))
+    (let* ((outcome (list 'pending))
+           (proc (my/scooter--login-start (apply-partially #'setcar outcome))))
       (unwind-protect
           (progn
             (message "Sign in to Scooter in the browser window (C-g cancels)...")
-            (while (process-live-p proc)
-              (accept-process-output proc 0.2))
-            (unless (zerop (process-exit-status proc))
-              (user-error "Scooter sign-in failed: %s"
-                          (string-trim (with-current-buffer output (buffer-string)))))
+            (while (eq (car outcome) 'pending)
+              (accept-process-output nil 0.2))
+            (when (car outcome)
+              (user-error "Scooter sign-in failed: %s" (car outcome)))
             (message "Signed in to Scooter"))
-        (when (process-live-p proc)
-          (signal-process proc 'SIGTERM))
-        (kill-buffer output))))
+        (when (and (eq (car outcome) 'pending) (process-live-p proc))
+          (signal-process proc 'SIGTERM)))))
+
+  (defun my/scooter--login-answered (client id failure)
+    (when (process-live-p (map-elt client :process))
+      (acp-send-response
+       :client client
+       :response (if failure
+                     `((:request-id . ,id)
+                       (:error . ,(acp-make-error :code -32000
+                                                  :message (format "Scooter sign-in failed: %s" failure))))
+                   `((:request-id . ,id) (:result . ((signedIn . t)))))))
+    (if failure
+        (message "Scooter sign-in failed: %s" failure)
+      (message "Signed in to Scooter again")))
+
+  (defun my/scooter--answer-login (state request)
+    "Answer scooter-acp's _scooter/login REQUEST once the browser sign-in ends.
+  The bridge sends it when Scooter refuses the cookie mid-session, and retries
+  what was refused once this answers."
+    (message "Scooter's session expired; sign in in the browser window...")
+    (my/scooter--login-start
+     (apply-partially #'my/scooter--login-answered (map-elt state :client) (map-elt request 'id))))
+
+  (defun my/scooter--on-request (orig &rest args)
+    "Handle scooter-acp's _scooter/login; hand every other request to ORIG."
+    (let ((request (plist-get args :acp-request)))
+      (if (equal (map-elt request 'method) "_scooter/login")
+          (my/scooter--answer-login (plist-get args :state) request)
+        (apply orig args))))
+  (advice-add 'agent-shell--on-request :around #'my/scooter--on-request)
 
   (defun my/scooter--ensure-signed-in (start &rest args)
     "Sign in before STARTing a Scooter session that would be refused."

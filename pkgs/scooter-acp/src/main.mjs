@@ -20,7 +20,20 @@ if (process.argv[2] === "--login") {
   process.exit(failed ? 1 : 0);
 }
 
-const client = createScooterClient(config, { log });
+let peer;
+const askClientToSignIn = (params) => {
+  if (!peer) return Promise.reject(new Error("not signed in to Scooter: run M-x my/scooter-login"));
+  const { id, promise } = peer.request("_scooter/login", params);
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      peer.notify("$/cancel_request", { requestId: id });
+      reject(new Error(`no sign-in within ${config.loginTimeoutMs / 1000}s`));
+    }, config.loginTimeoutMs);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+};
+const client = createScooterClient(config, { log, reauthenticate: askClientToSignIn });
 
 if (process.argv[2] === "--check-auth") {
   const accepted = await client.checkAuth().catch((e) => {
@@ -46,7 +59,7 @@ if (process.argv[2] === "--tunnel") {
   process.exit(code);
 }
 
-const peer = createPeer({ input: process.stdin, output: process.stdout, log });
+peer = createPeer({ input: process.stdin, output: process.stdout, log });
 const agent = registerAgent({ peer, client, config, log, version: VERSION });
 registerWebServices({ peer, client, config });
 registerSandbox({ peer, client, sessions: agent.sessions });

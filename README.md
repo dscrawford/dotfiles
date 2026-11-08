@@ -84,6 +84,14 @@ Then in Emacs:
    cookie is saved to `~/.config/scooter/cookie` (mode 600), and the bridge writes
    refreshed cookies back to that file. `M-x my/scooter-login` signs in by hand.
 
+   If Scooter refuses the cookie mid-session (401/403, a redirect to sign-in, or the
+   sign-in page), the bridge re-reads the cookie file and retries. If that is refused
+   too, it asks Emacs (`_scooter/login`) to run the same browser sign-in, then retries
+   the refused request and reconnects the event stream, so there is no restart. Buffers
+   refused at the same time share one sign-in. After a failed sign-in, the event
+   stream only re-reads the file; the next thing you do asks again. Other ACP clients
+   get the auth error, plus a `browser` method for `authenticate`.
+
    On start you pick an existing conversation or a new one. The picker lists the
    conversations the web UI's sidebar shows, in its order (starred first, then most
    recently active), with each one's status (working, waiting on you, suspended, ...).

@@ -39,6 +39,10 @@ async function setup(env = {}, opts) {
   await bridge.request("initialize", { protocolVersion: 1, clientCapabilities: {} });
 }
 
+const declineSignIn = () => {
+  throw Object.assign(new Error("sign-in cancelled"), { code: -32000 });
+};
+
 const texts = (kind) => bridge.updates.filter((u) => u.sessionUpdate === kind).map((u) => u.content.text).join("");
 
 test("initialize advertises load, list, resume and steering", async () => {
@@ -189,6 +193,7 @@ test("an expired session surfaces as an auth error naming the cookie file", asyn
   writeFileSync(file, "stale");
   fake = await startFakeScooter();
   bridge = startBridge({ SCOOTER_URL: fake.url, SCOOTER_COOKIE: "", SCOOTER_COOKIE_FILE: file });
+  bridge.answer("_scooter/login", declineSignIn);
   await bridge.request("initialize", { protocolVersion: 1 });
   await assert.rejects(bridge.request("session/list", {}), (e) => e.code === -32000 && e.message.includes(file));
 });
@@ -226,6 +231,7 @@ test("a missing cookie file surfaces as an auth error naming the file", async ()
   fake = await startFakeScooter();
   const file = join(mkdtempSync(join(tmpdir(), "scooter-")), "cookie");
   bridge = startBridge({ SCOOTER_URL: fake.url, SCOOTER_COOKIE_FILE: file });
+  bridge.answer("_scooter/login", declineSignIn);
   await bridge.request("initialize", { protocolVersion: 1, clientCapabilities: {} });
   await assert.rejects(bridge.request("session/new", { cwd: "/tmp", mcpServers: [] }), new RegExp(`refresh the session cookie in ${file}`));
 });
