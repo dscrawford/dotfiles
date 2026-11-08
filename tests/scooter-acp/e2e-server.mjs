@@ -1,5 +1,5 @@
 import { startFakeScooter } from "./fake-scooter.mjs";
-import { cardScript, cardTrigger } from "./e2e-cards.mjs";
+import { askingRun, cardScript, cardTrigger } from "./e2e-cards.mjs";
 const fake = await startFakeScooter();
 fake.conv("old");
 Object.assign(fake.conv("old"), { title: "Fix the login redirect" });
@@ -16,6 +16,7 @@ const run = (threadId, runId, q, a, extra = []) => [
   { type: "RUN_FINISHED", threadId, runId },
 ];
 for (const e of run("old", "h1", "HISTORY-QUESTION", "HISTORY-ANSWER")) fake.append("old", e);
+for (const e of askingRun("asking", "q1", "toolu_pending")) fake.append("asking", e);
 const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
 const shot = fake.addAsset("old", "shot", "image/png", Buffer.from(PNG, "base64"));
 fake.append("old", { type: "TEXT_MESSAGE_START", messageId: "ah1", role: "assistant" });
@@ -48,6 +49,7 @@ setInterval(() => {
     const what = readFileSync(process.env.TRIGGER_FILE, "utf8");
     rmSync(process.env.TRIGGER_FILE);
     if (cardTrigger(fake, what)) return;
+    if (what === "ask-in-web") return askingRun("old", "w-ask", "toolu_web").forEach((e) => fake.append("old", e));
     if (what === "link") return fake.addLink("old", { source: "jira", resourceType: "issue", url: "https://jira.example/browse/OPS-1" });
     for (const e of run("old", "w1", "WEB-QUESTION", "WEB-ANSWER", serviceCall)) fake.append("old", e);
   }

@@ -16,7 +16,7 @@ emacs=$(nix build --no-link --print-out-paths --impure --expr "
     in [ custom.acp custom.shell-maker custom.agent-shell ])")
 
 mkdir -p "$tmp/bridge/bin"
-printf '#!/bin/sh\nexec node %s/pkgs/scooter-acp/src/main.mjs "$@"\n' "$root" > "$tmp/bridge/bin/scooter-acp"
+printf '#!/bin/sh\nexec node %s/pkgs/scooter-acp/src/main.mjs "$@" 2>>%s\n' "$root" "$tmp/bridge.log" > "$tmp/bridge/bin/scooter-acp"
 chmod +x "$tmp/bridge/bin/scooter-acp"
 echo "_oauth2_proxy=good" > "$tmp/cookie"
 {
@@ -34,4 +34,4 @@ server=$!
 for _ in $(seq 50); do [ -s "$tmp/url" ] && break; sleep 0.1; done
 
 SCOOTER_URL=$(cat "$tmp/url") SCOOTER_EL="$tmp/scooter.el" HOME="$tmp" \
-  "$emacs/bin/emacs" -Q --batch -l tests/scooter-acp/agent-shell-e2e.el
+  "$emacs/bin/emacs" -Q --batch -l tests/scooter-acp/agent-shell-e2e.el || { cat "$tmp/bridge.log" >&2; exit 1; }

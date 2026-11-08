@@ -118,9 +118,18 @@ export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = 
     }
     if (req.method === "POST" && url.pathname === "/agui") {
       entry.body = await body(req);
+      let gone = false;
+      res.on("close", () => (gone = true));
+      const out = (await script(entry.body, req.headers)) ?? [];
+      const { startAfterMs = 0, events, streamOnly = [] } = Array.isArray(out) ? { events: out } : out;
+      if (startAfterMs) await new Promise((r) => setTimeout(r, startAfterMs));
+      if (gone) {
+        entry.abandoned = true;
+        return;
+      }
       res.writeHead(200, { "Content-Type": "text/event-stream" });
-      const events = script(entry.body, req.headers) ?? [];
-      for (const e of events) {
+      for (const e of streamOnly) res.write(`data: ${JSON.stringify(e)}\n\n`);
+      for (const e of events ?? []) {
         append(entry.body.threadId, e);
         res.write(`data: ${JSON.stringify(e)}\n\n`);
       }

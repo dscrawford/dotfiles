@@ -13,6 +13,8 @@ const GRANT = {
 };
 
 const pending = new Map();
+let nextResume;
+const RESUME_START_MS = 2500;
 
 const interrupt = (threadId, runId, intr) => [
   { type: "RUN_STARTED", threadId, runId },
@@ -32,8 +34,12 @@ export function cardScript(body) {
   const { threadId } = body;
   if (body.resume) {
     const [r] = body.resume;
+    const how = nextResume;
+    nextResume = undefined;
+    if (how === "reject") return { events: [], streamOnly: [{ type: "RUN_ERROR", threadId, message: `interrupt ${r.interruptId} is not waiting` }] };
     pending.delete(r.interruptId);
-    return finish(threadId, `${r.interruptId}-done`, r.interruptId, r.payload?.optionId ?? null, `ANSWERED ${JSON.stringify(r.payload?.result?.answers ?? r.status)}`);
+    const events = finish(threadId, `${r.interruptId}-${body.runId}`, r.interruptId, r.payload?.optionId ?? null, `ANSWERED ${JSON.stringify(r.payload?.result?.answers ?? r.status)}`);
+    return how === "slow" ? { startAfterMs: RESUME_START_MS, events } : events;
   }
   const text = body.messages[0]?.content;
   if (text === "ask me") {
@@ -57,6 +63,10 @@ export function cardScript(body) {
 }
 
 export function cardTrigger(fake, name) {
+  if (name === "slow-resume" || name === "reject-resume") {
+    nextResume = name.split("-")[0];
+    return true;
+  }
   if (name === "answer-in-web" && pending.has("toolu_ask")) {
     const threadId = pending.get("toolu_ask");
     pending.delete("toolu_ask");
@@ -68,4 +78,20 @@ export function cardTrigger(fake, name) {
   pending.delete("req-aws");
   for (const e of finish(threadId, "web-approve", "req-aws", "approve", "WEB-APPROVED")) fake.append(threadId, e);
   return true;
+}
+
+export function askingRun(threadId, runId, id) {
+  pending.set(id, threadId);
+  return [
+    { type: "RUN_STARTED", threadId, runId },
+    { type: "TOOL_CALL_START", toolCallId: id, toolCallName: "AskUserQuestion" },
+    { type: "TOOL_CALL_ARGS", toolCallId: id, delta: JSON.stringify({ questions: QUESTIONS }) },
+    { type: "TOOL_CALL_END", toolCallId: id },
+    ...interrupt(threadId, runId, {
+      id,
+      toolCallId: id,
+      message: "The agent has a question",
+      metadata: { kind: "ask-user.questions", data: { questions: QUESTIONS }, options: [{ optionId: "answer", name: "Answer", kind: "allow_once" }] },
+    }).slice(1),
+  ];
 }

@@ -173,6 +173,8 @@
       (e2e-links)
       (e2e-cards)
       (e2e-forms)
+      (e2e-forms-by-keys)
+      (e2e-forms-answer-reaches-scooter)
       (princ "agent-shell e2e: ok\n")
       (kill-emacs 0))
   (error

@@ -96,3 +96,100 @@
         (e2e-forms-answer-inline buf)
         (e2e-forms-web-answer-drops-form buf))
     (setq agent-shell-elicitation--experimental-feature-enabled nil)))
+
+(defun e2e-ui-goto (buf action &optional key value)
+  "Put point in BUF on the form control doing ACTION for field KEY and option VALUE."
+  (with-current-buffer buf
+    (goto-char (point-min))
+    (let ((match (text-property-search-forward
+                  'agent-shell-elicitation-control nil
+                  (lambda (_ c) (and (eq (map-elt c :action) action)
+                                     (or (null key) (equal (map-elt c :key) key))
+                                     (equal (map-elt c :value) value))))))
+      (unless match (error "No %S control for %S %S:\n%s" action key value (e2e-text buf)))
+      (goto-char (prop-match-beginning match))
+      (set-window-point (selected-window) (point)))))
+
+(defun e2e-ui-keys (buf keys)
+  "Type KEYS into BUF as a user would, through its keymaps and the minibuffer."
+  (switch-to-buffer buf)
+  (execute-kbd-macro (if (stringp keys) (kbd keys) keys)))
+
+(defun e2e-ui-press (buf action &optional key value typed)
+  (e2e-ui-goto buf action key value)
+  (e2e-ui-keys buf (if typed (vconcat (kbd "RET") typed (kbd "RET")) "RET")))
+
+(defun e2e-forms-key-in (buf answers want)
+  "Answer BUF's open question form by keypress and expect the run to come back with WANT.
+ANSWERS are `e2e-ui-press' arguments, after TAB RET has picked the first option."
+  (switch-to-buffer buf)
+  (agent-shell-elicitation-jump-to-latest-form)
+  (call-interactively (key-binding (kbd "TAB")))
+  (e2e-ui-keys buf "RET")
+  (unless (equal (map-nested-elt (cdr (e2e-forms-pending buf)) '(:values "q0")) "Postgres")
+    (error "TAB RET did not pick the first option:\n%s" (e2e-text buf)))
+  (dolist (a answers) (apply #'e2e-ui-press buf a))
+  (e2e-ui-press buf 'submit)
+  (condition-case nil
+      (e2e-wait (lambda () (e2e-has buf want)) "the answer")
+    (error (error "Submit did not resume the run with %s:\n%s" want (e2e-text buf))))
+  (e2e-wait (lambda () (with-current-buffer buf (not (shell-maker-busy)))) "the keyed-in turn to end"))
+
+(defconst e2e-forms-picked
+  '((toggle "q1" "Queue") (toggle "q1" "Cache") (read "q2" nil "billing")))
+
+(defconst e2e-forms-picked-answer
+  "ANSWERED {\"Which database?\":\"Postgres\",\"Which extras?\":\"Cache, Queue\",\"Name the service\":\"billing\"}")
+
+(defun e2e-forms-by-keys ()
+  (setq agent-shell-elicitation--experimental-feature-enabled t)
+  (unwind-protect
+      (let ((buf (e2e-start :session-strategy 'new)))
+        (e2e-wait (lambda () (map-nested-elt (buffer-local-value 'agent-shell--state buf) '(:session :id))) "session/new")
+        (e2e-forms-ask buf)
+        (e2e-forms-key-in buf e2e-forms-picked e2e-forms-picked-answer)
+        (e2e-forms-ask buf)
+        (e2e-forms-key-in
+         buf '((custom "q0_other" nil "MySQL") (toggle "q1" "Cache") (custom "q1_other" nil "Search") (read "q2" nil "ledger"))
+         "ANSWERED {\"Which database?\":\"MySQL\",\"Which extras?\":\"Cache, Search\",\"Name the service\":\"ledger\"}")
+        (let ((loaded (e2e-start :session-id "asking")))
+          (e2e-wait (lambda () (e2e-forms-pending loaded)) "the question left open in the loaded conversation")
+          (e2e-forms-key-in loaded e2e-forms-picked e2e-forms-picked-answer))
+        (let ((old (e2e-start :session-id "old")))
+          (e2e-wait (lambda () (e2e-has old "HISTORY-ANSWER")) "history replay")
+          (sleep-for 0.5)
+          (with-temp-file (getenv "TRIGGER_FILE") (insert "ask-in-web"))
+          (e2e-wait (lambda () (e2e-forms-pending old)) "the question from a web-started run")
+          (e2e-forms-key-in old e2e-forms-picked e2e-forms-picked-answer)))
+    (setq agent-shell-elicitation--experimental-feature-enabled nil)))
+
+(defun e2e-trigger (what)
+  (with-temp-file (getenv "TRIGGER_FILE") (insert what))
+  (e2e-wait (lambda () (not (file-exists-p (getenv "TRIGGER_FILE")))) (format "the %s trigger" what)))
+
+(defun e2e-forms-answer-reaches-scooter ()
+  "A form answered by keypress resumes the run even when Scooter is slow to start it or turns it down."
+  (setq agent-shell-elicitation--experimental-feature-enabled t)
+  (unwind-protect
+      (let* ((process-environment (cons "SCOOTER_REQUEST_TIMEOUT_MS=1000" process-environment))
+             (buf (e2e-start :session-strategy 'new)))
+        (e2e-wait (lambda () (map-nested-elt (buffer-local-value 'agent-shell--state buf) '(:session :id))) "session/new")
+        (e2e-trigger "slow-resume")
+        (e2e-forms-ask buf)
+        (e2e-forms-key-in buf e2e-forms-picked e2e-forms-picked-answer)
+        (e2e-trigger "reject-resume")
+        (e2e-forms-ask buf)
+        (let ((first (car (e2e-forms-pending buf))))
+          (switch-to-buffer buf)
+          (agent-shell-elicitation-jump-to-latest-form)
+          (dolist (a e2e-forms-picked) (apply #'e2e-ui-press buf a))
+          (e2e-ui-press buf 'select "q0" "SQLite")
+          (e2e-ui-press buf 'submit)
+          (condition-case nil
+              (e2e-wait (lambda () (and (e2e-has buf "interrupt toolu_ask is not waiting")
+                                        (not (equal (car (e2e-forms-pending buf)) first))
+                                        (e2e-forms-pending buf)))
+                        "the refusal and the question asked again")
+            (error (error "A refused answer was not reported and asked again:\n%s" (e2e-text buf)))))
+        (e2e-forms-key-in buf e2e-forms-picked e2e-forms-picked-answer))
+    (setq agent-shell-elicitation--experimental-feature-enabled nil)))

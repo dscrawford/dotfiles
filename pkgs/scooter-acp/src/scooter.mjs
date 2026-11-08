@@ -106,12 +106,6 @@ export function createScooterClient(config, { fetchImpl = fetch, log = () => {} 
     return text ? JSON.parse(text) : null;
   };
 
-  const fireAndForget = async (path, body, extraHeaders) => {
-    const res = await call("POST", path, { body, extraHeaders });
-    await res.body?.cancel();
-    if (!res.ok) throw new RpcError(-32000, `Scooter POST ${path} failed: HTTP ${res.status}`);
-  };
-
   const conv = (id) => `/conversations/${encodeURIComponent(id)}`;
 
   return {
@@ -146,8 +140,16 @@ export function createScooterClient(config, { fetchImpl = fetch, log = () => {} 
       }
       return res;
     },
-    resume: (id, interruptId, entry) =>
-      fireAndForget("/agui", { threadId: id, runId: crypto.randomUUID(), messages: [], resume: [{ interruptId, ...entry }] }),
+    // Scooter answers once the resumed run starts, which can take longer than
+    // requestTimeoutMs, and drops the resume if we hang up first: stream it.
+    resume: async (id, interruptId, entry) => {
+      const res = await call("POST", "/agui", { body: { threadId: id, runId: crypto.randomUUID(), messages: [], resume: [{ interruptId, ...entry }] }, stream: true });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new RpcError(-32000, `Scooter refused the answer: HTTP ${res.status} ${text.slice(0, 200)}`.trim());
+      }
+      return res;
+    },
     asset: async (path) => {
       const res = await call("GET", path, { extraHeaders: { Accept: "image/*" } });
       if (!res.ok) {

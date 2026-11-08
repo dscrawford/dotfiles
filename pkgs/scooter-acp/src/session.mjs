@@ -48,8 +48,7 @@ export function createSession({ id, client, peer, config, log, model, forms = ()
             return askForm(intr, form);
           }
           const { entry, text } = resolved;
-          send({ sessionUpdate: "tool_call_update", toolCallId: form.toolCall.toolCallId, status: "completed", content: [{ type: "content", content: { type: "text", text } }] });
-          return client.resume(id, intr.id, entry);
+          return resume(intr, entry, text);
         },
         (e) => {
           asked.delete(intr.id);
@@ -58,6 +57,42 @@ export function createSession({ id, client, peer, config, log, model, forms = ()
         },
       )
       .catch((e) => log("form answer failed", id, e?.message ?? e));
+  };
+
+  // Sends an answer and settles the question only once Scooter has taken it:
+  // the resumed run starting (or the interrupt resolving) is the receipt.
+  // A refusal is shown on the question, which is then asked again.
+  const resume = async (intr, entry, text) => {
+    const toolCallId = intr.toolCallId ?? intr.id;
+    const settle = (status, body) =>
+      send({ sessionUpdate: "tool_call_update", toolCallId, status, ...(body ? { content: [{ type: "content", content: { type: "text", text: body } }] } : {}) });
+    let refusal;
+    try {
+      const res = await client.resume(id, intr.id, entry);
+      try {
+        for await (const e of sseFrames(res.body)) {
+          if (e.type === "RUN_STARTED" || e.type === "PERMISSION_RESOLVED") {
+            settle("completed", text);
+            return;
+          }
+          if (e.type === "RUN_ERROR") {
+            refusal = e.message ?? "the run failed to start";
+            break;
+          }
+        }
+      } finally {
+        res.body?.cancel().catch(() => {});
+      }
+      if (refusal === undefined) {
+        settle("completed", text);
+        return;
+      }
+    } catch (e) {
+      refusal = e?.message ?? String(e);
+    }
+    log("answer not taken", id, intr.id, refusal);
+    settle("failed", `Scooter did not take the answer: ${refusal}`);
+    if (interrupts.has(intr.id)) ask(intr);
   };
 
   const ask = (intr) => {
@@ -76,7 +111,7 @@ export function createSession({ id, client, peer, config, log, model, forms = ()
         asked.delete(intr.id);
         if (!interrupts.has(intr.id)) return;
         const entry = cards.resume(intr, res?.outcome?.outcome === "selected" ? res.outcome.optionId : undefined);
-        return entry ? client.resume(id, intr.id, entry) : ask(intr);
+        return entry ? resume(intr, entry) : ask(intr);
       })
       .catch((e) => log("permission answer failed", id, e?.message ?? e));
   };
