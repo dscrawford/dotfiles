@@ -15,6 +15,7 @@ export function readConfig(env = process.env) {
     replayTurns: Number(env.SCOOTER_REPLAY_TURNS ?? 30),
     imageMaxBytes: Number(env.SCOOTER_IMAGE_MAX_BYTES ?? 5 * 1024 * 1024),
     requestTimeoutMs: Number(env.SCOOTER_REQUEST_TIMEOUT_MS ?? 15000),
+    tunnelTimeoutMs: Number(env.SCOOTER_TUNNEL_TIMEOUT_MS ?? 90000),
   };
 }
 
@@ -115,6 +116,7 @@ export function createScooterClient(config, { fetchImpl = fetch, log = () => {} 
   const conv = (id) => `/conversations/${encodeURIComponent(id)}`;
 
   return {
+    authHeaders: () => headers(),
     checkAuth: async () => {
       const res = await fetchImpl(`${config.url}/conversations?scope=${encodeURIComponent(config.scope)}`, {
         headers: headers(),
