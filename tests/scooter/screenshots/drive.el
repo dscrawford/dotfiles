@@ -10,6 +10,7 @@
 (scooter-auth-set-cookie my/scooter-server "good")
 
 (setq inhibit-startup-screen t
+      agent-shell-elicitation--experimental-feature-enabled t
       ring-bell-function #'ignore
       agent-shell-session-strategy 'prompt
       completions-format 'one-column
@@ -120,6 +121,20 @@
    (lambda ()
      (shot-bottom shot-buffer)
      (shot "04-approval")
+     (with-temp-file (getenv "TRIGGER_FILE") (insert "approve-in-web"))
+     (shot-when
+      (lambda () (and (shot-has shot-buffer "WEB-APPROVED")
+                      (with-current-buffer shot-buffer (not (shell-maker-busy)))))
+      #'shot-5-questions))))
+
+;; 5. Questions: every question at once, as one form inline in the buffer.
+(defun shot-5-questions ()
+  (agent-shell-insert :text "ask me" :submit t :no-focus t :shell-buffer shot-buffer)
+  (shot-when
+   (lambda () (map-elt (buffer-local-value 'agent-shell--state shot-buffer) :elicitations))
+   (lambda ()
+     (shot-bottom shot-buffer)
+     (shot "05-questions")
      (princ "screenshots: ok\n" #'external-debugging-output)
      (kill-emacs 0))))
 

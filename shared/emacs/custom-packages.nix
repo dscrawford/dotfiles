@@ -13,11 +13,11 @@ let
   # agent-shell pins exact versions of both, so these three move together.
   acp = mkEmacsPackage {
     pname = "acp";
-    version = "0.17.1";
+    version = "0.18.1";
     owner = "xenodium";
     repo = "acp.el";
-    rev = "v0.17.1";
-    hash = "sha256-vRvUAP3Al7itI6iaqUaRXNifYp4vfGvbSATfUYCrHHg=";
+    rev = "v0.18.1";
+    hash = "sha256-KO13uPcdspi83LcS+O6xW6VBZP//WQvbmA7S0ODGPw0=";
   };
 
   shell-maker = mkEmacsPackage {
@@ -33,11 +33,11 @@ let
   # on it — attribute sets are not self-referential.
   agent-shell = mkEmacsPackage {
     pname = "agent-shell";
-    version = "0.89.4";
+    version = "0.91.1";
     owner = "xenodium";
     repo = "agent-shell";
-    rev = "v0.89.4";
-    hash = "sha256-6R/l8rJR6JvQgLJP1uQoAvhc/N9NVeWD167bGhQnORs=";
+    rev = "v0.91.1";
+    hash = "sha256-kk6y+H3yGiqn/z99Illk7azCSh7bRS431Cvxbsn2Vq4=";
     packageRequires = [ shell-maker acp ];
   };
 in

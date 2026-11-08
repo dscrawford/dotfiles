@@ -38,6 +38,7 @@ export function cardScript(body) {
   }
   const text = body.messages[0]?.content;
   if (text === "ask me") {
+    pending.set("toolu_ask", threadId);
     return interrupt(threadId, "ask", {
       id: "toolu_ask",
       toolCallId: "toolu_ask",
@@ -57,6 +58,12 @@ export function cardScript(body) {
 }
 
 export function cardTrigger(fake, name) {
+  if (name === "answer-in-web" && pending.has("toolu_ask")) {
+    const threadId = pending.get("toolu_ask");
+    pending.delete("toolu_ask");
+    for (const e of finish(threadId, "web-answer", "toolu_ask", "answer", "WEB-ANSWERED")) fake.append(threadId, e);
+    return true;
+  }
   if (name !== "approve-in-web" || !pending.has("req-aws")) return false;
   const threadId = pending.get("req-aws");
   pending.delete("req-aws");
