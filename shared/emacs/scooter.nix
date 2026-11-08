@@ -362,11 +362,12 @@ in
 
   (defun my/scooter--replay-full-history ()
     "Show loaded Scooter conversations in full; scooter-acp caps the replay.
-  Also list conversations the way the web UI does when picking one, and name
-  the buffer after the conversation."
+  Also list conversations the way the web UI does when picking one, name
+  the buffer after the conversation, and link its sandbox files."
     (when (eq (map-nested-elt (agent-shell--state) '(:agent-config :identifier)) 'scooter)
       (setq-local agent-shell-session-choices-function #'my/scooter--session-choices)
       (setq-local agent-shell-session-restore-verbosity 'full)
+      (my/scooter-files-mode 1)
       (agent-shell-subscribe-to :shell-buffer (current-buffer)
                                 :event 'session-title-changed
                                 :on-event #'my/scooter--name-buffer)))
@@ -431,4 +432,5 @@ in
            :above-last-prompt (not (shell-maker-busy))))
         t)))
   ${import ./scooter-cards.nix { }}
+  ${import ./scooter-files.nix { }}
 ''

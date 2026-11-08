@@ -16,6 +16,7 @@ export function readConfig(env = process.env) {
     imageMaxBytes: Number(env.SCOOTER_IMAGE_MAX_BYTES ?? 5 * 1024 * 1024),
     requestTimeoutMs: Number(env.SCOOTER_REQUEST_TIMEOUT_MS ?? 15000),
     loginTimeoutMs: Number(env.SCOOTER_LOGIN_TIMEOUT_MS ?? 6 * 60 * 1000),
+    tunnelTimeoutMs: Number(env.SCOOTER_TUNNEL_TIMEOUT_MS ?? 90000),
   };
 }
 
@@ -169,6 +170,7 @@ export function createScooterClient(config, { fetchImpl = fetch, log = () => {},
 
   return {
     reloadCookie,
+    authHeaders: () => headers(),
     checkAuth: async () => {
       const res = await fetchImpl(`${config.url}/conversations?scope=${encodeURIComponent(config.scope)}`, {
         headers: headers(),
