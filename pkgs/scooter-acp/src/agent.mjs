@@ -1,9 +1,11 @@
 import { INVALID_PARAMS, RpcError } from "./jsonrpc.mjs";
 import { registerLinks, titleWithLinks } from "./links.mjs";
 import { promptImages } from "./images.mjs";
+import { login } from "./login.mjs";
 import { createSession } from "./session.mjs";
 
 const PAGE_SIZE = 50;
+const BROWSER_LOGIN = { id: "browser", name: "Sign in to Scooter in the browser", description: "Reuses the browser's Scooter session, or opens its sign-in page" };
 
 function promptText(blocks = []) {
   return blocks
@@ -83,12 +85,18 @@ export function registerAgent({ peer, client, config, log, version }) {
         promptCapabilities: { embeddedContext: true, image: true },
         sessionCapabilities: { list: {}, resume: {} },
       },
-      authMethods: [],
+      authMethods: config.cookieFile ? [BROWSER_LOGIN] : [],
       _meta: { steering: { supported: true } },
     };
   });
 
-  peer.on("authenticate", async () => ({}));
+  peer.on("authenticate", async ({ methodId } = {}) => {
+    if (methodId === BROWSER_LOGIN.id) {
+      await login(config);
+      client.reloadCookie();
+    }
+    return {};
+  });
 
   peer.on("session/new", async () => {
     const conv = await client.createConversation({});

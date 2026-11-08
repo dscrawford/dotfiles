@@ -48,6 +48,11 @@ setInterval(() => {
     const what = readFileSync(process.env.TRIGGER_FILE, "utf8");
     rmSync(process.env.TRIGGER_FILE);
     if (cardTrigger(fake, what)) return;
+    if (what === "expire") return fake.expireSession("_oauth2_proxy=renewed", 302);
+    if (what === "after-reauth") {
+      for (const e of run("old", "w2", "PUSH-AFTER-REAUTH", "STREAM-BACK-AFTER-REAUTH")) fake.append("old", e);
+      return;
+    }
     if (what === "link") return fake.addLink("old", { source: "jira", resourceType: "issue", url: "https://jira.example/browse/OPS-1" });
     for (const e of run("old", "w1", "WEB-QUESTION", "WEB-ANSWER", serviceCall)) fake.append("old", e);
   }

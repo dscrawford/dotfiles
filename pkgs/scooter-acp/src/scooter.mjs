@@ -15,6 +15,7 @@ export function readConfig(env = process.env) {
     replayTurns: Number(env.SCOOTER_REPLAY_TURNS ?? 30),
     imageMaxBytes: Number(env.SCOOTER_IMAGE_MAX_BYTES ?? 5 * 1024 * 1024),
     requestTimeoutMs: Number(env.SCOOTER_REQUEST_TIMEOUT_MS ?? 15000),
+    loginTimeoutMs: Number(env.SCOOTER_LOGIN_TIMEOUT_MS ?? 6 * 60 * 1000),
   };
 }
 
@@ -29,7 +30,8 @@ function cookieFromFile(path) {
   return raw.includes("=") ? raw : `_oauth2_proxy=${raw}`;
 }
 
-const isRefused = (res) => res.status === 401 || res.status === 403 || (res.status >= 300 && res.status < 400);
+const isSignInPage = (res) => res.ok && (res.headers.get("content-type") ?? "").startsWith("text/html");
+const isRefused = (res) => res.status === 401 || res.status === 403 || (res.status >= 300 && res.status < 400) || isSignInPage(res);
 
 function mergeSetCookies(cookie, setCookies) {
   const jar = new Map(
@@ -47,8 +49,44 @@ function mergeSetCookies(cookie, setCookies) {
   return [...jar].map(([k, v]) => `${k}=${v}`).join("; ");
 }
 
-export function createScooterClient(config, { fetchImpl = fetch, log = () => {} } = {}) {
+/**
+ * reauthenticate() asks for a new cookie in config.cookieFile and resolves once it is there.
+ * A refused request re-reads the file, then signs in once for every caller refused meanwhile.
+ * After a declined sign-in, background streams only re-read the file until a request asks again.
+ */
+export function createScooterClient(config, { fetchImpl = fetch, log = () => {}, reauthenticate } = {}) {
+  const fromFile = !config.cookie && config.cookieFile;
   let cookie = config.cookie ?? (config.cookieFile ? cookieFromFile(config.cookieFile) : undefined);
+  let signingIn;
+  let declined = false;
+
+  const reloadCookie = () => {
+    if (!fromFile) return;
+    try {
+      cookie = cookieFromFile(config.cookieFile);
+    } catch (e) {
+      log("could not re-read the cookie file", e.message);
+    }
+  };
+
+  const signIn = (reason, background) => {
+    if (!signingIn && reauthenticate && fromFile && !(background && declined)) {
+      log("session refused, asking the client to sign in:", reason);
+      signingIn = Promise.resolve()
+        .then(() => reauthenticate({ reason, cookieFile: config.cookieFile, url: config.url }))
+        .then(
+          () => true,
+          (e) => (log("sign-in did not finish:", e?.message ?? e), false),
+        )
+        .then((ok) => {
+          declined = !ok;
+          signingIn = undefined;
+          reloadCookie();
+          return ok;
+        });
+    }
+    return signingIn ?? Promise.resolve(false);
+  };
 
   const headers = (extra = {}) => ({
     ...(cookie ? { Cookie: cookie } : {}),
@@ -71,7 +109,7 @@ export function createScooterClient(config, { fetchImpl = fetch, log = () => {} 
     }
   };
 
-  const call = async (method, path, { body, signal, extraHeaders, stream = Boolean(signal) } = {}) => {
+  const send = async (method, path, { body, signal, extraHeaders, stream }) => {
     const deadline = stream ? undefined : AbortSignal.timeout(config.requestTimeoutMs);
     let res;
     try {
@@ -89,14 +127,29 @@ export function createScooterClient(config, { fetchImpl = fetch, log = () => {} 
       throw new RpcError(-32000, `Scooter ${method} ${path} unreachable: ${e?.cause?.message ?? e?.message ?? e} (${config.url})`);
     }
     keepRefreshedCookie(res);
-    if (isRefused(res)) {
-      await res.body?.cancel();
-      throw new RpcError(
-        AUTH_REQUIRED,
-        `Scooter refused ${method} ${path} (HTTP ${res.status}); refresh the session cookie in ${config.cookieFile ?? "SCOOTER_COOKIE"}`,
-      );
-    }
     return res;
+  };
+
+  const call = async (method, path, { background = false, ...opts } = {}) => {
+    opts.stream ??= Boolean(opts.signal);
+    const sent = cookie;
+    let res = await send(method, path, opts);
+    if (!isRefused(res)) return res;
+    await res.body?.cancel();
+    reloadCookie();
+    if (cookie === sent) await signIn(`Scooter refused ${method} ${path} (HTTP ${res.status})`, background);
+    if (cookie !== sent && !opts.signal?.aborted) {
+      res = await send(method, path, opts);
+      if (!isRefused(res)) {
+        declined = false;
+        return res;
+      }
+      await res.body?.cancel();
+    }
+    throw new RpcError(
+      AUTH_REQUIRED,
+      `Scooter refused ${method} ${path} (HTTP ${res.status}); refresh the session cookie in ${config.cookieFile ?? "SCOOTER_COOKIE"}`,
+    );
   };
 
   const json = async (method, path, opts) => {
@@ -115,6 +168,7 @@ export function createScooterClient(config, { fetchImpl = fetch, log = () => {} 
   const conv = (id) => `/conversations/${encodeURIComponent(id)}`;
 
   return {
+    reloadCookie,
     checkAuth: async () => {
       const res = await fetchImpl(`${config.url}/conversations?scope=${encodeURIComponent(config.scope)}`, {
         headers: headers(),
@@ -163,10 +217,10 @@ export function createScooterClient(config, { fetchImpl = fetch, log = () => {} 
     },
     steer: (id, text) => json("POST", `${conv(id)}/messages`, { body: { text } }),
     cancel: (id) => json("POST", `${conv(id)}/cancel`, { body: {} }),
-    openIntegrityStream: (id, signal) => call("GET", `${conv(id)}/events.integrity`, { signal, extraHeaders: { Accept: "text/event-stream" } }),
+    openIntegrityStream: (id, signal) => call("GET", `${conv(id)}/events.integrity`, { signal, background: true, extraHeaders: { Accept: "text/event-stream" } }),
     links: async (id) => (await json("GET", `${conv(id)}/links`))?.links ?? [],
     openListStream: (signal) =>
-      call("GET", `/conversations/events?scope=${encodeURIComponent(config.scope)}`, { signal, extraHeaders: { Accept: "text/event-stream" } }),
+      call("GET", `/conversations/events?scope=${encodeURIComponent(config.scope)}`, { signal, background: true, extraHeaders: { Accept: "text/event-stream" } }),
   };
 }
 
