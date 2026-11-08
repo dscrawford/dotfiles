@@ -1,8 +1,13 @@
 # shared/home/scooter.nix
 # Where the Scooter agent-shell bridge (pkgs/scooter-acp, wired in
-# emacs/scooter.nix) points. Set url to "" to keep Scooter out of the agent picker.
-{ lib, config, ... }:
+# emacs/scooter.nix) and the scooter-ssh command point. Set url to "" to keep
+# Scooter out of the agent picker.
+{ lib, config, pkgs, ... }:
 
+let
+  cfg = config.my.scooter;
+  bridge = pkgs.callPackage ../../pkgs/scooter-acp { };
+in
 {
   options.my.scooter = {
     url = lib.mkOption {
@@ -23,5 +28,15 @@
         rewrites it when oauth2-proxy refreshes the session.
       '';
     };
+  };
+
+  config = lib.mkIf (cfg.url != "") {
+    home.packages = [
+      (pkgs.writeShellScriptBin "scooter-ssh" ''
+        export SCOOTER_URL="''${SCOOTER_URL:-${cfg.url}}"
+        export SCOOTER_COOKIE_FILE="''${SCOOTER_COOKIE_FILE:-${cfg.cookieFile}}"
+        exec ${bridge}/bin/scooter-ssh "$@"
+      '')
+    ];
   };
 }

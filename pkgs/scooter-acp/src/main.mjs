@@ -3,6 +3,7 @@ import { createPeer } from "./jsonrpc.mjs";
 import { login } from "./login.mjs";
 import { registerSandbox } from "./sandbox.mjs";
 import { createScooterClient, readConfig } from "./scooter.mjs";
+import { TunnelRefused, runTunnel } from "./tunnel.mjs";
 import { registerWebServices } from "./webservices.mjs";
 
 const VERSION = "0.1.0";
@@ -27,6 +28,22 @@ if (process.argv[2] === "--check-auth") {
     return undefined;
   });
   process.exit(accepted === undefined ? 1 : accepted ? 0 : COOKIE_REFUSED);
+}
+
+if (process.argv[2] === "--tunnel") {
+  const id = process.argv[3];
+  if (!id) {
+    log("usage: scooter-acp --tunnel <conversation-id>");
+    process.exit(2);
+  }
+  const code = await runTunnel({ client, config, id, stdin: process.stdin, stdout: process.stdout, log }).then(
+    () => 0,
+    (e) => {
+      log(e.message);
+      return e instanceof TunnelRefused ? COOKIE_REFUSED : 1;
+    },
+  );
+  process.exit(code);
 }
 
 const peer = createPeer({ input: process.stdin, output: process.stdout, log });
