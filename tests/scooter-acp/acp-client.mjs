@@ -33,7 +33,14 @@ export function startBridge(env) {
     else if (msg.method && msg.id !== undefined) {
       requests.push(msg);
       const answer = autoAnswers.get(msg.method);
-      if (answer) write({ id: msg.id, result: answer(msg.params) });
+      if (answer) {
+        Promise.resolve()
+          .then(() => answer(msg.params))
+          .then(
+            (result) => write({ id: msg.id, result }),
+            (e) => write({ id: msg.id, error: { code: e.code ?? -32603, message: e.message } }),
+          );
+      }
     } else if (msg.method) requests.push(msg);
     else if (pending.has(msg.id)) {
       const p = pending.get(msg.id);

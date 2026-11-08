@@ -84,6 +84,14 @@ Then in Emacs:
    cookie is saved to `~/.config/scooter/cookie` (mode 600), and the bridge writes
    refreshed cookies back to that file. `M-x my/scooter-login` signs in by hand.
 
+   If Scooter refuses the cookie mid-session (401/403, a redirect to sign-in, or the
+   sign-in page), the bridge re-reads the cookie file and retries. If that is refused
+   too, it asks Emacs (`_scooter/login`) to run the same browser sign-in, then retries
+   the refused request and reconnects the event stream, so there is no restart. Buffers
+   refused at the same time share one sign-in. After a failed sign-in, the event
+   stream only re-reads the file; the next thing you do asks again. Other ACP clients
+   get the auth error, plus a `browser` method for `authenticate`.
+
    On start you pick an existing conversation or a new one. The picker lists the
    conversations the web UI's sidebar shows, in its order (starred first, then most
    recently active), with each one's status (working, waiting on you, suspended, ...).
@@ -127,8 +135,27 @@ private/shared. Restart, compact and making a private conversation shared ask fi
 Suspend, restart and compact are refused while a turn runs (cancel it with `C-c C-c`).
 A new size applies on the next restart.
 
+Sandbox files: a conversation's `/workspace` opens over TRAMP as
+`/scooter:<conversation-id>:/workspace/`, so files edit and save natively. In a Scooter
+buffer, `C-c C-f` (`my/scooter-find-file`) visits a file and `C-c C-d`
+(`my/scooter-dired`) opens dired. `/workspace/...` paths in the shell, including tool
+output, are links (`RET` or click), and `path:line[:col]` lands on that line.
+
+```
+TRAMP ─ scooter-ssh ─ ssh ─ ProxyCommand: scooter-acp --tunnel <id>
+  ─ wss://<scooter>/c/<id>/ssh/ (cookie) ─ sandbox websocat :2222 ─ sshd -i
+```
+
+Every sandbox has an unlisted `ssh` web service, and the platform proxy authenticates
+the WebSocket with your cookie. Its sshd accepts any key for root, so `scooter-ssh`
+uses its own key, `~/.local/state/scooter/ssh/id_ed25519` (created on first use), and
+its own `known_hosts`. The tunnel resumes a suspended sandbox and starts the service if
+it doesn't answer, then waits up to 90 s (`SCOOTER_TUNNEL_TIMEOUT_MS`). From a terminal:
+`scooter-ssh <conversation-id>` gives a shell in the sandbox.
+
 Tests: `tests/scooter-acp/run.sh` (protocol, fake Scooter) and
-`tests/scooter-acp/emacs-e2e.sh` (the pinned agent-shell driving the bridge).
+`tests/scooter-acp/emacs-e2e.sh` (the pinned agent-shell driving the bridge, with sandbox
+files over TRAMP through a local websocat + sshd).
 `tests/scooter-acp/screenshots/screenshots.sh` regenerates the screenshots in
 `docs/images/scooter-acp/` from a GUI Emacs under Xvfb and a demo fake Scooter.
 

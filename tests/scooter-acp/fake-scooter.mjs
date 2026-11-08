@@ -1,5 +1,9 @@
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
+import { connect } from "node:net";
+import { pipeline } from "node:stream";
+
+import { acceptKey, encodeFrame, frameDecoder, OP } from "../../pkgs/scooter-acp/src/websocket.mjs";
 
 const EMPTY = "0".repeat(64);
 
@@ -9,13 +13,25 @@ function canonical(event) {
   return JSON.stringify(sorted);
 }
 
-export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = {}) {
+const SIGN_IN = '<!DOCTYPE html><html><body><a href="/oauth2/start">Sign in</a></body></html>';
+
+function refuse(res, refusal) {
+  if (refusal === 302) {
+    res.writeHead(302, { Location: "/oauth2/sign_in?rd=%2F" });
+    return res.end();
+  }
+  res.writeHead(refusal === "html" ? 200 : refusal, { "Content-Type": "text/html; charset=utf-8" });
+  res.end(SIGN_IN);
+}
+
+export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo, refusal = 401 } = {}) {
   const convs = new Map();
   const requests = [];
   const listStreams = new Set();
   const assets = new Map();
   let script = () => [];
   let routes = () => undefined;
+  let upgrade = (_req, socket) => socket.end("HTTP/1.1 404 Not Found\r\n\r\n");
 
   const conv = (id) => {
     if (!convs.has(id)) convs.set(id, { id, title: id, events: [], checksums: [], streams: new Set(), lastActivityAt: Date.now(), model: null, links: [] });
@@ -57,7 +73,7 @@ export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = 
     const parts = url.pathname.split("/").filter(Boolean);
     const entry = { method: req.method, path: url.pathname + url.search, headers: req.headers };
     requests.push(entry);
-    if (![cookie, refreshTo].filter(Boolean).includes(req.headers.cookie)) return json(res, 401, { error: "no session" });
+    if (![cookie, refreshTo].filter(Boolean).includes(req.headers.cookie)) return refusal === 401 ? json(res, 401, { error: "no session" }) : refuse(res, refusal);
     const refresh = refreshTo && req.headers.cookie !== refreshTo ? { "Set-Cookie": `${refreshTo}; Path=/; HttpOnly` } : {};
     const routed = await routes({ method: req.method, path: url.pathname, body: async () => (entry.body = await body(req)) });
     if (routed) return json(res, routed.status ?? 200, routed.json);
@@ -139,6 +155,15 @@ export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = 
     json(res, 404, { error: "no route" });
   });
 
+  const upgraded = new Set();
+  server.on("upgrade", (req, socket, head) => {
+    upgraded.add(socket);
+    socket.on("close", () => upgraded.delete(socket));
+    requests.push({ method: "UPGRADE", path: req.url, headers: req.headers });
+    if (![cookie, refreshTo].filter(Boolean).includes(req.headers.cookie)) return socket.end("HTTP/1.1 302 Found\r\nLocation: /oauth2/start\r\n\r\n");
+    upgrade(req, socket, head);
+  });
+
   return new Promise((resolve) =>
     server.listen(0, "127.0.0.1", () =>
       resolve({
@@ -147,9 +172,17 @@ export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = 
         conv,
         append,
         setScript: (fn) => (script = fn),
+        expireSession: (next, how = refusal) => {
+          cookie = next;
+          refreshTo = undefined;
+          refusal = how;
+          for (const c of convs.values()) for (const s of c.streams) s.destroy();
+          for (const s of listStreams) s.destroy();
+        },
         addLink,
         listStreamCount: () => listStreams.size,
         setRoutes: (fn) => (routes = fn),
+        setUpgrade: (fn) => (upgrade = fn),
         addAsset: (id, assetId, mimeType, data) => {
           const path = `/conversations/${id}/assets/${assetId}`;
           assets.set(path, { mimeType, data });
@@ -163,9 +196,36 @@ export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = 
           for (const c of convs.values()) for (const s of c.streams) s.end();
           for (const s of listStreams) s.end();
           server.closeAllConnections?.();
+          for (const s of upgraded) s.destroy();
           return new Promise((r) => server.close(r));
         },
       }),
     ),
   );
 }
+
+export function acceptWebSocket(req, socket) {
+  socket.write(
+    `HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${acceptKey(req.headers["sec-websocket-key"])}\r\n\r\n`,
+  );
+}
+
+export function echoWebSocket(req, socket, head) {
+  acceptWebSocket(req, socket);
+  if (head.length) socket.unshift(head);
+  const decoder = frameDecoder({ onControl: (op) => op === OP.close && socket.end(encodeFrame(Buffer.from([3, 232]), { opcode: OP.close, mask: false })) });
+  decoder.on("data", (payload) => socket.write(encodeFrame(payload, { mask: false })));
+  pipeline(socket, decoder, () => {});
+}
+
+export const proxyUpgradeTo = (port) => (req, socket, head) => {
+  const backend = connect(port, "127.0.0.1", () => {
+    const lines = [];
+    for (let i = 0; i < req.rawHeaders.length; i += 2) lines.push(`${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}`);
+    backend.write(`${req.method} ${req.url} HTTP/1.1\r\n${lines.join("\r\n")}\r\n\r\n`);
+    backend.write(head);
+    socket.pipe(backend).pipe(socket);
+  });
+  backend.on("error", () => socket.end("HTTP/1.1 502 Bad Gateway\r\n\r\n"));
+  socket.on("error", () => backend.destroy());
+};
