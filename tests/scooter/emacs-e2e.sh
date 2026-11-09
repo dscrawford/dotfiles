@@ -32,8 +32,15 @@ export TRIGGER_FILE="$tmp/trigger"
 server=$!
 for _ in $(seq 50); do [ -s "$tmp/url" ] && break; sleep 0.1; done
 
+# Another Emacs, without scooter-mode, already owns the default server name:
+# the test Emacs must start its own (server.nix) for the bridge's emacsclient.
+HOME="$tmp" "$emacs/bin/emacs" -Q --daemon 2>/dev/null
+trap 'HOME="$tmp" "$emacs/bin/emacsclient" --eval "(kill-emacs)" >/dev/null 2>&1; kill "${server:-}" 2>/dev/null || true; rm -rf "$tmp"' EXIT
+nix eval --raw --impure --expr '(import ./shared/emacs/server.nix { })' > "$tmp/server.el"
+
 # auth-source writes the test cookie to this HOME's ~/.authinfo.
-SCOOTER_URL=$(cat "$tmp/url") SCOOTER_EL="$tmp/scooter.el" HOME="$tmp" \
+PATH="$emacs/bin:$PATH" SCOOTER_URL=$(cat "$tmp/url") SCOOTER_EL="$tmp/scooter.el" HOME="$tmp" \
   "$emacs/bin/emacs" -Q --batch \
   --eval '(setq auth-sources (list (expand-file-name "authinfo" (getenv "HOME"))) auth-source-save-behavior t)' \
+  -l "$tmp/server.el" \
   -l tests/scooter/agent-shell-e2e.el

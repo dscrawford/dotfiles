@@ -1,5 +1,5 @@
 # shared/emacs/ui.nix
-# UI, theme, org, tab-bar, performance, file management, server elisp.
+# UI, theme, org, tab-bar, performance, file management.
 { ... }:
 ''
   (tool-bar-mode -1)
@@ -106,9 +106,4 @@
           mac-command-modifier 'super
           mac-right-option-modifier 'none))  ; Allow special characters with right Option
 
-  ;; Start Emacs server with unique name per tmux pane
-  (require 'server)
-  (let ((pane (getenv "TMUX_PANE")))
-    (when pane (setq server-name (format "emacs-%s" (replace-regexp-in-string "%" "" pane)))))
-  (unless (server-running-p) (server-force-delete) (server-start))
 ''
