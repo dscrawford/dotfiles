@@ -30,6 +30,7 @@ in
       (setq agent-shell-elicitation--experimental-feature-enabled t)
       (my/guard "agent-shell" (require 'agent-shell))
       (global-set-key (kbd "C-c s") 'agent-shell)
+      (global-set-key (kbd "C-c S") 'agent-shell-new-shell)
       ;; Type a prompt while the agent is mid-turn: queued when busy, sent
       ;; straight away when idle. Upstream ships it unbound.
       (global-set-key (kbd "C-c q") 'agent-shell-prompt-queue)
@@ -67,7 +68,7 @@ in
       ;; alongside per-project tabs. Bound globally because the package's own
       ;; docs bind via `agent-shell-command-map', which has never existed.
       (my/guard "agent-shell-workspace" (require 'agent-shell-workspace))
-      (global-set-key (kbd "C-c S") 'agent-shell-workspace-sidebar-toggle)
+      (global-set-key (kbd "C-c TAB") 'agent-shell-workspace-sidebar-toggle)
       ;; The only MCP source for agent-shell sessions: they read neither
       ;; ~/.claude/.mcp.json nor `claude mcp` user scope.
       (setq agent-shell-mcp-servers
