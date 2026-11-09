@@ -51,9 +51,10 @@ default model via `LOCAL_LLM_MODEL_OVERRIDES`; opus hints deliberately stay
 remote. See `claude/skills/local-llm-routing/` for the usage pattern and
 `tests/local-llm-mcp/run.sh` for the test suite.
 
-### Scooter in Emacs (`pkgs/scooter-acp`)
+### Scooter in Emacs ([scooter-mode](https://github.com/chadac-me/scooter-mode))
 
-`scooter-acp` is an ACP agent that forwards to a [Scooter](https://github.com/chadac-me/scooter)
+scooter-mode (pinned in `shared/emacs/scooter-mode.nix`) is an Emacs package plus
+`scooter acp`, an ACP agent that forwards to a [Scooter](https://github.com/chadac-me/scooter)
 server, so agent-shell can open, continue and follow Scooter conversations instead of
 the web UI. It is a client of Scooter's HTTP API: the agent still runs in the cluster,
 in the conversation's sandbox.
@@ -68,29 +69,19 @@ server, or set it to `""` to leave Scooter out of agent-shell:
 
 Then in Emacs:
 
-1. `C-c j` (`my/scooter`) opens Scooter, which `C-c s` also lists in the agent picker.
+1. On first use scooter-mode asks for the `_oauth2_proxy` cookie value (browser
+   devtools → Application → Cookies) and saves it to auth-source (`~/.authinfo`,
+   mode 600). `M-x scooter-auth-set-cookie` replaces it; cookies oauth2-proxy
+   refreshes are kept automatically. A cookie the old `scooter-acp` saved in
+   `~/.config/scooter/cookie` is imported once.
+2. `C-c j` (`my/scooter`) opens Scooter, which `C-c s` also lists in the agent picker.
+   `C-c J` is scooter-mode's command map: `s` dispatch, `l` list, `o` open, `c` new,
+   `f` find a file in the sandbox (Tramp), `r`/`R` from/send region, `p` from project,
+   `b` sandbox, `w` web services, `k` links.
    There it has its own icon: the 🛴 mark as a one-colour silhouette (white on dark
    themes, black on light ones, from Noto Emoji), in `shared/emacs/icons/`.
 
    ![Scooter in the agent-shell agent picker](docs/images/scooter-acp/00-agent-picker.png)
-
-   Starting a session checks the saved cookie. If it's missing or Scooter refuses it,
-   the sign-in happens in your default browser. With Firefox that is your own profile:
-   a session you already have there is reused without opening a window, otherwise the
-   sign-in page opens in a tab and the bridge picks the cookie up from Firefox once
-   you're through. Any other default falls back to a Chromium-based browser with a
-   dedicated profile (`~/.config/scooter/browser-profile`); `SCOOTER_BROWSER` names
-   that binary and `SCOOTER_LOGIN_BROWSER=firefox|chromium` forces either path. The
-   cookie is saved to `~/.config/scooter/cookie` (mode 600), and the bridge writes
-   refreshed cookies back to that file. `M-x my/scooter-login` signs in by hand.
-
-   If Scooter refuses the cookie mid-session (401/403, a redirect to sign-in, or the
-   sign-in page), the bridge re-reads the cookie file and retries. If that is refused
-   too, it asks Emacs (`_scooter/login`) to run the same browser sign-in, then retries
-   the refused request and reconnects the event stream, so there is no restart. Buffers
-   refused at the same time share one sign-in. After a failed sign-in, the event
-   stream only re-reads the file; the next thing you do asks again. Other ACP clients
-   get the auth error, plus a `browser` method for `authenticate`.
 
    On start you pick an existing conversation or a new one. The picker lists the
    conversations the web UI's sidebar shows, in its order (starred first, then most
@@ -114,49 +105,31 @@ What carries over:
 | typing while a turn runs | steering, posted as an interrupting message |
 | model picker | `C-c C-v` |
 | context usage | the context indicator |
-| web services (Services panel) | `M-x my/scooter-web-services`: pick one, then browse, copy its URL, or start/stop it |
+| web services (Services panel) | `C-c J w` (`scooter-web-services`): pick one, then browse, copy its URL, or start/stop it |
 | `scooter-service start/stop` run by the agent | a one-line notice under the tool call |
-| linked resources (PRs, issues, Slack threads) | `M-x my/scooter-links` (`C-u` copies the URL); a "Linked" notice when one is added; sources in the picker's titles |
+| linked resources (PRs, issues, Slack threads) | `C-c J k` (`scooter-links`); a "Linked" notice when one is added; sources in the picker's titles |
 | images (attached, sent by the agent, in tool results such as `view_image`) | inline images, fetched through the bridge with your cookie |
 | `@image.png` mentions, `yank-media`/clipboard images in the prompt | uploaded the way the web UI attaches them (png, jpeg, gif, webp) |
 
 ![Scooter questions answered inline, all at once](docs/images/scooter-acp/05-questions.png)
 
-For anything else, `M-x my/scooter-open-in-browser` opens the conversation in the web
+For anything else, `C-c J s` (`scooter-dispatch`) opens the conversation in the web
 UI; approval cards of unknown kinds offer it as a choice. Local MCP
 servers from `agent-shell-mcp-servers` don't apply, since the agent runs remotely.
-Loading a conversation replays its last 30 user turns (`SCOOTER_REPLAY_TURNS`).
-Images over 5 MiB (`SCOOTER_IMAGE_MAX_BYTES`) are refused in prompts and shown as a
+Loading a conversation replays its last 30 user turns (`scooter-acp-replay-turns`).
+Images over 5 MiB are refused in prompts and shown as a
 placeholder in output. agent-shell shows a user's own images in replayed turns as `[image]`.
 
-Sandbox controls: `C-c C-b` (`my/scooter-sandbox`) shows the sandbox's status, size and
+Sandbox controls: `C-c C-b` (`scooter-sandbox`) shows the sandbox's status, size and
 visibility, then offers resize, suspend/resume, restart, compact, rename, star and
 private/shared. Restart, compact and making a private conversation shared ask first.
 Suspend, restart and compact are refused while a turn runs (cancel it with `C-c C-c`).
 A new size applies on the next restart.
 
-Sandbox files: a conversation's `/workspace` opens over TRAMP as
-`/scooter:<conversation-id>:/workspace/`, so files edit and save natively. In a Scooter
-buffer, `C-c C-f` (`my/scooter-find-file`) visits a file and `C-c C-d`
-(`my/scooter-dired`) opens dired. `/workspace/...` paths in the shell, including tool
-output, are links (`RET` or click), and `path:line[:col]` lands on that line.
-
-```
-TRAMP ─ scooter-ssh ─ ssh ─ ProxyCommand: scooter-acp --tunnel <id>
-  ─ wss://<scooter>/c/<id>/ssh/ (cookie) ─ sandbox websocat :2222 ─ sshd -i
-```
-
-Every sandbox has an unlisted `ssh` web service, and the platform proxy authenticates
-the WebSocket with your cookie. Its sshd accepts any key for root, so `scooter-ssh`
-uses its own key, `~/.local/state/scooter/ssh/id_ed25519` (created on first use), and
-its own `known_hosts`. The tunnel resumes a suspended sandbox and starts the service if
-it doesn't answer, then waits up to 90 s (`SCOOTER_TUNNEL_TIMEOUT_MS`). From a terminal:
-`scooter-ssh <conversation-id>` gives a shell in the sandbox.
-
-Tests: `tests/scooter-acp/run.sh` (protocol, fake Scooter) and
-`tests/scooter-acp/emacs-e2e.sh` (the pinned agent-shell driving the bridge, with sandbox
-files over TRAMP through a local websocat + sshd).
-`tests/scooter-acp/screenshots/screenshots.sh` regenerates the screenshots in
+Tests: the bridge's own suite lives in scooter-mode (`just ci`).
+`tests/scooter/emacs-e2e.sh` drives the pinned agent-shell and scooter-mode through
+this config against `scooter acp` and a fake Scooter.
+`tests/scooter/screenshots/screenshots.sh` regenerates the screenshots in
 `docs/images/scooter-acp/` from a GUI Emacs under Xvfb and a demo fake Scooter.
 
 ## Usage
@@ -275,7 +248,7 @@ nix flake update nixpkgs
 ├── hosts/
 │   ├── local/               # NixOS desktop (NVIDIA, Sway, PipeWire, Steam)
 │   └── node1..3/            # Kubernetes cluster nodes
-├── pkgs/                    # Local packages (claude-code, ruflo, local-llm-mcp, scooter-acp, ...)
+├── pkgs/                    # Local packages (claude-code, ruflo, local-llm-mcp, ...)
 ├── claude/                  # Claude Code settings, hooks, agents, skills
 ├── docs/                    # Runbooks and research notes
 ├── tests/                   # Hook, Emacs, and MCP-server tests

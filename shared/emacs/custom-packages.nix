@@ -44,6 +44,9 @@ in
 {
   inherit mkEmacsPackage acp shell-maker agent-shell;
 
+  # scooter-mode's Emacs package; its bridge is built beside it (scooter-mode.nix).
+  scooter = (import ./scooter-mode.nix { inherit pkgs; }).elisp { inherit epkgs agent-shell; };
+
   claude-code-ide = mkEmacsPackage {
     pname = "claude-code-ide";
     version = "0.2.7-unstable-2026-09-14";

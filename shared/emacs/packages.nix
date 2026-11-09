@@ -48,4 +48,5 @@ with epkgs; [
   custom.shell-maker
   custom.agent-shell
   custom.agent-shell-workspace
+  custom.scooter
 ]

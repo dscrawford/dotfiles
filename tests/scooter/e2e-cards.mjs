@@ -1,7 +1,8 @@
 const QUESTIONS = [
   { question: "Which database?", header: "DB", options: [{ label: "Postgres", description: "Relational" }, { label: "SQLite" }] },
   { question: "Which extras?", header: "Extras", multiSelect: true, options: [{ label: "Cache" }, { label: "Queue" }] },
-  { question: "Name the service", header: "Name", options: [] },
+  // AskUserQuestion always offers options; this one is answered with "Other".
+  { question: "Name the service", header: "Name", options: [{ label: "api" }, { label: "web" }] },
 ];
 
 const GRANT = {

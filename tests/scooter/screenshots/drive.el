@@ -3,7 +3,11 @@
 
 (require 'agent-shell)
 (require 'markdown-mode nil t)
+(setq auth-sources (list (expand-file-name "authinfo" (getenv "HOME")))
+      auth-source-save-behavior t)
 (load (getenv "SCOOTER_EL"))
+;; The demo server accepts this cookie; scooter-mode would otherwise ask for one.
+(scooter-auth-set-cookie my/scooter-server "good")
 
 (setq inhibit-startup-screen t
       agent-shell-elicitation--experimental-feature-enabled t
