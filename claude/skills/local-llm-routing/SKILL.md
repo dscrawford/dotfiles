@@ -47,17 +47,6 @@ Requires the `local-llm-router` MCP server in the current session
 4) return concise synthesis to caller
 ```
 
-## Example prompts
-
-- "Review this test diff for flaky risks and missing coverage"
-  - Use `profile: test-review`
-- "Scan this patch for auth and injection issues"
-  - Use `profile: security-review`
-- "Summarize these logs and suggest next 3 actions"
-  - Use `profile: general`
-
 ## Notes
 
-- This is a **tool-offload** pattern: the subagent still reasons normally,
-  but heavy bounded analysis can be delegated to local inference.
 - If Ollama is down, report that clearly and continue remote-only.

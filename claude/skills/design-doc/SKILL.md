@@ -119,7 +119,7 @@ Apply: `node["Label"]:::primary`. D2: `style.fill: "#D6E4F0"; style.stroke: "#4A
 
 ### 4b. Render for print
 
-Mermaid: PDF directly from `mmdc`; **never via `rsvg-convert`** — librsvg can't render Mermaid's `foreignObject` HTML labels and silently drops every node label (empty boxes); `htmlLabels: false` only half-fixes (labels still missing, spaces collapse); `mmdc`'s Chromium export is correct.
+Mermaid: PDF directly from `mmdc`; **never via `rsvg-convert`**, which drops every node label (see `diagram` §4).
 
 ```bash
 # --pdfFit crops the page to the diagram (600x77pt) instead of padding to US Letter
@@ -238,7 +238,7 @@ cd docs && nix-shell -p '(texliveSmall.withPackages (ps: with ps; [
          pdflatex -interaction=nonstopmode system_design.tex"
 ```
 
-Run `pdflatex` twice (TOC). Confirm `Output written on system_design.pdf`. `texliveSmall` + those nine packages ≈ 137 MiB vs 2.5 GiB `texliveFull` — holds only while TikZ-free; never reintroduce TikZ, fix the figure.
+Run `pdflatex` twice (TOC). Confirm `Output written on system_design.pdf`. `texliveSmall` + those nine packages suffice only while TikZ-free; never reintroduce TikZ, fix the figure.
 
 | Error | Fix |
 |---|---|
@@ -271,4 +271,4 @@ Report: `.tex`/`.pdf`/`docs/diagrams/` paths; page count; sections + figures wit
 
 ## Toolchain
 
-`mmdc`, `d2`, `rsvg-convert` (never for Mermaid SVG), `structurizr-cli` (C4 → Mermaid for multi-view consistency); `pdflatex` via `nix-shell -p '(texliveSmall.withPackages …)'`; `pdfinfo`/`pdftoppm` via `nix-shell -p poppler-utils`. Diagram tools come from `shared/home/diagrams.nix`; if one is missing, the config needs a rebuild — say so; never fall back to an online renderer or hand-written TikZ.
+Diagram tools are `diagram`'s Available commands; `pdflatex` and `pdfinfo`/`pdftoppm` come from the `nix-shell` calls above. A missing diagram tool means the config needs a rebuild — say so; never fall back to an online renderer or hand-written TikZ.

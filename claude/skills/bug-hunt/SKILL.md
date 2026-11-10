@@ -35,9 +35,6 @@ says so, on stderr) and links the object stores together instead of copying. `fi
 forces a real transport, so the clone is shallow and shares nothing. `owner/repo` →
 `gh repo clone`. Record the HEAD sha; every finding is reported against it.
 
-Nothing to clean up: `systemd-tmpfiles` sweeps `/tmp` on its own. Never `rm -rf` the
-sandbox — the user may want to re-run a failing test or read the code behind a finding.
-
 ## Phase 1b: Cut the sandbox off from the user
 
 Every command after the clone runs with:
