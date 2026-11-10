@@ -19,6 +19,7 @@ let
 
   sections = [
     (chunk (import ./ui.nix { }))
+    (chunk (import ./server.nix { }))
     ""
     (chunk (import ./scrolling.nix { }))
     ""
