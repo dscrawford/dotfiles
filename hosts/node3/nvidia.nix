@@ -33,7 +33,7 @@
       # nvidia-egl-external-platforms symlinkJoin and then into egl-gbm /
       # egl-x11 / egl-wayland*. Neither hop is mounted, so inside a container
       # Xwayland's glamor cannot dlopen libnvidia-egl-gbm and silently falls
-      # back to llvmpipe (docs/node3-cdi-egl-platforms.md). containerPath ==
+      # back to llvmpipe. containerPath ==
       # hostPath because the links are absolute store paths.
       mounts =
         let
