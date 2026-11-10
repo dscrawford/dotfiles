@@ -5,20 +5,18 @@
 {
   systemd.services.gpu-monitor = {
     description = "NVIDIA GPU state logger";
-    after = [ "multi-user.target" ];
     wantedBy = [ "multi-user.target" ];
     path = [ config.hardware.nvidia.package.bin ];
     serviceConfig = {
-      Type = "simple";
+      DynamicUser = true;
+      LogsDirectory = "gpu-monitor";
       ExecStart = pkgs.writeShellScript "gpu-monitor" ''
-        LOG_DIR=/var/log/gpu-monitor
-        mkdir -p $LOG_DIR
-        find $LOG_DIR -name "*.log" -mtime +7 -delete 2>/dev/null
-        LOG_FILE="$LOG_DIR/$(date +%Y-%m-%d).log"
+        cd "$LOGS_DIRECTORY" || exit 1
         while true; do
+          find . -name "*.log" -mtime +7 -delete
           nvidia-smi \
             --query-gpu=timestamp,temperature.gpu,power.draw,utilization.gpu,utilization.memory,memory.used,memory.total,clocks.gr,clocks.mem,pstate \
-            --format=csv,noheader >> "$LOG_FILE" 2>&1
+            --format=csv,noheader >> "$(date +%Y-%m-%d).log" 2>&1
           sleep 10
         done
       '';
