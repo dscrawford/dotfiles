@@ -22,7 +22,9 @@
   (with-current-buffer buf (buffer-substring-no-properties (point-min) (point-max))))
 
 (defun e2e-has (buf s)
-  (string-match-p (regexp-quote s) (e2e-text buf)))
+  ;; Case matters: "ANSWERED" is the reply, "Answered" only the form.
+  (let ((case-fold-search nil))
+    (string-match-p (regexp-quote s) (e2e-text buf))))
 
 (defun e2e-start (&rest args)
   (let ((default-directory temporary-file-directory))

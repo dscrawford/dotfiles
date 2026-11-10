@@ -14,6 +14,8 @@ in
   (autoload 'scooter-find-file "scooter-tramp" nil t)
   (autoload 'scooter-kanban "scooter-kanban" nil t)
   (autoload 'scooter-kanban-file "scooter-kanban" nil t)
+  ;; Each card's chat in a tab of its own; closing the tab closes the chat.
+  (setq scooter-kanban-open-in 'tab)
   (with-eval-after-load 'tramp
     (my/guard "scooter-tramp"
       (require 'scooter-tramp)
