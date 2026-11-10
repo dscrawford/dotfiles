@@ -63,14 +63,14 @@ Linux, and a launchd agent on macOS (Metal via unified memory). The desktop swap
 `ollama-cuda`, and `local-llm-mcp` and `ollama` are on PATH on every system.
 
 ```bash
-ollama pull qwen3:8b
+ollama pull qwen3-coder:30b
 # agent-shell sessions get the server automatically; the Claude Code CLI needs:
 claude mcp add --scope user local-llm-router -- local-llm-mcp
 ```
 
-`LOCAL_LLM_MODEL_OVERRIDES` maps Sonnet-tier hints (`sonnet`, `claude-sonnet-5`) to the
-local default. Opus hints deliberately stay remote. Usage is in `claude/skills/local-llm-routing/`,
-and the tests are in `tests/local-llm-mcp/run.sh`.
+`my.llmRouting` (`shared/home/llm-routing.nix`) defaults to `qwen3-coder:30b` with empty
+`overrides`, so only explicit `local_model_run` calls run locally. Usage is in
+`claude/skills/local-llm-routing/`, and the tests are in `tests/local-llm-mcp/run.sh`.
 
 ## Scooter in Emacs ([scooter-mode](https://github.com/chadac-me/scooter-mode))
 
