@@ -1,6 +1,6 @@
 ---
 name: make-envrc
-description: Generate .envrc, flake.nix, and .dir-locals.el for a project with direnv + nix-direnv + Emacs integration (eglot, dap-mode).
+description: Generate .envrc, flake.nix, and .dir-locals.el for a project with direnv + nix-direnv + Emacs integration (eglot).
 argument-hint: "[language] e.g. 'python', 'node', 'go' — defaults to auto-detect"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 ---
@@ -47,8 +47,7 @@ the change. Tell the user this when `.envrc` is new or the line was added.
 **Python**
 ```elisp
 ((python-mode
-  . ((dap-python-executable . "<absolute-path-to-project>/.venv/bin/python")
-     (eglot-workspace-configuration
+  . ((eglot-workspace-configuration
       . (:python (:pythonPath ".venv/bin/python"
                   :venvPath "."
                   :venv ".venv"))))))
@@ -63,14 +62,12 @@ the change. Tell the user this when `.envrc` is new or the line was added.
 **Go** — none needed; `gopls`/`delve` found via PATH from direnv.
 
 Rules:
-- `dap-python-executable` MUST be absolute (dap-mode ignores buffer-local values; relative paths resolve to nil)
 - `eglot-workspace-configuration` can be relative (pyright resolves from workspace root)
-- `debugpy` MUST be in the venv — check, add to dev dependencies if missing
 
 ## Phase 5: Activate and Verify
 
 1. Stage `flake.nix` + `flake.lock` with git (nix requires tracked files)
 2. `direnv allow`
-3. Verify: runtime version; LSP in PATH; debugger works (e.g. `python -m debugpy --version`)
+3. Verify: runtime version; LSP in PATH
 4. Add `.direnv/` to `.gitignore` if missing
 5. Summarize created files + manual steps
