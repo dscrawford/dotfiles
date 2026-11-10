@@ -13,6 +13,7 @@ in
   programs.bash = {
     enable = true;
     enableCompletion = true;
+    historyControl = [ "ignorespace" ];
     bashrcExtra = ''
       PS1='\u:\W\$ '
       export EDITOR="emacs -nw"
@@ -32,7 +33,9 @@ in
       # Inside eat, open files in a new window instead of a nested instance.
       if [ -n "$INSIDE_EMACS" ]; then
         emacs() {
-          emacsclient -s "$EMACS_SERVER" -n --eval "(progn (split-window-right) (other-window 1) (find-file \"$(realpath "$1")\"))"
+          local f
+          f=$(realpath "$1"); f=''${f//\\/\\\\}; f=''${f//\"/\\\"}
+          emacsclient -s "$EMACS_SERVER" -n --eval "(progn (split-window-right) (other-window 1) (find-file \"$f\"))"
         }
       else
         alias emacs="emacs -nw"
