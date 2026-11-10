@@ -16,9 +16,6 @@
       enable = true;
       maxretry = 10;
       bantime = "15m";
-      jails = {
-        sshd.enabled = true;
-      };
     };
 
     tailscale = {
@@ -70,7 +67,7 @@
     '';
 
     firewall = {
-      allowedTCPPorts = [ 22 8080 6443 10250 8888 ];
+      allowedTCPPorts = [ 8080 6443 10250 8888 ];
       allowedTCPPortRanges = [
         { from = 30500; to = 30799; }
       ];
