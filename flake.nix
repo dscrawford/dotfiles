@@ -50,8 +50,6 @@
         (./hosts + "/${hostname}/hardware-configuration.nix")
         (./hosts + "/${hostname}/boot.nix")
         ./shared/kubernetes.nix
-        ./shared/kube-etcd-cluster.nix
-        ./shared/keepalived.nix
         ./shared/kube-cert-renew.nix
         ./shared/kube-stale-mount-recovery.nix
         ./shared/iscsi.nix

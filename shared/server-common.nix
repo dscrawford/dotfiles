@@ -1,5 +1,5 @@
 # Configuration specific to server systems (not desktops)
-{ config, pkgs, hostname, ip, netInterface ? "eno1", kubeApiVIP, kubeMasterHostname, ... }:
+{ config, pkgs, hostname, ip, netInterface ? "eno1", kubeMasterIP, kubeMasterHostname, ... }:
 
 {
   # Each node's tailscale auth key, decrypted at activation with the node's
@@ -63,7 +63,7 @@
     nameservers = [ "1.1.1.1" "9.9.9.9" ];
     
     extraHosts = ''
-      ${kubeApiVIP} ${kubeMasterHostname}
+      ${kubeMasterIP} ${kubeMasterHostname}
       192.168.0.2 node1
       192.168.0.4 node2
       192.168.0.6 node3
