@@ -7,10 +7,7 @@ input=$(</dev/stdin)
 [[ $input == *commit* ]] || exit 0
 cmd=$(jq -r '.tool_input.command // empty' <<<"$input")
 
-case "$cmd" in
-*"git commit"*) ;;
-*) exit 0 ;;
-esac
+[[ $cmd =~ git([[:space:]]+-[cC][[:space:]]+[^[:space:]]+|[[:space:]]+-[^[:space:]]+)*[[:space:]]+commit([[:space:]]|$) ]] || exit 0
 grep -qE -- '--no-edit|--amend|-F |--file|--fixup|--squash' <<<"$cmd" && exit 0
 
 subject=""
@@ -20,7 +17,7 @@ if grep -q '<<' <<<"$cmd"; then
   subject=$(head -1 <<<"$body")
   lines=$(grep -c '' <<<"$body")
 else
-  subject=$(grep -oP -- "-m ['\"]\K[^'\"]*" <<<"$cmd" | head -1)
+  subject=$(grep -oP -- "(^|\s)-[a-zA-Z]*m ['\"]\K[^'\"]*" <<<"$cmd" | head -1)
   lines=1
 fi
 [ -z "$subject" ] && exit 0

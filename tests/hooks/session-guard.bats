@@ -62,7 +62,7 @@ outside_sway() {
 
 @test "pkill and killall by a session process name are denied" {
   outside_sway >/dev/null
-  for cmd in "pkill sway" "pkill -x sway" "pkill -9 '^sway\$'" "killall sway" "killall -9 sway" "kill \$(pgrep sway)" "kill \$(pidof sway)"; do
+  for cmd in "pkill sway" "pkill -x sway" "pkill -9 '^sway\$'" "killall sway" "killall -9 sway" "kill \$(pgrep sway)" "kill \$(pidof sway)" "pgrep sway | xargs kill" "timeout 5 pkill sway" "bash -c 'pkill sway'" "sudo -u root pkill sway"; do
     run guard "$cmd"
     echo "cmd: $cmd | out: $output"
     denied
