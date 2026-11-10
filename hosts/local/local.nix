@@ -17,11 +17,7 @@
 
   time.timeZone = "America/Los_Angeles";
   time.hardwareClockInLocalTime = true;
-  i18n.defaultLocale = "en_US.UTF-8";
-  console = {
-    font = "Lat2-Terminus16";
-    keyMap = "us";
-  };
+  console.font = "Lat2-Terminus16";
 
   nixpkgs.config.allowUnfree = true;
   # gemini-cli carries a removal notice (replaced by Antigravity CLI), but
@@ -42,11 +38,6 @@
       gnome-keyring
       libsecret
       tree
-      findutils
-      gnugrep
-      gnused
-      gawk
-      util-linux
       jq
       libva-utils
       # Forced onto XWayland: Qt-embedded mpv on native Wayland + NVIDIA shows

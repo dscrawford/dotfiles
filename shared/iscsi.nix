@@ -14,7 +14,6 @@
     };
 
     rpcbind.enable = true;
-    nfs.server.enable = false;
   };
 
   systemd.services.iscsid = {
@@ -28,11 +27,7 @@
     '';
   };
 
-  environment.systemPackages = with pkgs; [
-    nfs-utils
-    util-linux
-    openiscsi
-  ];
+  environment.systemPackages = [ pkgs.openiscsi ];
 
   system.activationScripts.longhorn-compat = let
     iscsi = pkgs.openiscsi;

@@ -5,15 +5,11 @@
   networking.hostName = hostname;
   networking.networkmanager.enable = true;
 
-  services.xserver.xkb.layout = "us";
-
   environment.systemPackages = with pkgs; [
     vim
     wget
     emacs-nox
     openssl
-    less
-    coreutils
   ];
 
   services.openssh = {
@@ -22,16 +18,10 @@
       PasswordAuthentication = false;
       KbdInteractiveAuthentication = false;
       PermitRootLogin = "no";
-      PubkeyAuthentication = true;
-      X11Forwarding = false;
     };
   };
 
-  networking.firewall = {
-    enable = true;
-    allowedTCPPorts = [ 22 ];
-    allowPing = false;
-  };
+  networking.firewall.allowPing = false;
 
   boot.kernelModules = [ "coretemp" ];
 

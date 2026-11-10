@@ -8,7 +8,6 @@ let
 
   inputs = { inherit nixpkgs home-manager sops-nix nix-darwin darwin-emacs lib claudeSkills; };
 in {
-  inherit claudeSkills;
   mkServer = import ./mkServer.nix inputs;
   mkLocal = import ./mkLocal.nix inputs;
   mkDarwin = import ./mkDarwin.nix inputs;
