@@ -7,6 +7,7 @@
 (require 'agent-shell)
 (load (getenv "SCOOTER_EL"))
 (load (expand-file-name "agent-shell-cards-e2e.el" (file-name-directory load-file-name)))
+(load (expand-file-name "agent-shell-kanban-e2e.el" (file-name-directory load-file-name)))
 
 ;; The fake accepts this cookie; scooter-mode would otherwise ask for one.
 (scooter-auth-set-cookie my/scooter-server "good")
@@ -21,7 +22,9 @@
   (with-current-buffer buf (buffer-substring-no-properties (point-min) (point-max))))
 
 (defun e2e-has (buf s)
-  (string-match-p (regexp-quote s) (e2e-text buf)))
+  ;; Case matters: "ANSWERED" is the reply, "Answered" only the form.
+  (let ((case-fold-search nil))
+    (string-match-p (regexp-quote s) (e2e-text buf))))
 
 (defun e2e-start (&rest args)
   (let ((default-directory temporary-file-directory))
@@ -167,6 +170,7 @@
       (e2e-web-services)
       (e2e-links)
       (e2e-cards)
+      (e2e-kanban)
       (princ "agent-shell e2e: ok\n")
       (kill-emacs 0))
   (error
