@@ -1,6 +1,6 @@
 # Kubernetes Certificate Management
 
-NixOS `easyCerts` generates all cluster TLS certificates via CFSSL running on the master node (node1). Certificates are valid for 30 days and are auto-renewed by `certmgr`.
+NixOS `easyCerts` issues all cluster TLS certificates from CFSSL on node1. The CFSSL signing profile in `shared/kubernetes.nix` sets `expiry = "8760h"` (1 year); `certmgr` renews them, and the monthly `kube-cert-renew` timer deletes any cert within 7 days of expiry so certmgr re-issues it.
 
 ## Architecture
 
@@ -49,7 +49,7 @@ sudo openssl x509 -in /var/lib/cfssl/cfssl.pem -noout -text | grep -A1 "Subject 
 
 ### Full cluster renewal (master + workers)
 
-When certs expire, the entire chain must be regenerated starting from the master.
+If certs have expired, regenerate the chain starting from the master.
 
 #### Step 1: Regenerate CFSSL CA and certs on node1 (master)
 
@@ -94,7 +94,7 @@ sudo systemctl restart kubelet
 
 #### Step 2: Regenerate certs on each worker node
 
-Repeat this on each worker (node2, node3, etc.):
+On each worker:
 
 ```bash
 # SSH to the worker
@@ -134,7 +134,7 @@ kubectl get nodes
 
 ### certmgr fails with "certificate signed by unknown authority"
 
-The `ca.pem` in `/var/lib/kubernetes/secrets/` doesn't match the CA that signed `cfssl.pem`. Fix:
+`secrets/ca.pem` doesn't match the CA that signed `cfssl.pem`:
 
 ```bash
 sudo cp /var/lib/cfssl/ca.pem /var/lib/kubernetes/secrets/ca.pem  # on master
@@ -146,7 +146,7 @@ sudo systemctl restart certmgr
 
 ### certmgr fails with "authentication error" on authsign
 
-The API token doesn't match. The CFSSL server reads the token at startup, so both the token file and the service must be in sync:
+The API token doesn't match; cfssl reads it only at startup:
 
 ```bash
 # Copy fresh token from master
@@ -172,7 +172,7 @@ sudo systemctl restart cfssl
 
 ### kubelet fails with "unable to read client-cert"
 
-The client cert PEM files are missing. Certmgr hasn't generated them yet:
+certmgr hasn't generated the client certs yet:
 
 ```bash
 sudo systemctl status certmgr  # check if running
@@ -181,7 +181,7 @@ sudo journalctl -u certmgr -n 20 --no-pager -o cat  # check for errors
 
 ### /var/lib/kubernetes/secrets doesn't exist
 
-NixOS doesn't auto-create this directory if it was deleted. Create it manually:
+NixOS won't recreate it:
 
 ```bash
 sudo mkdir -p /var/lib/kubernetes/secrets
