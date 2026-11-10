@@ -110,13 +110,11 @@
   (add-hook 'eshell-load-hook #'eat-eshell-mode)
   (add-hook 'eshell-load-hook #'eat-eshell-visual-command-mode)
 
-  (my/guard "magit"
-    (require 'magit)
-    (global-set-key (kbd "C-c g") 'magit-status)
-    ;; Open magit in the current window instead of splitting; diffs still get
-    ;; their own window so they can be viewed alongside the status buffer.
-    (setq magit-display-buffer-function
-          #'magit-display-buffer-same-window-except-diff-v1))
+  (global-set-key (kbd "C-c g") 'magit-status)
+  ;; Open magit in the current window instead of splitting; diffs still get
+  ;; their own window so they can be viewed alongside the status buffer.
+  (setq magit-display-buffer-function
+        'magit-display-buffer-same-window-except-diff-v1)
 
   (my/guard "xclip"
     (setq xclip-method (if (eq system-type 'darwin) 'pbpaste 'wl-copy))
