@@ -1,325 +1,265 @@
-# NixOS Configuration
+# dotfiles
 
-Daniel's NixOS configuration using flakes for multiple systems. Yes I used Claude to make a lot of this kinda, I just told it to turn all my configs into a flake. I am horrible at documentation and would never write this much detail below.
+Nix flake for Daniel's machines: a Sway desktop, terminal-only boxes, a three-node
+Kubernetes cluster, and macOS. Home Manager carries the user config (Emacs, shell,
+Claude Code), and sops-nix carries the secrets.
 
-## Systems
+| Config | What it is | Build |
+|---|---|---|
+| `local` | NixOS desktop: Sway, Emacs GUI, NVIDIA, gaming, VR | `sudo nixos-rebuild switch --flake '.?submodules=1#local'` |
+| `terminal`, `terminal-arm` | NixOS terminal-only (x86_64, aarch64) | `sudo nixos-rebuild switch --flake .#terminal` |
+| `node1`–`node3` | Kubernetes nodes, HA control plane, iSCSI | `deploy-nodes` (from `local`) |
+| `terminal-darwin-arm`, `terminal-darwin-x86` | macOS via nix-darwin | `darwin-rebuild switch --flake .#terminal-darwin-arm` |
 
-- **local** — NixOS desktop (Sway + Emacs GUI + gaming)
-- **terminal** — NixOS terminal-only (x86)
-- **terminal-arm** — NixOS terminal-only (aarch64)
-- **terminal-darwin-arm** — macOS Apple Silicon
-- **terminal-darwin-x86** — macOS Intel
-- **node1**, **node2**, **node3** — Kubernetes cluster nodes with iSCSI
+`local` and the nodes need `?submodules=1`, because their tailscale key lives in the
+secrets submodule. Without it, the build fails with a confusing error about a missing key
+file. [AGENTS.md](AGENTS.md) lists every build, test and eval command.
 
-## Features
+## Quick start
 
-### Boot Management (`boot-common.nix`)
-- Automatically cleans old boot entries (keeps last 5 generations)
-- Weekly automatic garbage collection (removes items older than 7 days)
-- Supports both GRUB and systemd-boot
+```bash
+git clone --recurse-submodules git@github.com:dscrawford/dotfiles.git ~/.local/dotfiles
+cd ~/.local/dotfiles
+git add -A    # flakes only see tracked files; run before every build
+sudo nixos-rebuild switch --flake '.?submodules=1#local'
+```
 
-### Secrets Management (sops-nix)
-- Encrypted secrets using age encryption
-- Configuration in `.sops.yaml`
-- Encrypted secrets stored in `secrets/secrets.yaml` (safe to commit — decryption requires age key)
+Hosts built with `enableSecrets = true` need the age key at `~/.config/sops/age/keys.txt`
+(see `secrets/README.md`). For macOS, see [macOS from your own flake](#macos-from-your-own-flake).
 
-### Local LLM MCP Router (`pkgs/local-llm-mcp`)
+## Claude Code guardrails (`claude/`)
+
+![Claude Code hooks denying a non-conventional commit, a PR body with no demo, and swaymsg exit, then rewriting pytest to tail its output](docs/demos/claude-hooks.gif)
+
+*The PreToolUse hooks judging five Bash calls. To regenerate it, run
+`nix run nixpkgs#vhs -- docs/demos/claude-hooks.tape`.*
+
+`claude/` is the source for `~/.claude`. On activation, its files become read-only store
+symlinks, so make edits in `claude/` and rebuild.
+
+| Hook | Event | Effect |
+|---|---|---|
+| `commit-guard` | PreToolUse | denies non-conventional or >10-line commit messages |
+| `pr-guard` | PreToolUse | denies PR bodies with >100 words of prose or nothing shown |
+| `session-guard` | PreToolUse | denies kills of sway, greetd, emacs, … the agent didn't start |
+| `tool-output-filter` | PreToolUse | rewrites verbose test runners to keep the last 120 lines |
+| `prompt-router` | UserPromptSubmit | brevity for easy prompts, full reasoning for hard ones |
+| `comment-density` | PostToolUse | challenges each added comment (advisory, never blocks) |
+
+Agents (`comment-scout`, `test-scout`, `security-scout`, `performance-scout`) are read-only
+reviewers. Skills include `update-readme`, `readme-demo`, `bug-hunt`, `deep-research` and
+`local-llm-routing`. To run the hook tests, use `nix run nixpkgs#bats -- tests/hooks/`.
+
+## Local LLM MCP router (`pkgs/local-llm-mcp`)
 
 ![The local-llm-router MCP server drafting a conventional commit message from a diff summary on the local GPU](docs/demos/local-llm-router.gif)
 
-*The router drafting a commit message locally — regenerate with
+*The router drafting a commit message locally. To regenerate it, run
 `nix run nixpkgs#vhs -- docs/demos/local-llm-router.tape` (see `claude/skills/readme-demo/`).*
 
-Self-hosted model routing for small subagent tasks (test/security/general
-review) using Ollama + MCP. One shared Home Manager module
-(`shared/home/ollama.nix`) runs the Ollama daemon on every system: a systemd
-user service on Linux, a launchd agent on macOS (Metal via unified memory).
-The desktop overrides the package to `ollama-cuda` in flake.nix;
-`local-llm-mcp` and the `ollama` CLI are on PATH everywhere.
+Small subagent tasks (test, security and general review) run on a local Ollama model over
+MCP. `shared/home/ollama.nix` runs the Ollama daemon everywhere: a systemd user service on
+Linux, and a launchd agent on macOS (Metal via unified memory). The desktop swaps in
+`ollama-cuda`, and `local-llm-mcp` and `ollama` are on PATH on every system.
 
 ```bash
-# Pull the default model once
 ollama pull qwen3:8b
-
-# agent-shell sessions get the server automatically (shared/emacs/agent-shell.nix).
-# The Claude Code CLI needs a one-time user-scope registration:
+# agent-shell sessions get the server automatically; the Claude Code CLI needs:
 claude mcp add --scope user local-llm-router -- local-llm-mcp
 ```
 
-Sonnet-tier model hints (`sonnet`, `claude-sonnet-5`) are mapped to the local
-default model via `LOCAL_LLM_MODEL_OVERRIDES`; opus hints deliberately stay
-remote. See `claude/skills/local-llm-routing/` for the usage pattern and
-`tests/local-llm-mcp/run.sh` for the test suite.
+`LOCAL_LLM_MODEL_OVERRIDES` maps Sonnet-tier hints (`sonnet`, `claude-sonnet-5`) to the
+local default. Opus hints deliberately stay remote. Usage is in `claude/skills/local-llm-routing/`,
+and the tests are in `tests/local-llm-mcp/run.sh`.
 
-### Scooter in Emacs ([scooter-mode](https://github.com/chadac-me/scooter-mode))
+## Scooter in Emacs ([scooter-mode](https://github.com/chadac-me/scooter-mode))
 
-scooter-mode (pinned in `shared/emacs/scooter-mode.nix`) is an Emacs package plus
-`scooter acp`, an ACP agent that forwards to a [Scooter](https://github.com/chadac-me/scooter)
-server, so agent-shell can open, continue and follow Scooter conversations instead of
-the web UI. It is a client of Scooter's HTTP API: the agent still runs in the cluster,
-in the conversation's sandbox.
+![A Scooter conversation loaded into agent-shell](docs/images/scooter-acp/02-history.png)
 
-`my.scooter.url` defaults to `https://scooter.dcraw.net`. Point it at another
-server, or set it to `""` to leave Scooter out of agent-shell:
+scooter-mode (pinned in `shared/emacs/scooter-mode.nix`) is an Emacs package plus `scooter acp`,
+an ACP agent that forwards to a [Scooter](https://github.com/chadac-me/scooter) server.
+With it, agent-shell can open, continue and follow Scooter conversations. The agent still
+runs in the cluster, in the conversation's sandbox.
 
 ```nix
-# any Home Manager module
+# any Home Manager module. Default: https://scooter.dcraw.net. "" leaves Scooter out.
 { my.scooter.url = ""; }
 ```
 
-Then in Emacs:
+`SCOOTER_URL` in the environment overrides it.
 
-1. On first use scooter-mode asks for the `_oauth2_proxy` cookie value (browser
-   devtools → Application → Cookies) and saves it to auth-source (`~/.authinfo`,
-   mode 600). `M-x scooter-auth-set-cookie` replaces it; cookies oauth2-proxy
-   refreshes are kept automatically. A cookie the old `scooter-acp` saved in
-   `~/.config/scooter/cookie` is imported once.
-2. `C-c j` (`my/scooter`) opens Scooter, which `C-c s` also lists in the agent picker.
-   `C-c J` is scooter-mode's command map: `s` dispatch, `l` list, `o` open, `c` new,
-   `f` find a file in the sandbox (Tramp), `r`/`R` from/send region, `p` from project,
-   `b` sandbox, `w` web services, `k` links.
-   There it has its own icon: the 🛴 mark as a one-colour silhouette (white on dark
-   themes, black on light ones, from Noto Emoji), in `shared/emacs/icons/`.
+| Key | Does |
+|---|---|
+| `C-c j` | open Scooter: pick a conversation or start a new one |
+| `C-c J` | scooter-mode's map: `s` dispatch, `l` list, `o` open, `c` new, `f` find a sandbox file (TRAMP), `r`/`R` from/send region, `p` from project, `b` sandbox, `w` web services, `k` links |
+| `C-c s` / `C-c S` | agent-shell picker (Scooter is listed) / always a new shell |
+| `C-c TAB` | agent-shell-workspace sidebar |
+| `C-c q` | queue a prompt while the agent is mid-turn |
+| `C-c C-b` | sandbox: status, resize, suspend/resume, restart, compact, rename, star, private/shared |
 
-   ![Scooter in the agent-shell agent picker](docs/images/scooter-acp/00-agent-picker.png)
+On first use, scooter-mode opens the login page and asks for the `_oauth2_proxy` cookie
+value, then saves it to auth-source (`~/.authinfo`, mode 600). To replace it, run
+`M-x scooter-auth-set-cookie`. Refreshed cookies are kept automatically, and a cookie the
+old `scooter-acp` left in `~/.config/scooter/cookie` is imported once. Each Emacs runs its
+own server (`emacs-$TMUX_PANE`, or `-<pid>` when that name is taken), and the bridge reads
+the cookie through it.
 
-   On start you pick an existing conversation or a new one. The picker lists the
-   conversations the web UI's sidebar shows, in its order (starred first, then most
-   recently active), with each one's status (working, waiting on you, suspended, ...).
-   It doesn't depend on the directory you start it from. A Scooter buffer is named after
-   its conversation (`Scooter Agent @ <title>`), and its header shows the title where
-   other agents show the project.
+<table><tr>
+<td><img src="docs/images/scooter-acp/00-agent-picker.png" alt="Scooter, with its 🛴 icon, in the agent-shell agent picker"></td>
+<td><img src="docs/images/scooter-acp/01-picker.png" alt="Conversation picker: starred first, then most recent, with status"></td>
+</tr><tr>
+<td><img src="docs/images/scooter-acp/03-web-run.png" alt="A run started from the web UI streaming into the Emacs buffer"></td>
+<td><img src="docs/images/scooter-acp/04-approval.png" alt="An AWS access approval card as an agent-shell permission prompt"></td>
+</tr></table>
 
-   ![Picking a conversation](docs/images/scooter-acp/01-picker.png)
-   ![A conversation loaded from Scooter](docs/images/scooter-acp/02-history.png)
+![Scooter questions answered inline, all at once](docs/images/scooter-acp/05-questions.png)
 
-What carries over:
+The picker lists conversations in the web UI sidebar's order: starred first, then most
+recently active, each with its status. Each buffer is named `Scooter Agent @ <title>`.
+The icon is the 🛴 as a one-colour silhouette from Noto Emoji (`shared/emacs/icons/`).
 
 | Scooter | agent-shell |
 |---|---|
 | assistant text, reasoning | message and thought chunks |
 | tool calls and results | tool call blocks |
-| approval interrupts and cards | questions render as one inline agent-shell form (all questions at once, with an "Other" free-text choice); other cards (AWS grants, commit identities) stay permission prompts; answer from either Emacs or the web UI |
+| questions | one inline form with all questions and an "Other" free-text choice |
+| other approval cards (AWS grants, commit identities) | permission prompts; answer from Emacs or the web UI |
 | runs started from the web UI, Slack, webhooks | pushed into the open buffer (`session/push`) |
-| Stop | `C-c C-c` |
-| typing while a turn runs | steering, posted as an interrupting message |
-| model picker | `C-c C-v` |
-| context usage | the context indicator |
-| web services (Services panel) | `C-c J w` (`scooter-web-services`): pick one, then browse, copy its URL, or start/stop it |
-| `scooter-service start/stop` run by the agent | a one-line notice under the tool call |
-| linked resources (PRs, issues, Slack threads) | `C-c J k` (`scooter-links`); a "Linked" notice when one is added; sources in the picker's titles |
-| images (attached, sent by the agent, in tool results such as `view_image`) | inline images, fetched through the bridge with your cookie |
-| `@image.png` mentions, `yank-media`/clipboard images in the prompt | uploaded the way the web UI attaches them (png, jpeg, gif, webp) |
+| Stop / typing mid-turn | `C-c C-c` / steering, posted as an interrupting message |
+| model picker / context usage | `C-c C-v` / the context indicator |
+| web services (Services panel) | `C-c J w`: browse, copy URL, start/stop; agent `scooter-service` calls show as a notice |
+| linked resources (PRs, issues, Slack threads) | `C-c J k`; a "Linked" notice when one is added |
+| images (attached, sent, in tool results) | inline, fetched through the bridge with your cookie |
+| `@image.png`, `yank-media`/clipboard images | uploaded like the web UI does (png, jpeg, gif, webp) |
 
-![Scooter questions answered inline, all at once](docs/images/scooter-acp/05-questions.png)
+Some limits:
 
-For anything else, `C-c J s` (`scooter-dispatch`) opens the conversation in the web
-UI; approval cards of unknown kinds offer it as a choice. Local MCP
-servers from `agent-shell-mcp-servers` don't apply, since the agent runs remotely.
-Loading a conversation replays its last 30 user turns (`scooter-acp-replay-turns`).
-Images over 5 MiB are refused in prompts and shown as a
-placeholder in output. agent-shell shows a user's own images in replayed turns as `[image]`.
+- Loading a conversation replays its last 30 user turns (`scooter-acp-replay-turns`).
+- Images over 5 MiB are refused in prompts and shown as a placeholder in output.
+- Your own images in replayed turns show as `[image]`.
+- Local `agent-shell-mcp-servers` don't apply, because the agent runs remotely.
+- Unknown card kinds offer `C-c J s` to open the web UI.
+- Suspend, restart and compact are refused while a turn runs. Restart, compact and going
+  shared ask for confirmation first, and a new size applies on the next restart.
 
-Sandbox controls: `C-c C-b` (`scooter-sandbox`) shows the sandbox's status, size and
-visibility, then offers resize, suspend/resume, restart, compact, rename, star and
-private/shared. Restart, compact and making a private conversation shared ask first.
-Suspend, restart and compact are refused while a turn runs (cancel it with `C-c C-c`).
-A new size applies on the next restart.
+Tests: the bridge suite is `just ci` in scooter-mode, and `tests/scooter/emacs-e2e.sh`
+covers this config against a fake Scooter. `tests/scooter/screenshots/screenshots.sh`
+regenerates the screenshots from a GUI Emacs under Xvfb.
 
-Tests: the bridge's own suite lives in scooter-mode (`just ci`).
-`tests/scooter/emacs-e2e.sh` drives the pinned agent-shell and scooter-mode through
-this config against `scooter acp` and a fake Scooter.
-`tests/scooter/screenshots/screenshots.sh` regenerates the screenshots in
-`docs/images/scooter-acp/` from a GUI Emacs under Xvfb and a demo fake Scooter.
+## Kubernetes cluster (`node1`–`node3`)
 
-## Usage
+```
+              192.168.0.10  (keepalived VIP, API server)
+            ┌──────────────┼──────────────┐
+  node1 192.168.0.2   node2 192.168.0.4   node3 192.168.0.6
+  etcd + control plane on every node · node3: NVIDIA GPU, RAID6 storage
+```
 
-### NixOS Setup
-
-1. Clone this repository to `~/.local/dotfiles` (use `--recurse-submodules` for secrets)
-2. Set up your age key for secrets (see `secrets/README.md`)
-3. Build — the full per-system command list lives in [AGENTS.md](AGENTS.md):
+Each node runs etcd (a 3-member cluster) and the control plane. keepalived floats the API
+VIP, and only the peers' unicast VRRP adverts are accepted. `kubernetes.nix` also registers
+`crun`, which the KubeServer repo's `RuntimeClass crun` (Scooter sandboxes) selects.
 
 ```bash
-sudo nixos-rebuild switch --flake .#local   # desktop; .#terminal / .#node1-3 likewise
+deploy-nodes             # build all here, then switch node1 → node3 over ssh, waiting for Ready
+deploy-nodes --build-only
+reboot-nodes             # interactive rolling cordon/drain/reboot, Longhorn- and etcd-aware
 ```
 
-### macOS (Darwin) Setup
+Both act on the live cluster, so never run them unattended. Runbooks:
+[HA migration](docs/kubernetes-ha-migration.md), [certs](docs/kubernetes-certs.md),
+[reboot resilience](docs/reboot-resilience-research.md), [node3 storage](docs/node3-storage.md).
 
-#### 1. Install Nix with Determinate Installer
+## Store retention
+
+| What | Policy | Module |
+|---|---|---|
+| Boot entries | last 5 (GRUB and systemd-boot) | `shared/boot-common.nix` |
+| System generations | weekly GC, older than 7 days; weekly `nix.optimise` | `shared/nix-gc.nix` |
+| Home Manager generations (Linux) | weekly user GC, older than 7 days | `shared/home/nix-gc.nix` |
+| Stale `.direnv` roots (Linux) | dropped after 30 days untouched | `shared/home/nix-gc.nix` |
 
 ```bash
-curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+sudo nix-collect-garbage -d                                   # keep only current
+nix path-info --recursive --size /run/current-system | sort -nk2
 ```
 
-#### 2. Create your machine's flake
+## Secrets
 
-Create a new flake that imports this repo. Replace the values marked with `# <-- CHANGE` below.
+`secrets/` is the [dotfiles-secrets](https://github.com/dscrawford/dotfiles-secrets)
+submodule, encrypted with age. The recipients are in `secrets/.sops.yaml`. Every non-empty
+top-level key in `secrets/secrets.yaml` is exported as an uppercased env var, so renaming a
+key renames the variable. Secrets are off by default for Darwin.
 
-The key in `darwinConfigurations` must match your machine's hostname so that `--flake .` works without specifying a config name. Run `scutil --get LocalHostName` to find it.
+## macOS from your own flake
 
-```nix
-# flake.nix
-{
-  inputs = {
-    base-dotfiles.url = "github:dscrawford/dotfiles";
-  };
+1. Install Nix:
+   ```bash
+   curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+   ```
+2. Import this flake. The `darwinConfigurations` key must match `scutil --get LocalHostName`,
+   so `--flake .` works without a name.
+   ```nix
+   {
+     inputs.base-dotfiles.url = "github:dscrawford/dotfiles";
+     outputs = { self, base-dotfiles }: {
+       darwinConfigurations.My-MacBook-Pro = base-dotfiles.lib.mkDarwin {
+         hostname = "My-MacBook-Pro";
+         username = "myuser";             # whoami
+         system = "aarch64-darwin";       # x86_64-darwin on Intel
+         gitUser = { name = "My Name"; email = "my@email.com"; };
+         extraModules = [ ./certs.nix ];  # CA certs, proxies, extra services
+       };
+     };
+   }
+   ```
+3. Build:
+   ```bash
+   git add -A
+   nix run nix-darwin -- switch --flake .   # first time only
+   darwin-rebuild switch --flake .
+   ```
 
-  outputs = { self, base-dotfiles }:
-  {
-    darwinConfigurations.My-MacBook-Pro = base-dotfiles.lib.mkDarwin {  # <-- CHANGE to your hostname (scutil --get LocalHostName)
-      hostname = "My-MacBook-Pro";  # <-- CHANGE to match above
-      username = "myuser";          # <-- CHANGE to your macOS username (whoami)
-      system = "aarch64-darwin";    # <-- CHANGE to "x86_64-darwin" for Intel Macs
-      gitUser = {                   # <-- CHANGE to your git identity
-        name = "My Name";
-        email = "my@email.com";
-      };
-    };
-  };
-}
-```
+| `mkDarwin` param | Default | Meaning |
+|---|---|---|
+| `gitUser` | `null` | `{ name, email }`; null uses the repo default |
+| `enableSecrets` | `false` | sops-nix secrets |
+| `homeModules` | `[ ./shared/home ]` | Home Manager modules |
+| `extraModules` | `[]` | extra nix-darwin modules |
 
-`mkDarwin` also accepts these optional parameters:
+`mkLocal` takes the same params (`system ? "x86_64-linux"`, `enableSecrets ? true`).
+`mkServer` takes `hostname`, `ip`, `netInterface` and `extraModules`.
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `gitUser` | `null` | Git identity attrset `{ name, email }` (uses repo default if null) |
-| `enableSecrets` | `false` | Enable sops-nix secret management |
-| `homeModules` | `[ ./shared/home ]` | Home Manager modules to import |
-| `extraModules` | `[]` | Additional nix-darwin modules (certificates, custom services, etc.) |
-
-Use `extraModules` to add machine-specific nix-darwin config — for example, corporate certificates or extra services:
-
-```nix
-darwinConfigurations.My-MacBook-Pro = base-dotfiles.lib.mkDarwin {
-  hostname = "My-MacBook-Pro";
-  username = "myuser";
-  system = "aarch64-darwin";
-  extraModules = [
-    ./certs.nix  # custom CA certificates, proxy config, etc.
-  ];
-};
-```
-
-#### 3. Build and switch
+**"not a trusted user" warning.** macOS drops group membership from peer credentials
+([NixOS/nix#5885](https://github.com/NixOS/nix/issues/5885)), so `trusted-users = root @staff`
+doesn't match. The activation script in `darwin-common.nix` adds your username to
+`/etc/nix/nix.custom.conf`, because Determinate Nix overwrites `nix.conf`. To fix it by hand:
 
 ```bash
-# First run — git add so the flake can see all files
-git add -A
-
-# Build (nix-darwin must be bootstrapped on first run)
-nix run nix-darwin -- switch --flake .  # first time only
-
-# Subsequent rebuilds
-darwin-rebuild switch --flake .
+echo "trusted-users = root $(whoami)" | sudo tee -a /etc/nix/nix.custom.conf
+sudo launchctl kickstart -k system/org.nixos.nix-daemon
 ```
-
-### Updating Dependencies
-
-```bash
-# Update all inputs
-nix flake update
-
-# Update specific input
-nix flake update nixpkgs
-```
-
-> **Note:** Always run `git add -A` before rebuilding — Nix flakes only see tracked files.
 
 ## Structure
 
 ```
-.
-├── flake.nix                # Inputs and all system configurations
-├── lib/                     # Builder functions (mkServer, mkLocal, mkDarwin)
-├── shared/
-│   ├── common.nix           # Base config for all NixOS systems
-│   ├── local-common.nix     # Desktop/terminal overrides
-│   ├── server-common.nix    # Server config (static IP, fail2ban, tailscale)
-│   ├── darwin-common.nix    # macOS system config (nix-darwin)
-│   ├── boot-common.nix      # Boot entry limits and garbage collection
-│   ├── kubernetes.nix       # + kube-*.nix, iscsi.nix: cluster node modules
-│   ├── users.nix            # Server user accounts
-│   ├── home/                # Cross-platform Home Manager (default.nix + per-tool modules)
-│   ├── emacs/               # Emacs config assembled from elisp modules (default.nix)
-│   ├── sway/                # Sway + Waybar config and scripts (default.nix)
-│   └── gaming.nix           # + easyeffects.nix, vr.nix: desktop extras
-├── hosts/
-│   ├── local/               # NixOS desktop (NVIDIA, Sway, PipeWire, Steam)
-│   └── node1..3/            # Kubernetes cluster nodes
-├── pkgs/                    # Local packages (claude-code, ruflo, local-llm-mcp, ...)
-├── claude/                  # Claude Code settings, hooks, agents, skills
-├── docs/                    # Runbooks and research notes
-├── tests/                   # Hook, Emacs, and MCP-server tests
-├── patches/                 # Temporary upstream patches
-└── secrets/                 # Encrypted secrets (sops-nix git submodule)
+flake.nix         inputs, host list, kubeNode helper
+lib/              mkServer / mkLocal / mkDarwin, exported as the flake's `lib`
+hosts/local/      desktop: NVIDIA, audio, Steam, greetd, tailscale, udev
+hosts/node1..3/   boot + generated hardware config (node3: nvidia, storage)
+shared/           common, local-common, server-common, darwin-common, boot-common, nix-gc
+                  kubernetes, kube-etcd-cluster, keepalived, kube-cert-renew,
+                  kube-stale-mount-recovery, iscsi; gaming, easyeffects, vr
+  home/           cross-platform Home Manager (bash, git, tmux, ssh, ollama, scooter, …)
+  emacs/          elisp modules, assembled in order by default.nix
+  sway/           Sway, waybar and scripts (Home Manager level)
+pkgs/             claude-code, claude-agent-acp, local-llm-mcp, ruflo, ruflo-mcp, slack-cli, …
+claude/           ~/.claude source: hooks, agents, rules, skills, settings.json
+tests/            bats, node and ERT suites
+docs/             runbooks, research notes, demos, screenshots
+secrets/          sops-encrypted submodule
 ```
 
-## Important Notes
-
-### Boot Configuration
-The boot-common.nix module is automatically imported by all systems and handles:
-- Limiting boot menu entries to prevent /boot partition from filling up
-- Regular cleanup of old Nix store generations
-
-## Maintenance
-
-### Cleaning Up
-
-The configuration includes automatic cleanup, but you can also manually clean:
-
-```bash
-# Remove old generations
-sudo nix-collect-garbage --delete-older-than 7d
-
-# Remove all old generations (keeps only current)
-sudo nix-collect-garbage -d
-
-# Clean up boot entries
-sudo nixos-rebuild switch --flake .#local
-```
-
-### Checking System Status
-
-```bash
-# List generations
-sudo nix-env --list-generations --profile /nix/var/nix/profiles/system
-
-# See what's using disk space
-nix path-info --recursive --size /run/current-system | sort -nk2
-```
-
-## Troubleshooting
-
-### macOS: "not a trusted user" Nix warning
-
-On macOS, you may see `warning: you are not a trusted user of the Nix store` when running `nix build` or similar commands. This is caused by a [macOS bug](https://github.com/NixOS/nix/issues/5885) where peer credentials don't include group membership, so `trusted-users = root @staff` doesn't work.
-
-The `darwin-common.nix` activation script fixes this automatically on `darwin-rebuild switch` by adding your username to `trusted-users` in `/etc/nix/nix.conf`.
-
-If you need to fix it manually:
-
-```bash
-echo "trusted-users = root $(whoami)" | sudo tee -a /etc/nix/nix.conf
-sudo launchctl kickstart -k system/org.nixos.nix-daemon
-```
-
-## Temporary Patches
-
-Patches to remove once upstream fixes land:
-
-- **xdg-desktop-portal-wlr duplicate frame crash** (`patches/xdg-desktop-portal-wlr-fix-duplicate-frame.patch`)
-  - Fixes `ext_image_copy_capture_session_v1: session already has a frame object` crash during screen sharing
-  - PR: https://github.com/emersion/xdg-desktop-portal-wlr/pull/380
-  - Pinned to 0.8.2: 0.8.3 stalls screencasts after the first frame
-  - Remove when: a release past 0.8.3 ships the fix
-
-## References
-
-- [NixOS Manual](https://nixos.org/manual/nixos/stable/)
-- [Home Manager Manual](https://nix-community.github.io/home-manager/)
-- [nix-darwin](https://github.com/LnL7/nix-darwin)
-- [Determinate Nix Installer](https://github.com/DeterminateSystems/nix-installer)
-- [sops-nix](https://github.com/Mic92/sops-nix)
-- [Nix Flakes](https://nixos.wiki/wiki/Flakes)
+The desktop also gets [lsfg-vk](https://github.com/pabloaul/lsfg-vk-flake) (set
+`ENABLE_LSFG=1 %command%` per game, with Lossless Scaling installed via Steam),
+[GamesOnTheGo](https://github.com/dscrawford/GamesOnTheGo) (`gotg`, `gotg-ui`), and Quest 3
+streaming via WiVRn (with ALVR as a fallback). To update inputs, run `nix flake update [input]`.
