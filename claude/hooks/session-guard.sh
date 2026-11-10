@@ -105,16 +105,13 @@ check_segment() {
   read -ra words <<<"$1"
   words=("${words[@]//[\'\"]/}")
   while [ "$i" -lt "${#words[@]}" ]; do
-    case "${words[$i]}" in
-    SWAYSOCK=*) private=1 ;;
-    sudo | env | command | exec | nohup | *=*) ;;
-    *) break ;;
-    esac
+    [[ ${words[$i]} == SWAYSOCK=* ]] && private=1
+    [[ ${words[$i]##*/} =~ ^(kill|pkill|killall|pgrep|pidof|swaymsg|loginctl|systemctl)$ ]] && break
     i=$((i + 1))
   done
   local verb=${words[$i]:-} rest=("${words[@]:$((i + 1))}")
   local all=" ${rest[*]} "
-  case "$(basename -- "$verb" 2>/dev/null)" in
+  case "${verb##*/}" in
   kill) check_kill "${rest[@]}" ;;
   pkill) check_pkill "${rest[@]}" ;;
   killall) check_killall "${rest[@]}" ;;
@@ -135,7 +132,7 @@ check_segment() {
 }
 
 KILLS=0
-grep -qE '(^|[^[:alnum:]_-])kill[[:space:]]' <<<"$cmd" && KILLS=1
+grep -qE '(^|[^[:alnum:]_-])kill([[:space:]]|$)' <<<"$cmd" && KILLS=1
 while IFS= read -r segment; do
   [ -n "${segment// /}" ] && check_segment "$segment"
 done < <(sed -E 's/\|\||&&|[;|&()`]|\$\(/\n/g' <<<"$cmd")

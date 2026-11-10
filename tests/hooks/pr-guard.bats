@@ -68,8 +68,10 @@ $demo
 @test "body-file is read" {
   f="$BATS_TEST_TMPDIR/body.md"
   printf 'Only prose here.\n' >"$f"
-  run guard "gh pr create --body-file $f"
-  denied
+  for cmd in "gh pr create --body-file $f" "gh pr create -F $f"; do
+    run guard "$cmd"
+    denied
+  done
 }
 
 @test "create without a body is left alone" {

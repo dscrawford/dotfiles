@@ -18,8 +18,8 @@ if grep -q '<<' <<<"$cmd"; then
   body=$(sed -n "/<<[-']*EOF/,/^EOF/p" <<<"$cmd" | sed '1d;$d')
 elif [[ "$cmd" =~ (--body|-b)[=\ ]+\"([^\"]*)\" ]] || [[ "$cmd" =~ (--body|-b)[=\ ]+\'([^\']*)\' ]]; then
   body=${BASH_REMATCH[2]}
-elif [[ "$cmd" =~ --body-file[=\ ]+([^\ ]+) ]] && [ -f "${BASH_REMATCH[1]}" ]; then
-  body=$(cat "${BASH_REMATCH[1]}")
+elif [[ "$cmd" =~ (--body-file|-F)[=\ ]+([^\ ]+) ]] && [ -f "${BASH_REMATCH[2]}" ]; then
+  body=$(cat "${BASH_REMATCH[2]}")
 fi
 [ -z "$body" ] && exit 0
 
