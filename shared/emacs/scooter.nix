@@ -25,7 +25,10 @@ in
         ;; Long conversations load their last 30 turns, in full.
         scooter-acp-replay-turns 30)
   (unless (string-empty-p my/scooter-url)
-    (setq scooter-servers `((,my/scooter-server :url ,my/scooter-url :auth cookie))
+    ;; The cookie comes from Firefox's default profile; with no profile,
+    ;; scooter-mode falls back to asking for it.
+    (setq scooter-servers `((,my/scooter-server :url ,my/scooter-url
+                                                :auth (cookie :browser firefox)))
           scooter-default-server my/scooter-server))
 
   (defun my/scooter-buffer-p ()

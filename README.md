@@ -76,7 +76,9 @@ and the tests are in `tests/local-llm-mcp/run.sh`.
 
 ![A Scooter conversation loaded into agent-shell](docs/images/scooter-acp/02-history.png)
 
-scooter-mode (pinned in `shared/emacs/scooter-mode.nix`) is an Emacs package plus `scooter acp`,
+scooter-mode (pinned in `shared/emacs/scooter-mode.nix`, currently to `combined/dcraw` on
+the [dscrawford fork](https://github.com/dscrawford/scooter-mode) until chadac-me#20–#24
+merge) is an Emacs package plus `scooter acp`,
 an ACP agent that forwards to a [Scooter](https://github.com/chadac-me/scooter) server.
 With it, agent-shell can open, continue and follow Scooter conversations. The agent still
 runs in the cluster, in the conversation's sandbox.
@@ -96,10 +98,16 @@ runs in the cluster, in the conversation's sandbox.
 | `C-c TAB` | agent-shell-workspace sidebar |
 | `C-c q` | queue a prompt while the agent is mid-turn |
 | `C-c C-b` | sandbox: status, resize, suspend/resume, restart, compact, rename, star, private/shared |
+| `C-c C-f` / `C-c C-j` | in a Scooter shell: open a sandbox file / dired on its `/workspace` (TRAMP) |
+| `RET` on a `/workspace/...` path | opens it in the sandbox at that line (`:42`, `:42:5`, `#L42`) |
 
-On first use, scooter-mode opens the login page and asks for the `_oauth2_proxy` cookie
-value, then saves it to auth-source (`~/.authinfo`, mode 600). To replace it, run
-`M-x scooter-auth-set-cookie`. Refreshed cookies are kept automatically, and a cookie the
+scooter-mode signs in through Firefox (`:auth (cookie :browser firefox)`): it reads the
+`_oauth2_proxy` cookie from the default Firefox profile and checks it against the server.
+If Firefox isn't signed in, it opens the sign-in page there and waits; with no Firefox
+profile it asks for the cookie value instead. Either way the cookie is saved to
+auth-source (`~/.authinfo`, mode 600). To replace it, run `M-x scooter-auth-browser-login`
+or `M-x scooter-auth-set-cookie`. When the session expires mid-session, every waiting
+request shares one sign-in. Refreshed cookies are kept automatically, and a cookie the
 old `scooter-acp` left in `~/.config/scooter/cookie` is imported once. Each Emacs runs its
 own server (`emacs-$TMUX_PANE`, or `-<pid>` when that name is taken), and the bridge reads
 the cookie through it.

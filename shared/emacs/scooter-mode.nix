@@ -2,15 +2,19 @@
 # scooter-mode (github.com/chadac-me/scooter-mode): the `scooter` bridge
 # (`scooter acp`, an ACP agent for agent-shell) and its Emacs package, built
 # from one pinned source so the two always match.
+#
+# Pinned to combined/dcraw on the dscrawford fork: chadac-me#19 plus the open
+# PRs #20-#24 (mid-session sign-in, Firefox login, answer delivery, sandbox
+# path links, push race). Move back to chadac-me once those merge.
 { pkgs }:
 
 let
-  version = "0.1.0-unstable-2026-11-04";
+  version = "0.1.0-unstable-2026-11-10";
   src = pkgs.fetchFromGitHub {
-    owner = "chadac-me";
+    owner = "dscrawford";
     repo = "scooter-mode";
-    rev = "1cca6f98a709bc7e3ed152de20b64ed6c414b0a9";
-    hash = "sha256-e08jmXQ9ThM2CMgowB8Pl1xrcMcJ6sVAIZ5c8xVEDEI=";
+    rev = "4dfb37a767490116ff417e7b355d8ada34fd3b12";
+    hash = "sha256-ZlxM15AE51WeF/XUgE6xPNi4WvfaFPhmqpGxYRDTy7w=";
   };
 in
 {

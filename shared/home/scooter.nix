@@ -10,8 +10,9 @@
       default = "https://scooter.dcraw.net";
       example = "https://scooter.example.com";
       description = ''
-        Scooter UI origin. Behind oauth2-proxy: scooter-mode asks for the
-        `_oauth2_proxy` cookie on first use and keeps it in auth-source.
+        Scooter UI origin. Behind oauth2-proxy: scooter-mode reads the
+        `_oauth2_proxy` cookie from Firefox (or asks for it) and keeps it
+        in auth-source.
       '';
     };
   };
