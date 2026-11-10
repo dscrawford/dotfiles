@@ -7,9 +7,11 @@
 # chain would be auto-approved.
 set -euo pipefail
 
-# $(</dev/stdin) and [[ =~ ]] over cat/grep: this runs on every Bash call,
-# and the two forks were half the per-invocation cost.
+# $(</dev/stdin), [[ =~ ]] and the raw-input runner check: this runs on every
+# Bash call, and jq plus two forks were most of the per-invocation cost.
+runner='pytest|python3? -m pytest|npm (test|run test[a-z:-]*)|yarn test|pnpm test|go test|cargo test|bats|node --test'
 input=$(</dev/stdin)
+[[ $input =~ $runner ]] || exit 0
 cmd=$(jq -r '.tool_input.command // empty' <<<"$input" 2>/dev/null) || exit 0
 [ -z "$cmd" ] && exit 0
 
@@ -26,7 +28,6 @@ case "$rest" in
 *[\|\&\;\<\>\`\$\(\)\{\}\#\!\\\'\"]* | *$'\n'* | *$'\r'*) exit 0 ;;
 esac
 
-runner='pytest|python3? -m pytest|npm (test|run test[a-z:-]*)|yarn test|pnpm test|go test|cargo test|bats|node --test'
 runner_re="^($runner)( [A-Za-z0-9_./:=@,+-]+)* *$"
 [[ $rest =~ $runner_re ]] || exit 0
 

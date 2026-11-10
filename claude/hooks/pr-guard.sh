@@ -5,7 +5,8 @@ set -euo pipefail
 
 MAX_WORDS=100
 
-input=$(cat)
+input=$(</dev/stdin)
+[[ $input == *"gh pr"* ]] || exit 0
 cmd=$(jq -r '.tool_input.command // empty' <<<"$input")
 
 case "$cmd" in

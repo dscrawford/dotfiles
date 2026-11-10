@@ -3,7 +3,8 @@
 # a kill may only reach a session process (sway, greetd, emacs...) the agent started.
 set -uo pipefail
 
-input=$(cat)
+input=$(</dev/stdin)
+[[ $input =~ kill|swaymsg|loginctl|systemctl ]] || exit 0
 cmd=$(jq -r '.tool_input.command // empty' <<<"$input")
 grep -qE '(^|[^[:alnum:]_-])(kill|pkill|killall|swaymsg|loginctl|systemctl)([^[:alnum:]_-]|$)' <<<"$cmd" || exit 0
 

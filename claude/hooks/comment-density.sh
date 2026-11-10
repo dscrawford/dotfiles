@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-input=$(cat)
-file=$(jq -r '.tool_input.file_path // .toolArgs.path // empty' <<<"$input")
-command=$(jq -r '.tool_input.command // empty' <<<"$input")
+{ IFS= read -r -d '' file && IFS= read -r -d '' command && IFS= read -r -d '' new && IFS= read -r -d '' copilot; } < <(jq -j '
+  (.tool_input.file_path // .toolArgs.path // ""), "\u0000",
+  (.tool_input.command // ""), "\u0000",
+  ([ (.tool_input.new_string // .toolArgs.new_str // empty),
+     (.tool_input.content // .toolArgs.file_text // empty),
+     ((.tool_input.edits // []) | map(.new_string) | join("\n")) ]
+   | map(select(. != "")) | join("\n")), "\u0000",
+  (if .toolName then "1" else "" end), "\u0000"') || exit 0
 
 writes_file() {
   grep -Eq '<<|>>?[[:space:]]*[^&>[:space:]]|(^|[[:space:]|;&(])(sed|perl)[[:space:]]+(-[a-zA-Z]*i|--in-place)|(^|[[:space:]|])tee[[:space:]]' <<<"$1"
@@ -47,11 +52,7 @@ tex|sty|erl|hrl|m) leader='%+' ;;
 *) leader='' ;;
 esac
 
-added="${added-$(jq -r '
-  [ (.tool_input.new_string // .toolArgs.new_str // empty),
-    (.tool_input.content // .toolArgs.file_text // empty),
-    ((.tool_input.edits // []) | map(.new_string) | join("\n")) ]
-  | map(select(. != "")) | join("\n")' <<<"$input")}"
+added=${added-$new}
 [ -z "$added" ] && exit 0
 
 found=$(awk -v leader="$leader" '
@@ -97,7 +98,7 @@ first="${found#*$'\t'}"
 
 message="Comment challenge: $base +$count (\`$first\`). Delete or make the code say it; keep only for a workaround the code cannot express. Decide once."
 
-if jq -e '.toolName' <<<"$input" >/dev/null; then
+if [ -n "$copilot" ]; then
   jq -n --arg m "$message" '{additionalContext: $m}'
 else
   jq -n --arg m "$message" '{hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: $m}}'

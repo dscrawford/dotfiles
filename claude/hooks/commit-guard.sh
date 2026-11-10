@@ -3,7 +3,8 @@
 # format or whose message runs long; the deny reason prompts a rewrite.
 set -euo pipefail
 
-input=$(cat)
+input=$(</dev/stdin)
+[[ $input == *commit* ]] || exit 0
 cmd=$(jq -r '.tool_input.command // empty' <<<"$input")
 
 case "$cmd" in
