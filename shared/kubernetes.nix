@@ -1,12 +1,7 @@
 # kubernetes.nix
-{ config, pkgs, lib, hostname, ip, kubeMasterIP, kubeMasterHostname, kubeMasterAPIServerPort,
-  kubeApiVIP, kubeNodes, ... }:
+{ config, pkgs, lib, hostname, ip, kubeMasterIP, kubeMasterHostname, kubeMasterAPIServerPort, ... }:
 let
-  isCfsslHost = ip == kubeMasterIP;
-  nodeIPs = lib.attrValues kubeNodes;
-  secrets = config.services.kubernetes.secretsPath;
-  saKey = config.sops.secrets.kube_sa_key.path;
-  apiToken = config.sops.secrets.kube_apitoken.path;
+  isMaster = ip == kubeMasterIP;
 in
 {
   # flannel-io moved the v1.9.1-flannel3 tag on 2026-08-07; the channel pinned
@@ -31,34 +26,17 @@ in
     kubernetes
   ];
 
-  # Shared across the cluster: tokens signed by one apiserver must verify on
-  # the others, and every node's certmgr must authenticate to node1's cfssl.
-  sops.secrets = {
-    kube_sa_key = {
-      sopsFile = ../secrets/kube.yaml;
-      key = "sa_key";
-      owner = "kubernetes";
-      mode = "0400";
-    };
-    kube_apitoken = {
-      sopsFile = ../secrets/kube.yaml;
-      key = "apitoken";
-      owner = if isCfsslHost then "cfssl" else "root";
-      mode = "0400";
-    };
-  };
-
   services.kubernetes = {
-    roles = [ "master" "node" ];
-    masterAddress = kubeMasterIP;
+    roles = if isMaster then [ "master" "node" ] else [ "node" ];
+    masterAddress = if isMaster then "127.0.0.1" else kubeMasterIP;
     apiserverAddress = "https://${kubeMasterHostname}:${toString kubeMasterAPIServerPort}";
     easyCerts = true;
+    pki.cfsslAPIExtraSANs = lib.mkIf isMaster [ kubeMasterIP ];
 
     # Upstream default is 720h; renewal runs via certmgr + kube-cert-renew.nix.
   };
 
-  services.cfssl.enable = lib.mkForce isCfsslHost;
-  services.cfssl.configFile = lib.mkIf isCfsslHost (lib.mkForce (toString (pkgs.writeText "cfssl-config.json" (builtins.toJSON {
+  services.cfssl.configFile = lib.mkIf isMaster (lib.mkForce (toString (pkgs.writeText "cfssl-config.json" (builtins.toJSON {
     signing.profiles.default = {
       usages = [ "digital signature" ];
       auth_key = "default";
@@ -71,19 +49,16 @@ in
   }))));
 
   services.kubernetes = {
-    apiserver = {
+    apiserver = lib.mkIf isMaster {
       securePort = kubeMasterAPIServerPort;
-      advertiseAddress = ip;
+      advertiseAddress = kubeMasterIP;
       bindAddress = "0.0.0.0";
-      etcd.servers = lib.mkForce (map (a: "https://${a}:2379") nodeIPs);
-      extraSANs = [ kubeMasterHostname kubeApiVIP ] ++ nodeIPs;
-      serviceAccountKeyFile = saKey;
-      serviceAccountSigningKeyFile = saKey;
-      # node1 still verifies tokens signed by its pre-sops certmgr key.
-      extraOpts = "--allow-privileged=true"
-        + lib.optionalString isCfsslHost " --service-account-key-file=${secrets}/service-account.pem";
+      etcd = {
+        servers = lib.mkForce [ "https://${kubeMasterIP}:2379" ];
+      };
+      extraOpts = "--allow-privileged=true";
+      extraSANs = [ kubeMasterHostname ];
     };
-    controllerManager.serviceAccountKeyFile = saKey;
 
     proxy.enable = true;
     addons.dns.enable = true;
@@ -129,20 +104,18 @@ in
     };
   };
 
-  systemd.services = {
-    flannel.environment.FLANNELD_IP_MASQ = "true";
-    kube-controller-manager.serviceConfig = {
-      Restart = "on-failure";
-      StartLimitBurst = 5;
-      StartLimitIntervalSec = 10;
-    };
-    cfssl.enable = isCfsslHost;
-    cfssl.preStart = lib.mkIf isCfsslHost (lib.mkAfter ''
-      install -m 400 ${apiToken} ${config.services.cfssl.dataDir}/apitoken.secret
-    '');
-    kube-certmgr-bootstrap.preStart = lib.mkIf (!isCfsslHost) ''
-      mkdir -p ${secrets}
-      ln -sfn ${apiToken} ${secrets}/apitoken.secret
-    '';
-  };
+  systemd.services = lib.mkMerge [
+    { flannel.environment.FLANNELD_IP_MASQ = "true"; }
+    (lib.mkIf isMaster {
+      kube-controller-manager.serviceConfig = {
+        Restart = "on-failure";
+        StartLimitBurst = 5;
+        StartLimitIntervalSec = 10;
+      };
+      etcd.environment = {
+        ETCD_LISTEN_CLIENT_URLS = lib.mkForce "https://127.0.0.1:2379,https://${kubeMasterIP}:2379";
+        ETCD_ADVERTISE_CLIENT_URLS = lib.mkForce "https://${kubeMasterIP}:2379,https://etcd.local:2379";
+      };
+    })
+  ];
 }
