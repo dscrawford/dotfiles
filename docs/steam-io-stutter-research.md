@@ -3,8 +3,7 @@
 *2026-09-20. 34 sources. High confidence on local measurements and the two config
 defects; medium on which mechanism causes the freezes (none captured yet).*
 
-Companion to `docs/steam-ui-performance-research.md` (compositor) and
-`docs/memory-pressure-research.md` (memory), whose central finding carries over: every
+Companion to `docs/memory-pressure-research.md`, whose central finding carries over: every
 graphical process lives in one cgroup.
 
 ## Summary

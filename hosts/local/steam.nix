@@ -1,5 +1,4 @@
 # Gaming: Steam, Proton, gamescope, gamemode, and dconf.
-# Why these knobs: docs/steam-ui-performance-research.md.
 { config, lib, pkgs, ... }:
 
 {

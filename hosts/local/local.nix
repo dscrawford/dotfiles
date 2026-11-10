@@ -64,8 +64,7 @@
       GSETTINGS_SCHEMA_DIR = "${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}/glib-2.0/schemas";
       XDG_CURRENT_DESKTOP = "sway";
       GTK_THEME = "Adwaita:dark";
-      # Two NVIDIA vars are deliberately NOT set here (full workings in
-      # docs/steam-ui-performance-research.md):
+      # Two NVIDIA vars are deliberately NOT set here:
       # WLR_NO_HARDWARE_CURSORS — wlroots refuses direct scan-out on any output
       # with a software cursor, costing a full render pass per frame everywhere.
       # GBM_BACKEND — redundant on the host, and it leaked into Steam's
