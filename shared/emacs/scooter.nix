@@ -12,6 +12,8 @@ in
   (require 'scooter)
   (require 'scooter-conversation)
   (autoload 'scooter-find-file "scooter-tramp" nil t)
+  (autoload 'scooter-kanban "scooter-kanban" nil t)
+  (autoload 'scooter-kanban-file "scooter-kanban" nil t)
   (with-eval-after-load 'tramp
     (my/guard "scooter-tramp"
       (require 'scooter-tramp)
@@ -172,7 +174,9 @@ in
     (my/guard "scooter-agent"
       ;; One agent-shell agent per server, listed in the agent picker (C-c s).
       (when scooter-servers (scooter-agent-shell-register)))
-    (define-key agent-shell-mode-map (kbd "C-c C-b") #'scooter-sandbox))
+    (define-key agent-shell-mode-map (kbd "C-c C-b") #'scooter-sandbox)
+    (define-key agent-shell-mode-map (kbd "C-c C-k") #'scooter-kanban))
+  (global-set-key (kbd "C-c C-k") #'scooter-kanban)
   (global-set-key (kbd "C-c j") #'my/scooter)
   (global-set-key (kbd "C-c J") scooter-command-map)
 ''

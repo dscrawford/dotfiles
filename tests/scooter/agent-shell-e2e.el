@@ -7,6 +7,7 @@
 (require 'agent-shell)
 (load (getenv "SCOOTER_EL"))
 (load (expand-file-name "agent-shell-cards-e2e.el" (file-name-directory load-file-name)))
+(load (expand-file-name "agent-shell-kanban-e2e.el" (file-name-directory load-file-name)))
 
 ;; The fake accepts this cookie; scooter-mode would otherwise ask for one.
 (scooter-auth-set-cookie my/scooter-server "good")
@@ -167,6 +168,7 @@
       (e2e-web-services)
       (e2e-links)
       (e2e-cards)
+      (e2e-kanban)
       (princ "agent-shell e2e: ok\n")
       (kill-emacs 0))
   (error

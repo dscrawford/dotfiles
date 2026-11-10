@@ -1,5 +1,6 @@
 import { startFakeScooter } from "./fake-scooter.mjs";
 import { cardScript, cardTrigger } from "./e2e-cards.mjs";
+import { kanbanRoutes } from "./e2e-kanban.mjs";
 const fake = await startFakeScooter();
 fake.conv("old");
 Object.assign(fake.conv("old"), { title: "Fix the login redirect" });
@@ -52,7 +53,10 @@ setInterval(() => {
     for (const e of run("old", "w1", "WEB-QUESTION", "WEB-ANSWER", serviceCall)) fake.append("old", e);
   }
 }, 100);
-fake.setRoutes(({ method, path }) => {
+fake.setRoutes(async (req) => {
+  const { method, path } = req;
+  const kanban = await kanbanRoutes(req);
+  if (kanban) return kanban;
   if (method === "GET" && path === "/conversations/old") return { json: { id: "old", title: "Fix the login redirect", status: "running", visibility: "shared" } };
   if (method !== "POST" || path !== "/conversations/old/compact") return undefined;
   fake.append("old", { type: "COMPACTION_MARKER", summary: "s", summarizedTurns: 3, keptRuns: 1, ts: Date.now() });

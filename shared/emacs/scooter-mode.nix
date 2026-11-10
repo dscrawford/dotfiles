@@ -3,9 +3,10 @@
 # (`scooter acp`, an ACP agent for agent-shell) and its Emacs package, built
 # from one pinned source so the two always match.
 #
-# Pinned to combined/dcraw on the dscrawford fork: chadac-me#19 plus the open
-# PRs #20-#24 (mid-session sign-in, Firefox login, answer delivery, sandbox
-# path links, push race). Move back to chadac-me once those merge.
+# Pinned to feat/kanban on the dscrawford fork: combined/dcraw (chadac-me#19
+# plus the open PRs #20-#24: mid-session sign-in, Firefox login, answer
+# delivery, sandbox path links, push race) and dscrawford#1 (kanban boards).
+# Move back to chadac-me once those merge.
 { pkgs }:
 
 let
@@ -13,8 +14,8 @@ let
   src = pkgs.fetchFromGitHub {
     owner = "dscrawford";
     repo = "scooter-mode";
-    rev = "4dfb37a767490116ff417e7b355d8ada34fd3b12";
-    hash = "sha256-ZlxM15AE51WeF/XUgE6xPNi4WvfaFPhmqpGxYRDTy7w=";
+    rev = "659d60cde9232a77e6c07168a0bc2de8ac4547a8";
+    hash = "sha256-KLeR5vSAIvSWrBZjY1n5nEpyrKh973DWrC5PPKk4fsc=";
   };
 in
 {
