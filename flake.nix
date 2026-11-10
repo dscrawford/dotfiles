@@ -59,7 +59,11 @@
     lib = { inherit mkServer mkLocal mkDarwin; };
 
     nixosConfigurations = {
-      node1 = kubeNode { hostname = "node1"; ip = "192.168.0.2"; };
+      node1 = kubeNode {
+        hostname = "node1";
+        ip = "192.168.0.2";
+        extraModules = [ ./hosts/node1/tailnet-ingress.nix ];
+      };
       node2 = kubeNode { hostname = "node2"; ip = "192.168.0.4"; };
       node3 = kubeNode {
         hostname = "node3";
