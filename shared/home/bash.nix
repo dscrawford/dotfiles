@@ -25,7 +25,7 @@ in
 
       # One Emacs server per tmux pane.
       if [ -n "$TMUX_PANE" ]; then
-        export EMACS_SERVER="emacs-$(echo $TMUX_PANE | tr -d %)"
+        export EMACS_SERVER="emacs-''${TMUX_PANE#%}"
         export EDITOR="emacsclient -s $EMACS_SERVER"
       fi
 

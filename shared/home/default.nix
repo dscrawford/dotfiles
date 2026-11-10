@@ -33,65 +33,27 @@ in
     ./reboot-nodes.nix
   ];
 
-  home.file = {
-    # Steer agent-shell/Claude Code memory to the ruflo MCP server instead of
-    # the built-in file-based memory (memory/*.md + MEMORY.md index).
-    ".claude/rules/common/ruflo-memory.md".source = ../../claude/rules/common/ruflo-memory.md;
-    # Read-only under nix by design; /config and /hooks can no longer write it.
-    # force: replace the pre-existing hand-managed file on first activation.
-    ".claude/settings.json" = {
-      source = ../../claude/settings.json;
-      force = true;
-    };
-    ".claude/output-styles/concise.md".source = ../../claude/output-styles/concise.md;
-    ".claude/hooks/comment-density.sh" = {
-      source = ../../claude/hooks/comment-density.sh;
-      executable = true;
-    };
-    ".claude/hooks/prompt-router.sh" = {
-      source = ../../claude/hooks/prompt-router.sh;
-      executable = true;
-      force = true;
-    };
-    ".claude/hooks/commit-guard.sh" = {
-      source = ../../claude/hooks/commit-guard.sh;
-      executable = true;
-      force = true;
-    };
-    ".claude/hooks/pr-guard.sh" = {
-      source = ../../claude/hooks/pr-guard.sh;
-      executable = true;
-      force = true;
-    };
-    ".claude/hooks/session-guard.sh" = {
-      source = ../../claude/hooks/session-guard.sh;
-      executable = true;
-      force = true;
-    };
-    ".claude/hooks/tool-output-filter.sh" = {
-      source = ../../claude/hooks/tool-output-filter.sh;
-      executable = true;
-      force = true;
-    };
-    # Read-only advisors spawned alongside feature work; no Edit/Write in
-    # their tools, so the main agent stays the single writer.
-    ".claude/agents/test-scout.md" = {
-      source = ../../claude/agents/test-scout.md;
-      force = true;
-    };
-    ".claude/agents/security-scout.md" = {
-      source = ../../claude/agents/security-scout.md;
-      force = true;
-    };
-    ".claude/agents/performance-scout.md" = {
-      source = ../../claude/agents/performance-scout.md;
-      force = true;
-    };
-    ".claude/agents/comment-scout.md" = {
-      source = ../../claude/agents/comment-scout.md;
-      force = true;
-    };
-    ".claude/rules/common/ruflo-tools.md".source = ../../claude/rules/common/ruflo-tools.md;
+  # force: replace hand-managed files on first activation. settings.json is
+  # read-only under nix by design; /config and /hooks can no longer write it.
+  home.file = lib.genAttrs (map (p: ".claude/${p}") [
+    "settings.json"
+    "output-styles/concise.md"
+    "rules/common/ruflo-memory.md"
+    "rules/common/ruflo-tools.md"
+    "agents/test-scout.md"
+    "agents/security-scout.md"
+    "agents/performance-scout.md"
+    "agents/comment-scout.md"
+    "hooks/comment-density.sh"
+    "hooks/prompt-router.sh"
+    "hooks/commit-guard.sh"
+    "hooks/pr-guard.sh"
+    "hooks/session-guard.sh"
+    "hooks/tool-output-filter.sh"
+  ]) (p: {
+    source = ../../claude + lib.removePrefix ".claude" p;
+    force = true;
+  } // lib.optionalAttrs (lib.hasSuffix ".sh" p) { executable = true; }) // {
     # Display-only .ipynb diffs. The nbstripout clean/smudge filter is NOT set
     # globally — it wipes local outputs on pull; opt in per-repo instead.
     ".config/git/attributes".text = "*.ipynb diff=ipynb\n";
