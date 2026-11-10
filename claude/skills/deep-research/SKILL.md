@@ -16,7 +16,7 @@ Use for in-depth topic research; competitive analysis, technology evaluation, ma
 - `WebSearch` (built-in): primary search, no key.
 - `search` from the **web-search** MCP (open-websearch): second engine — DuckDuckGo, Bing, Brave, Startpage; no key; `engines` picks one.
 - `WebFetch` (built-in): guided read — answers a prompt against a fetched URL.
-- Jina Reader via Bash `curl -s --max-time 30 "https://r.jina.ai/<url>"`: raw markdown; free without a key (~20 req/min); renders JS-heavy pages (~10s uncached — never omit `--max-time`); `-H "X-No-Cache: true"` skips stale snapshots.
+- Jina Reader via Bash `curl -s --max-time 30 "https://r.jina.ai/<url>"`: raw markdown; free without a key (~20 req/min — pace calls); renders JS-heavy pages (~10s uncached — never omit `--max-time`); `-H "X-No-Cache: true"` skips stale snapshots.
 - `fetchWebContent` (web-search MCP): fallback when WebFetch fails or truncates.
 - `gh search repos` / `gh search code` / `gh api`: GitHub research, authenticated CLI.
 
@@ -51,8 +51,6 @@ Full text/tables/JS-heavy:
 ```bash
 curl -s --max-time 30 "https://r.jina.ai/<url>"
 ```
-
-Jina ≤ ~15/min (free tier rate-limits); space out or batch the most valuable URLs.
 
 **5. Report.**
 
@@ -100,11 +98,3 @@ Broad topics: split sub-questions across parallel Agent-tool agents (e.g. 1-2 / 
 4. State gaps when a sub-question came up thin.
 5. Never hallucinate — say "insufficient data found."
 6. Separate fact from inference; label estimates, projections, opinions.
-7. Respect rate limits: space out MCP searches and Jina fetches, never hammer.
-
-## Examples
-
-```
-"Research the current state of nuclear fusion energy"
-"Investigate the competitive landscape for AI code editors"
-```

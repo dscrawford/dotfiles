@@ -11,5 +11,3 @@ via ToolSearch when deferred.
   `-reviewers` instead of ad-hoc diff parsing.
 - End of a significant work session: `mcp__ruflo__session_save` with a
   short state summary.
-- Memory: see the ruflo-memory rule — `memory_search_unified` before
-  non-trivial tasks, `memory_store` for new facts.
