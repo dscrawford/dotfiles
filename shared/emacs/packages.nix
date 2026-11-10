@@ -42,7 +42,6 @@ with epkgs; [
   web-server
   eat
   exec-path-from-shell
-  dap-mode
   custom.claude-code-ide
   custom.acp
   custom.shell-maker

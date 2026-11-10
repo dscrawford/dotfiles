@@ -1,5 +1,5 @@
 # shared/emacs/lsp.nix
-# eglot/LSP, dap-mode debugging, corfu, and language file associations.
+# eglot/LSP, corfu, and language file associations.
 { ... }:
 ''
   ;; gdscript-mode is omitted from flymake — diagnostics come over the Godot LSP.
@@ -18,32 +18,6 @@
     (add-to-list 'eglot-server-programs '((js-mode typescript-mode web-mode) . ("typescript-language-server" "--stdio")))
     (add-to-list 'eglot-server-programs '(rust-mode . ("rust-analyzer")))
     (add-to-list 'eglot-server-programs '((c-mode c++-mode) . ("clangd"))))
-
-  (my/guard "dap-mode"
-    (require 'dap-mode)
-    (require 'dap-python)
-    (setq dap-python-debugger 'debugpy
-          dap-python-executable "python3")
-    (dap-auto-configure-mode 1)
-
-    (dolist (bind '(("d" . dap-debug)
-                   ("b" . dap-breakpoint-toggle)
-                   ("n" . dap-next)
-                   ("i" . dap-step-in)
-                   ("o" . dap-step-out)
-                   ("c" . dap-continue)
-                   ("r" . dap-ui-repl)
-                   ("q" . dap-disconnect)
-                   ("e" . dap-eval-thing-at-point)))
-      (global-set-key (kbd (format "C-c d %s" (car bind))) (cdr bind)))
-
-    (dap-register-debug-template "Python :: Run Current File"
-      (list :type "python"
-            :args ""
-            :cwd nil
-            :program nil
-            :request "launch"
-            :name "Python :: Run Current File")))
 
   (my/guard "corfu"
     (setq corfu-auto t
