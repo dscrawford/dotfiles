@@ -1,36 +1,28 @@
 # EasyEffects under load: why it breaks, why it never catches up, what to change
 
-*Generated: 2026-09-02 | Sources: ~100 across three research passes plus live measurement on the desktop | Confidence: High on the mechanism (read from plugin and host source), High on the PipeWire/rtkit facts (official docs), Medium on the exact numeric tuning (no benchmark on this hardware yet)*
+*2026-09-02. ~100 sources plus live measurement. High confidence on the mechanism (plugin and host source) and PipeWire/rtkit facts; medium on exact tuning (not benchmarked here).*
 
-## Executive summary
+## Summary
 
-The mic chain fails under load for three stacked reasons, and none of them is
-"EasyEffects is buggy":
+The mic chain fails under load for three stacked reasons, none of them an
+EasyEffects bug:
 
-1. **DeepFilterNet's LADSPA plugin is built to accumulate.** Its inference
-   runs on a plain nice-0 worker thread; the realtime audio thread spin-waits
-   for it. Every underrun adds 10 ms of queue; the queue shrinks by 10 ms only
-   after ~1000 consecutive quiet cycles with plenty of margin, and one
-   hiccup restarts the count. Bypass does not touch the instance; recreation
-   leaks a worker thread. That is the whole "does not come back down".
-2. **The mic side ran at half the budget.** This repo pinned the Snowball to
-   `node.latency = 512` with `node.lock-quantum`, so the capture graph gave
-   DFN ~10 ms per cycle while playback ran at 21–42 ms. The mic node has
-   **331 xruns** since boot; the sink has 3.
-3. **Nothing kept the load away.** `nix-daemon` runs 24 jobs × all cores at
-   normal priority with no CPU set; rtkit caps PipeWire at RR 20 and kills a
-   thread that stalls 200 ms; the CPU governor is `powersave`; the last OOM
-   was a game with only 4 G of disk swap.
+1. **DeepFilterNet's LADSPA plugin accumulates delay.** Inference runs on a nice-0
+   worker; the RT audio thread spin-waits for it. Each underrun adds 10 ms of queue,
+   which shrinks by 10 ms only after ~1000 clean cycles with margin; one hiccup
+   restarts the count. Bypass doesn't touch the instance; recreation leaks a thread.
+2. **The mic ran at half the budget.** The Snowball was pinned to `node.latency = 512`
+   with `node.lock-quantum`, giving DFN ~10 ms per cycle while playback had 21–42 ms.
+   Mic xruns since boot: **331**; sink: 3.
+3. **Nothing kept load away.** `nix-daemon` ran 24 jobs × all cores at normal priority
+   on every CPU; rtkit capped PipeWire at RR 20 and kills a thread stalling 200 ms;
+   governor `powersave`; the last OOM was a game with 4 G of disk swap.
 
-Fixes applied in this repo (see §6): a fixed 1024-sample floor for the whole
-graph including the mic, PipeWire's data loop pinned to a reserved physical
-core that builds may not use, builds demoted to `batch`/idle-IO with a bounded
-job count, rtkit raised to real priorities with a 5 s stall budget, the
-`performance` governor, zram + systemd-oomd, and one frame of pre-paid buffer
-in DFN. Phase 2, recommended but not applied: move the mic chain from
-EasyEffects into a PipeWire `filter-chain` process.
-
-Everything measured is from this machine today; everything else is cited.
+Applied (§6): a 1024-sample floor for the whole graph, PipeWire's data loop on a
+reserved physical core, builds at `batch`/idle-IO with bounded jobs, rtkit at real
+priorities with a 5 s stall budget, `performance` governor, zram + systemd-oomd, and
+one pre-paid DFN frame. Phase 2 (not applied): move the mic chain into a PipeWire
+`filter-chain`.
 
 ## 1. What the live system showed
 
@@ -153,10 +145,3 @@ power at idle.
 4. `deploy-nodes --build-only` while talking into the mic; watch `pw-top -b -n 30 | grep -E 'BLUE|deepfilternet'` — the mic ERR column should not increment, and the DFN row's B/Q should stay well under 0.8.
 5. If the driver row (the Snowball) still xruns while followers don't, it is ALSA timing: try `api.alsa.period-size 1024`, then `api.alsa.headroom 8192` ([PipeWire troubleshooting](https://gitlab.freedesktop.org/pipewire/pipewire/-/wikis/Troubleshooting)).
 
-## Sources
-
-Consolidated from three research passes (~100 unique). Primary: PipeWire docs (pipewire.conf(5), pipewire-props(7), module-rt, module-protocol-pulse, module-filter-chain, scheduling, pw-top(1), wiki Performance-tuning/Troubleshooting/Config-PipeWire); rtkit source and README; EasyEffects source, changelog, issues #3851/#3659/#2279/#4722/#3224; DeepFilterNet ladspa source, README, #482; kernel docs (cgroup-v2, sched-util-clamp, sched-rt-group, cpu-isolation, no_hz, sched-eevdf, Kconfig.preempt/hz, irq/manage.c); systemd man pages (resource-control, exec, oomd); nixpkgs modules (nix-daemon, pipewire, rtkit, gamemode, oomd, zram, kernel common-config) and musnix; sched(7); Nix manual cores-vs-jobs; LWN (lazy preempt, SCHED_IDLE); linuxaudio wiki, ArchProAudio, Arch pro-audio; Fedora/NixOS wiki on zram; Harrison/Mixxx on SMT.
-
-## Methodology
-
-Three parallel agents (PipeWire/RT/kernel; EasyEffects/DFN internals and filter-chain alternative; taming nix builds, games and memory), WebSearch/WebFetch only, 12-month recency preferred, single-source claims flagged in the agent transcripts. Every mechanism claim was checked against the live desktop: thread classes and CPUs of every audio data loop, pw-top xrun counters, rtkit journal and flags, effective PipeWire metadata, nix-daemon unit scheduling, CPU topology and frequency policy, memory/swap state, and the LADSPA labels of the packaged plugins. The DFN queue-growth mechanism is from reading the plugin source, not from any maintainer statement.
