@@ -21,15 +21,17 @@
 (defun e2e-kanban ()
   (let ((old (e2e-old-buffer)))
     (unless (eq scooter-kanban-open-in 'tab) (error "Cards don't open in tabs: %S" scooter-kanban-open-in))
-    (unless (eq (lookup-key (current-global-map) (kbd "C-c C-k")) #'scooter-kanban) (error "C-c C-k is not global"))
+    (unless (eq (lookup-key (current-global-map) (kbd "C-c K")) #'scooter-kanban) (error "C-c K is not global"))
+    (when (eq (lookup-key (current-global-map) (kbd "C-c C-k")) #'scooter-kanban) (error "C-c C-k is still scooter-kanban"))
     (with-current-buffer old
-      (unless (eq (key-binding (kbd "C-c C-k")) #'scooter-kanban) (error "C-c C-k is not scooter-kanban in a shell")))
+      (unless (eq (key-binding (kbd "C-c K")) #'scooter-kanban) (error "C-c K is not scooter-kanban in a shell"))
+      (when (eq (key-binding (kbd "C-c C-k")) #'scooter-kanban) (error "C-c C-k is still scooter-kanban in a shell")))
     (switch-to-buffer old)
     (delete-other-windows)
-    ;; C-c C-k from a shell: the board in a tab of its own, on the shell's card.
+    ;; C-c K from a shell: the board in a tab of its own, on the shell's card.
     (call-interactively #'scooter-kanban)
     (let ((board (get-buffer "*scooter-kanban*")))
-      (unless (eq (window-buffer) board) (error "C-c C-k didn't select the board"))
+      (unless (eq (window-buffer) board) (error "C-c K didn't select the board"))
       (set-buffer board)
       (unless (equal (e2e-kanban-tab-of board) "Kanban") (error "The board isn't in a Kanban tab: %S" (e2e-kanban-tabs)))
       (unless (tab-bar-get-buffer-tab old nil t) (error "The board replaced the shell's tab"))
@@ -56,11 +58,11 @@
         (unless (eq (window-buffer) pinned) (error "RET didn't select the card's shell"))
         (unless (equal (e2e-kanban-tab-of pinned) "Pinned") (error "The chat isn't in a Pinned tab: %S" (e2e-kanban-tabs)))
         (unless (equal (e2e-kanban-tab-of board) "Kanban") (error "Opening a card moved the board: %S" (e2e-kanban-tabs)))
-        ;; C-c C-k in the chat goes back to the board's tab, opening none.
+        ;; C-c K in the chat goes back to the board's tab, opening none.
         (let ((n (length (e2e-kanban-tabs))))
           (with-current-buffer pinned (call-interactively #'scooter-kanban))
-          (unless (eq (window-buffer) board) (error "C-c C-k didn't go back to the board"))
-          (unless (= n (length (e2e-kanban-tabs))) (error "C-c C-k opened another tab: %S" (e2e-kanban-tabs))))
+          (unless (eq (window-buffer) board) (error "C-c K didn't go back to the board"))
+          (unless (= n (length (e2e-kanban-tabs))) (error "C-c K opened another tab: %S" (e2e-kanban-tabs))))
         ;; RET again switches to the chat's tab.
         (set-buffer board)
         (goto-char (point-min))

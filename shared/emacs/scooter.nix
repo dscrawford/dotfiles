@@ -176,9 +176,9 @@ in
     (my/guard "scooter-agent"
       ;; One agent-shell agent per server, listed in the agent picker (C-c s).
       (when scooter-servers (scooter-agent-shell-register)))
-    (define-key agent-shell-mode-map (kbd "C-c C-b") #'scooter-sandbox)
-    (define-key agent-shell-mode-map (kbd "C-c C-k") #'scooter-kanban))
-  (global-set-key (kbd "C-c C-k") #'scooter-kanban)
+    (define-key agent-shell-mode-map (kbd "C-c C-b") #'scooter-sandbox))
+  ;; C-c C-k stays my/compile (misc.nix).
+  (global-set-key (kbd "C-c K") #'scooter-kanban)
   (global-set-key (kbd "C-c j") #'my/scooter)
   (global-set-key (kbd "C-c J") scooter-command-map)
 ''
