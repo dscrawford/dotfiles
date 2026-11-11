@@ -5,8 +5,10 @@
 #
 # Pinned to feat/kanban on the dscrawford fork: combined/dcraw (chadac-me#19
 # plus the open PRs #20-#24: mid-session sign-in, Firefox login, answer
-# delivery, sandbox path links, push race), dscrawford#1 (kanban boards) and
-# dscrawford#4 (Firefox cookie without the paste prompt).
+# delivery, sandbox path links, push race), dscrawford#1 (kanban boards),
+# dscrawford#4 (Firefox cookie without the paste prompt) and dscrawford#5
+# (oauth2-proxy --cookie-name, which scooter.dcraw.net uses; any browser's
+# cookie jar; one sign-in wait per command).
 # Move back to chadac-me once those merge.
 { pkgs }:
 
@@ -15,8 +17,8 @@ let
   src = pkgs.fetchFromGitHub {
     owner = "dscrawford";
     repo = "scooter-mode";
-    rev = "acb48f8d7299b49a1fa5ce4731fcd7527b56aee5";
-    hash = "sha256-jTMSde8P2R0l1Tp1ZVl7vvy5FDEaqs9g+0MIhAfLK60=";
+    rev = "9ce25c29441c87f9de7bb59ef19c019ead2fa247";
+    hash = "sha256-7dYIu/G1a3loiBIugUVFWFpKArVBeulhoZyVbRFADog=";
   };
 in
 {

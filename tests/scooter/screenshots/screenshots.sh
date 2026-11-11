@@ -25,9 +25,11 @@ node=$(build "pkgs.nodejs")
   echo ";; -*- lexical-binding: t -*-"
   nix eval --raw --impure --expr '(import ./shared/emacs/guard.nix { })'
   echo
-  nix eval --raw --impure --expr "(import ./shared/emacs/scooter.nix {
-    pkgs = $pkgs;
-    config.my.scooter.url = \"\";
+  nix eval --raw --impure --expr "let pkgs = $pkgs; in (import ./shared/emacs/scooter.nix {
+    inherit pkgs;
+    config = (pkgs.lib.evalModules {
+      modules = [ ./shared/home/scooter.nix { my.scooter.url = \"\"; } ];
+    }).config;
   })"
 } > "$tmp/scooter.el"
 
