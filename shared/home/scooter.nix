@@ -11,8 +11,20 @@
       example = "https://scooter.example.com";
       description = ''
         Scooter UI origin. Behind oauth2-proxy: scooter-mode reads its
-        session cookie (cookieName) from Firefox and keeps it in
-        auth-source.
+        session cookie (cookieName) from your browser (browser) and keeps
+        it in auth-source.
+      '';
+    };
+    browser = lib.mkOption {
+      type = lib.types.str;
+      default = "any";
+      example = "firefox";
+      description = ''
+        Which browser's session scooter-mode signs in with: "any" reads
+        every browser scooter-mode knows (Firefox, Chromium, Chrome,
+        Brave, LibreWolf) and opens the sign-in page with the default
+        one; a name (firefox, chromium, brave, ...) reads and opens only
+        that browser.
       '';
     };
     cookieName = lib.mkOption {
@@ -22,7 +34,7 @@
       description = ''
         oauth2-proxy's --cookie-name at url (KubeServer
         config/scooter/oauth2-proxy.yaml). scooter-mode looks for this
-        cookie in Firefox and sends it.
+        cookie in your browser (browser) and sends it.
       '';
     };
   };

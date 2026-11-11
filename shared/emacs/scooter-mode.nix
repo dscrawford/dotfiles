@@ -7,7 +7,8 @@
 # plus the open PRs #20-#24: mid-session sign-in, Firefox login, answer
 # delivery, sandbox path links, push race), dscrawford#1 (kanban boards),
 # dscrawford#4 (Firefox cookie without the paste prompt) and dscrawford#5
-# (oauth2-proxy --cookie-name, which scooter.dcraw.net uses).
+# (oauth2-proxy --cookie-name, which scooter.dcraw.net uses; any browser's
+# cookie jar; one sign-in wait per command).
 # Move back to chadac-me once those merge.
 { pkgs }:
 
@@ -16,8 +17,8 @@ let
   src = pkgs.fetchFromGitHub {
     owner = "dscrawford";
     repo = "scooter-mode";
-    rev = "82abb8cb30b1e92b7e4eb7da2a95b31ebe80486c";
-    hash = "sha256-JmrwRW1gLegcmiJ1Vm5WK0P6qnLS+SYewqfimZev7dk=";
+    rev = "4220edf2a47a059a6902240352d46799c7fe4c70";
+    hash = "sha256-AsU4lm5BYFcrPVslRZFnJl/rl7H72If/+kV0YqZ3DUo=";
   };
 in
 {
