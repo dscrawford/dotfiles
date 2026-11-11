@@ -10,9 +10,19 @@
       default = "https://scooter.dcraw.net";
       example = "https://scooter.example.com";
       description = ''
-        Scooter UI origin. Behind oauth2-proxy: scooter-mode reads the
-        `_oauth2_proxy` cookie from Firefox and keeps it
-        in auth-source.
+        Scooter UI origin. Behind oauth2-proxy: scooter-mode reads its
+        session cookie (cookieName) from Firefox and keeps it in
+        auth-source.
+      '';
+    };
+    cookieName = lib.mkOption {
+      type = lib.types.str;
+      default = "__Host-scooter_oauth2";
+      example = "_oauth2_proxy";
+      description = ''
+        oauth2-proxy's --cookie-name at url (KubeServer
+        config/scooter/oauth2-proxy.yaml). scooter-mode looks for this
+        cookie in Firefox and sends it.
       '';
     };
   };

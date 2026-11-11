@@ -11,7 +11,7 @@ function canonical(event) {
   return JSON.stringify(sorted);
 }
 
-export function startFakeScooter({ cookie = "_oauth2_proxy=good", refreshTo } = {}) {
+export function startFakeScooter({ cookie = "__Host-scooter_oauth2=good", refreshTo } = {}) {
   const convs = new Map();
   const requests = [];
   const listStreams = new Set();

@@ -32,7 +32,8 @@ in
     ;; The cookie comes from Firefox (any profile, the default first); it
     ;; never asks to paste it.
     (setq scooter-servers `((,my/scooter-server :url ,my/scooter-url
-                                                :auth (cookie :browser firefox)))
+                                                :auth (cookie :browser firefox
+                                                              :cookie-name ${builtins.toJSON cfg.cookieName})))
           scooter-default-server my/scooter-server))
 
   (defun my/scooter-buffer-p ()
