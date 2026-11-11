@@ -17,8 +17,8 @@ let
   src = pkgs.fetchFromGitHub {
     owner = "dscrawford";
     repo = "scooter-mode";
-    rev = "4220edf2a47a059a6902240352d46799c7fe4c70";
-    hash = "sha256-AsU4lm5BYFcrPVslRZFnJl/rl7H72If/+kV0YqZ3DUo=";
+    rev = "9ce25c29441c87f9de7bb59ef19c019ead2fa247";
+    hash = "sha256-7dYIu/G1a3loiBIugUVFWFpKArVBeulhoZyVbRFADog=";
   };
 in
 {
