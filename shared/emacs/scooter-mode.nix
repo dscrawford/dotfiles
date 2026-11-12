@@ -8,8 +8,10 @@
 # delivery, sandbox path links, push race), dscrawford#1 (kanban boards),
 # dscrawford#4 (Firefox cookie without the paste prompt), dscrawford#5
 # (oauth2-proxy --cookie-name, which scooter.dcraw.net uses; any browser's
-# cookie jar; one sign-in wait per command) and dscrawford#6 (`c` on a
-# board opens an empty conversation instead of asking for a first message).
+# cookie jar; one sign-in wait per command), dscrawford#6 (`c` on a
+# board opens an empty conversation instead of asking for a first message)
+# and dscrawford#7-#9 (folds on the board stay put and bear their marks,
+# boards start folded, card statuses roll up to the stage and board headings).
 # Move back to chadac-me once those merge.
 { pkgs }:
 
@@ -18,8 +20,8 @@ let
   src = pkgs.fetchFromGitHub {
     owner = "dscrawford";
     repo = "scooter-mode";
-    rev = "039a1c25b902bfe0498d57e6c950c27b8e0c9244";
-    hash = "sha256-RLQ1fn4PRyUI4d9NmuiBE/kbr5EeSKKI9ToMUAYUu7Y=";
+    rev = "7e970272c280366fed13f122145941ba2c0270de";
+    hash = "sha256-etQJo7WnhulOvVQ6jqDlN91ruQcoz/C3qv6Q2gWG0I0=";
   };
 in
 {
