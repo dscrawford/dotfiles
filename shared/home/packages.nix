@@ -66,7 +66,11 @@ in
     openssl
     curl
     gcc
-    redis
+    # nixpkgs' darwin postPatch --replace-fail's an SDK path some redis 8.10
+    # Makefiles no longer have; drop once nixpkgs fixes it.
+    (if isDarwin then redis.overrideAttrs (o: {
+      postPatch = builtins.replaceStrings [ "--replace-fail" ] [ "--replace-quiet" ] (o.postPatch or "");
+    }) else redis)
     ripgrep
     fd
     dnsutils
