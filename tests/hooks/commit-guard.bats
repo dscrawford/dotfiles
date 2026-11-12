@@ -23,3 +23,19 @@ denied() { [ "$(jq -r '.hookSpecificOutput.permissionDecision' <<<"$output")" = 
     [ -z "$output" ]
   done
 }
+
+@test "-m subjects are parsed without GNU grep -P (macOS BSD grep)" {
+  shim="$BATS_TEST_TMPDIR/bin"
+  mkdir -p "$shim"
+  real_grep=$(command -v grep)
+  printf '#!/usr/bin/env bash\nfor a; do [[ $a == -*P* && $a != --* ]] && { echo "grep: invalid option -- P" >&2; exit 2; }; done\nexec %s "$@"\n' "$real_grep" >"$shim/grep"
+  chmod +x "$shim/grep"
+  PATH="$shim:$PATH" run guard "git commit -m 'bad message'"
+  echo "out: $output"
+  [ "$status" -eq 0 ]
+  denied
+  PATH="$shim:$PATH" run guard "git commit -am \"fix(hooks): portable -m parsing\""
+  echo "out: $output"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
