@@ -27,6 +27,9 @@
       url = "github:dscrawford/GamesOnTheGo";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # No nixpkgs follows: scooter-local pulls the published images, whose tags
+    # are hashes over scooter's own nixpkgs.
+    scooter.url = "github:dscrawford/scooter";
     everything-claude-code = {
       url = "github:affaan-m/everything-claude-code";
       flake = false;
@@ -37,10 +40,10 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, sops-nix, nix-darwin, darwin-emacs, lsfg-vk-flake, gamesonthego, everything-claude-code, cli-anything }:
+  outputs = { self, nixpkgs, home-manager, sops-nix, nix-darwin, darwin-emacs, lsfg-vk-flake, gamesonthego, scooter, everything-claude-code, cli-anything }:
   let
     builders = import ./lib {
-      inherit nixpkgs home-manager sops-nix nix-darwin darwin-emacs
+      inherit nixpkgs home-manager sops-nix nix-darwin darwin-emacs scooter
         everything-claude-code cli-anything;
     };
     inherit (builders) mkServer mkLocal mkDarwin;
@@ -76,6 +79,7 @@
         username = "daniel";
         homeModules = [
           ./shared/home ./shared/sway ./shared/gaming.nix ./shared/easyeffects.nix
+          { my.scooter.local.enable = true; }
           # Ollama daemon itself comes from shared/home/ollama.nix; only the
           # GPU package choice is desktop-specific.
           ({ pkgs, ... }: { services.ollama.package = pkgs.ollama-cuda; })

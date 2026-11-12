@@ -1,10 +1,12 @@
 # shared/home/scooter.nix
 # The Scooter server scooter-mode (wired in emacs/scooter.nix) talks to.
 # Set url to "" to keep Scooter out of Emacs and the agent picker.
-{ lib, ... }:
+# local.enable adds scooter-local, which runs one on this machine.
+{ config, lib, pkgs, scooter, ... }:
 
 {
   options.my.scooter = {
+    local.enable = lib.mkEnableOption "scooter-local: Scooter in a k3d cluster on this machine (needs Docker)";
     url = lib.mkOption {
       type = lib.types.str;
       default = "https://scooter.dcraw.net";
@@ -37,5 +39,19 @@
         cookie in your browser (browser) and sends it.
       '';
     };
+  };
+
+  # The fork's images: its CI publishes every tag its main renders to its own
+  # ghcr, while the default prefix (chadac-me) lacks the ones the fork changed.
+  config = lib.mkIf config.my.scooter.local.enable {
+    home.packages = [
+      (scooter.lib.mkLocal {
+        system = pkgs.stdenv.hostPlatform.system;
+        module.scooter = {
+          registryPrefix = "ghcr.io/dscrawford/scooter/";
+          local.provider = "claude-code";
+        };
+      })
+    ];
   };
 }

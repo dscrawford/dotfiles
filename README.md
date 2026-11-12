@@ -90,6 +90,11 @@ runs in the cluster, in the conversation's sandbox.
 
 `SCOOTER_URL` in the environment overrides it.
 
+`my.scooter.local.enable = true` (on for `local`) adds `scooter-local`, which runs Scooter
+itself in a k3d cluster on this machine from the dscrawford fork's published images:
+`scooter-local up` (asks for a `claude setup-token` token once), then http://localhost:8080.
+Needs Docker and pulls about 1.3 GB of images on the first run.
+
 | Key | Does |
 |---|---|
 | `C-c j` | open Scooter: pick a conversation or start a new one |

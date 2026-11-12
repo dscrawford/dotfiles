@@ -1,4 +1,4 @@
-{ nixpkgs, home-manager, sops-nix, lib, claudeSkills, ... }:
+{ nixpkgs, home-manager, sops-nix, lib, claudeSkills, scooter, ... }:
 { hostname, username, system ? "x86_64-linux", gitUser ? null, enableSecrets ? true, homeModules ? [ ../shared/home ], extraModules ? [] }: nixpkgs.lib.nixosSystem {
   inherit system;
   specialArgs = {
@@ -19,7 +19,7 @@
       home-manager.users.${username} = {
         imports = homeModules;
       };
-      home-manager.extraSpecialArgs = { inherit hostname username gitUser enableSecrets claudeSkills; };
+      home-manager.extraSpecialArgs = { inherit hostname username gitUser enableSecrets claudeSkills scooter; };
       home-manager.sharedModules = lib.optionals enableSecrets [
         sops-nix.homeManagerModules.sops
       ];

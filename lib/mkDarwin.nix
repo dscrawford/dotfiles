@@ -1,4 +1,4 @@
-{ home-manager, sops-nix, nix-darwin, darwin-emacs, lib, claudeSkills, ... }:
+{ home-manager, sops-nix, nix-darwin, darwin-emacs, lib, claudeSkills, scooter, ... }:
 { hostname, username, system, gitUser ? null, enableSecrets ? false, homeModules ? [ ../shared/home ], extraModules ? [] }: nix-darwin.lib.darwinSystem {
   inherit system;
   specialArgs = {
@@ -36,7 +36,7 @@
       home-manager.users.${username} = {
         imports = homeModules;
       };
-      home-manager.extraSpecialArgs = { inherit hostname username gitUser enableSecrets claudeSkills; };
+      home-manager.extraSpecialArgs = { inherit hostname username gitUser enableSecrets claudeSkills scooter; };
       home-manager.sharedModules = lib.optionals enableSecrets [
         sops-nix.homeManagerModules.sops
       ];
