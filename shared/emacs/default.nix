@@ -45,7 +45,14 @@ in
 {
   programs.emacs = {
     enable = true;
-    package = if isDarwin then pkgs.emacs-unstable else pkgs.emacs-pgtk;
+    # darwin-emacs dropped emacs-unstable. nixpkgs' CVE backport patches are
+    # already in emacs-31 and fail to apply; drop the filter once nixpkgs stops
+    # applying them.
+    package = if isDarwin
+      then pkgs.emacs-31.overrideAttrs (old: {
+        patches = lib.filter (p: !lib.hasInfix "-CVE-" (baseNameOf (toString p))) (old.patches or [ ]);
+      })
+      else pkgs.emacs-pgtk;
     # elpa.gnu.org regenerated org-9.8.6.tar in place, so the hash pinned in
     # nixpkgs no longer matches; drop this once nixpkgs catches up.
     overrides = final: prev: {

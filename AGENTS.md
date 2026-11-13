@@ -115,7 +115,7 @@ adds `shared/sway`, `gaming.nix`, `easyeffects.nix` as Home Manager modules.
 System and Home Manager config are separate layers: `hosts/local/` holds NVIDIA,
 PipeWire, greetd, Steam, portals; `shared/sway/` holds user-level Sway.
 
-Emacs is `emacs-pgtk` on Linux, `emacs-30` (darwin-emacs) on macOS. One server per tmux
+Emacs is `emacs-pgtk` on Linux, `emacs-31` (darwin-emacs) on macOS. One server per tmux
 pane (socket `emacs-$TMUX_PANE`), so init cost is paid per pane: an eager `require` of
 a heavy package costs more here than usual.
 
