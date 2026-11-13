@@ -17,7 +17,8 @@ if grep -q '<<' <<<"$cmd"; then
   subject=$(head -1 <<<"$body")
   lines=$(grep -c '' <<<"$body")
 else
-  subject=$(grep -oP -- "(^|\s)-[a-zA-Z]*m ['\"]\K[^'\"]*" <<<"$cmd" | head -1)
+  msg_re="(^|[[:space:]])-[a-zA-Z]*m ['\"]([^'\"]*)"
+  [[ $cmd =~ $msg_re ]] && subject=${BASH_REMATCH[2]}
   lines=1
 fi
 [ -z "$subject" ] && exit 0
