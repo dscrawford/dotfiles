@@ -21,6 +21,21 @@ between boots and hot-swaps. HGST serials and WWNs:
 | JEGGZT5X | `wwn-0x5000cca267c6d0bd` | md1 |
 | JEGG8TWN | `wwn-0x5000cca267c67e3d` | DOA 2026-11-10: no link on two controllers; RMA |
 
+WD serials and WWNs (former `md0`):
+
+| Serial | WWN |
+|--------|-----|
+| 1EG191TZ | `wwn-0x5000cca27ec0965f` |
+| 1EG11K9Z | `wwn-0x5000cca27ec07a38` |
+| JEKY7J2Z | `wwn-0x5000cca267f7917f` |
+| 1EG20UXZ | `wwn-0x5000cca27ec0ebe1` |
+| JEKY6SMZ | `wwn-0x5000cca267f78ea8` |
+| 1EG1MM9Z | `wwn-0x5000cca27ec0be08` |
+
+Partition every member identically (`sfdisk` GPT, one partition from sector
+2048): the old `md0` partitions started at 32760 and were 23 MiB too small for
+`md1`'s component size.
+
 Why xfs: a Longhorn replica is one sparse file per snapshot, sized to the
 volume, and ext4 caps a file at 16 TiB. `jellyfin-data` hit that cap on `md0`.
 Longhorn also needs FIEMAP on the disk filesystem, which rules out ZFS

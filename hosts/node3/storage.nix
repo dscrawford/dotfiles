@@ -1,7 +1,7 @@
 # hosts/node3/storage.nix
-# mdadm RAID6 arrays backing Longhorn disks. Array creation, UUID discovery
-# and the md0 -> md1 migration: docs/node3-storage.md. md1 is xfs because
-# ext4's 16 TiB file limit caps a Longhorn replica, hence a volume.
+# mdadm RAID6 array backing Longhorn disk "data". Creation and growth:
+# docs/node3-storage.md. xfs because ext4's 16 TiB file limit caps a Longhorn
+# replica, hence a volume.
 #
 # The SAS drives enumerate ~8s after local-fs.target, udev's incremental
 # assembly does not pick them up, and with `nofail` the node used to boot
@@ -15,13 +15,6 @@
 
 let
   arrays = {
-    storage = {
-      device = "/dev/md0";
-      arrayUUID = "fe7545fb:b91b0af5:912acc2a:4e6cc046";
-      mountPoint = "/mnt/storage";
-      fsUUID = "abef8108-3220-4ba6-9d75-753671a4a021";
-      fsType = "ext4";
-    };
     data = {
       device = "/dev/md1";
       arrayUUID = "5867dae4:814c13ca:74515fd7:5cf25f31";
