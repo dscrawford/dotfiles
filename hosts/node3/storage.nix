@@ -41,6 +41,10 @@ in
     kernelModules = [ "md_mod" "raid456" ];
   };
 
+  services.udev.extraRules = ''
+    SUBSYSTEM=="block", KERNEL=="md*", ACTION=="add|change", TEST=="md/stripe_cache_size", ATTR{md/stripe_cache_size}="16384", ATTR{md/sync_speed_min}="80000"
+  '';
+
   systemd.services = lib.mapAttrs' (name: a: lib.nameValuePair "mdadm-assemble-${name}" {
     description = "Assemble ${a.device} for ${a.mountPoint}";
     wantedBy = [ "multi-user.target" ];
