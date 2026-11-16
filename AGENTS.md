@@ -109,7 +109,10 @@ secrets/      git submodule (dotfiles-secrets), sops-encrypted
 `node1`–`node3` use `kubeNode` in `flake.nix`, which adds `kubernetes.nix`,
 `kube-*.nix`, `iscsi.nix` and the host's hardware/boot files. `kubernetes.nix` registers
 `crun` as a second containerd runtime for the KubeServer repo's `RuntimeClass crun`
-(Scooter sandboxes): deploy the nodes before pushing a manifest that uses it. `local`
+(Scooter sandboxes): deploy the nodes before pushing a manifest that uses it.
+`kube-secrets.nix` (master only) applies the Kubernetes Secrets listed in its
+`kubeSecrets` from `secrets/kube.yaml` (encrypted to the admin key and node1), so
+KubeServer references them without committing values. `local`
 adds `shared/sway`, `gaming.nix`, `easyeffects.nix` as Home Manager modules.
 
 System and Home Manager config are separate layers: `hosts/local/` holds NVIDIA,

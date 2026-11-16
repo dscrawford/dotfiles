@@ -55,6 +55,7 @@
         ./shared/kubernetes.nix
         ./shared/kube-cert-renew.nix
         ./shared/kube-stale-mount-recovery.nix
+        ./shared/kube-secrets.nix
         ./shared/iscsi.nix
       ] ++ extraModules;
     };
