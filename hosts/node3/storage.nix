@@ -42,7 +42,7 @@ in
   };
 
   services.udev.extraRules = ''
-    SUBSYSTEM=="block", KERNEL=="md*", ACTION=="add|change", TEST=="md/stripe_cache_size", ATTR{md/stripe_cache_size}="16384", ATTR{md/sync_speed_min}="80000"
+    SUBSYSTEM=="block", KERNEL=="md*", ACTION=="add|change", TEST=="md/stripe_cache_size", ATTR{md/stripe_cache_size}="16384"
   '';
 
   systemd.services = lib.mapAttrs' (name: a: lib.nameValuePair "mdadm-assemble-${name}" {
