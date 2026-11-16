@@ -72,7 +72,7 @@
         hostname = "node3";
         ip = "192.168.0.6";
         netInterface = "enp5s0";
-        extraModules = [ ./hosts/node3/nvidia.nix ./hosts/node3/storage.nix ];
+        extraModules = [ ./hosts/node3/nvidia.nix ./hosts/node3/storage.nix ./hosts/node3/md-resync-schedule.nix ];
       };
       local = mkLocal {
         hostname = "nixos";
