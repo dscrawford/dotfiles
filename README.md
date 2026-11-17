@@ -106,6 +106,9 @@ Needs Docker and pulls about 1.3 GB of images on the first run.
 | `C-c C-f` / `C-c C-j` | in a Scooter shell: open a sandbox file / dired on its `/workspace` (TRAMP) |
 | `RET` on a `/workspace/...` path | opens it in the sandbox at that line (`:42`, `:42:5`, `#L42`) |
 
+How kanban cards reach the model on the server (hooks, board skills, the cold-sandbox
+override) is in [docs/scooter-kanban.md](docs/scooter-kanban.md).
+
 scooter-mode signs in through Firefox (`:auth (cookie :browser firefox)`): it reads the
 `_oauth2_proxy` cookie from the default Firefox profile and checks it against the server.
 If Firefox isn't signed in, it opens the sign-in page there and waits; with no Firefox
