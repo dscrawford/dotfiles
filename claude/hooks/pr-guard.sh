@@ -2,6 +2,7 @@
 # PreToolUse guard: deny PR bodies that tell instead of show — over 100
 # words of prose, or no code block, CLI demo, or screenshot.
 set -euo pipefail
+. "$(dirname "${BASH_SOURCE[0]}")/lib/commands.sh"
 
 MAX_WORDS=100
 
@@ -9,17 +10,21 @@ input=$(</dev/stdin)
 [[ $input == *"gh pr"* ]] || exit 0
 cmd=$(jq -r '.tool_input.command // empty' <<<"$input")
 
-case "$cmd" in
-*"gh pr create"* | *"gh pr edit"*) ;;
-*) exit 0 ;;
-esac
+pr_re='^gh[[:space:]]+pr[[:space:]]+(create|edit)([[:space:]]|$)'
+pr=""
+while IFS= read -r -d $'\036' unit; do
+  pr=$(command_words "$unit")
+  [[ $pr =~ $pr_re ]] && break
+  pr=""
+done < <(bash_commands "$cmd")
+[ -z "$pr" ] && exit 0
 
 body=""
-if grep -q '<<' <<<"$cmd"; then
-  body=$(sed -n "/<<[-']*EOF/,/^EOF/p" <<<"$cmd" | sed '1d;$d')
-elif [[ "$cmd" =~ (--body|-b)[=\ ]+\"([^\"]*)\" ]] || [[ "$cmd" =~ (--body|-b)[=\ ]+\'([^\']*)\' ]]; then
+if [[ ${pr%%$'\n'*} == *'<<'* ]]; then
+  body=$(heredoc_body "$pr") || true
+elif [[ "$pr" =~ (--body|-b)[=\ ]+\"([^\"]*)\" ]] || [[ "$pr" =~ (--body|-b)[=\ ]+\'([^\']*)\' ]]; then
   body=${BASH_REMATCH[2]}
-elif [[ "$cmd" =~ (--body-file|-F)[=\ ]+([^\ ]+) ]] && [ -f "${BASH_REMATCH[2]}" ]; then
+elif [[ "$pr" =~ (--body-file|-F)[=\ ]+([^\ ]+) ]] && [ -f "${BASH_REMATCH[2]}" ]; then
   body=$(cat "${BASH_REMATCH[2]}")
 fi
 [ -z "$body" ] && exit 0

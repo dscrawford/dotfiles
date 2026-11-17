@@ -46,6 +46,7 @@ in
     "agents/comment-scout.md"
     "hooks/comment-density.sh"
     "hooks/prompt-router.sh"
+    "hooks/lib/commands.sh"
     "hooks/commit-guard.sh"
     "hooks/pr-guard.sh"
     "hooks/session-guard.sh"

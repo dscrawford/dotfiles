@@ -39,3 +39,45 @@ denied() { [ "$(jq -r '.hookSpecificOutput.permissionDecision' <<<"$output")" = 
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
+
+@test "only the commit's own heredoc is read as its message" {
+  run guard "python3 - <<'EOF'
+$(seq 12)
+EOF
+git commit -m \"\$(cat <<'EOF'
+fix(hooks): read the commit's own heredoc
+EOF
+)\""
+  echo "out: $output"
+  [ -z "$output" ]
+  run guard "python3 - <<'PY'
+print('edit')
+PY
+git commit -m 'fix(hooks): ok'"
+  echo "out: $output"
+  [ -z "$output" ]
+}
+
+@test "heredoc messages with any delimiter are checked" {
+  run guard "git commit -m \"\$(cat <<'MSG'
+bad subject
+MSG
+)\""
+  echo "out: $output"
+  denied
+}
+
+@test "every commit in a command is checked, but not heredoc text" {
+  run guard "git commit -m 'fix(x): ok' && cd /r && git commit -m 'bad'"
+  echo "out: $output"
+  denied
+  run guard "cat > f <<'EOF'
+git commit -m 'bad'
+EOF"
+  [ -z "$output" ]
+}
+
+@test "deny reason says staged files stay staged" {
+  run guard "git add -A && git commit -m 'bad'"
+  [[ $(jq -r '.hookSpecificOutput.permissionDecisionReason' <<<"$output") == *"git status"* ]]
+}
