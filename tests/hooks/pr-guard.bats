@@ -78,3 +78,24 @@ $demo
   run guard "gh pr create --fill"
   [ -z "$output" ]
 }
+
+@test "gh pr create inside a commit message is not a PR" {
+  run guard "git commit -m 'docs: explain gh pr create --repo'"
+  [ -z "$output" ]
+  run guard "git commit -m \"\$(cat <<'EOF'
+docs: note
+gh pr create needs --repo.
+EOF
+)\""
+  echo "out: $output"
+  [ -z "$output" ]
+}
+
+@test "PR heredoc is found after other commands and heredocs" {
+  run guard "git commit -m 'docs: x' && git push && gh pr create --title t --body \"\$(cat <<'BODY'
+$(words 150)
+BODY
+)\""
+  echo "out: $output"
+  denied
+}
