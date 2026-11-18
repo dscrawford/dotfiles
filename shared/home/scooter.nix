@@ -125,12 +125,9 @@ in
         module = {
           scooter = {
             registryPrefix = "ghcr.io/dscrawford/scooter/";
-            # optionalAttrs, not mkIf: a scooter without secretFiles must still evaluate.
             local = { provider = "claude-code"; } // lib.optionalAttrs gh.enable {
-              secretFiles.github = lib.filterAttrs (_: f: f != null) {
-                private-key = gh.privateKeyFile;
-                token = gh.tokenFile;
-              };
+              credentials.github = lib.mapAttrs (_: file: { inherit file; })
+                (lib.filterAttrs (_: f: f != null) { private-key = gh.privateKeyFile; token = gh.tokenFile; });
             };
           };
           contribs = lib.optionalAttrs gh.enable {
