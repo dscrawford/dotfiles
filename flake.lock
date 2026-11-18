@@ -491,11 +491,11 @@
         "uv-nix": "uv-nix"
       },
       "locked": {
-        "lastModified": 1794665703,
-        "narHash": "sha256-QCYMJlwZJgnhEvsOm88AglejjOivT38RRjnmfPc43oE=",
+        "lastModified": 1794977290,
+        "narHash": "sha256-TiAZgMEpiUat4pcvmhyYrz/TjoFjaGW5HGYS+TlEJYs=",
         "owner": "dscrawford",
         "repo": "scooter",
-        "rev": "2d0479acad9bf9ab1e251786866887e4624e44aa",
+        "rev": "c8ffa3d4424682f23ed21704e56a22594d935fe6",
         "type": "github"
       },
       "original": {
