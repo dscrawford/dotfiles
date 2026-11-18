@@ -79,7 +79,7 @@
         username = "daniel";
         homeModules = [
           ./shared/home ./shared/sway ./shared/gaming.nix ./shared/easyeffects.nix
-          { my.scooter.local = { enable = true; github.enable = true; }; }
+          { my.scooter.local.enable = true; }
           # Ollama daemon itself comes from shared/home/ollama.nix; only the
           # GPU package choice is desktop-specific.
           ({ pkgs, ... }: { services.ollama.package = pkgs.ollama-cuda; })
