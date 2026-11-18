@@ -47,7 +47,7 @@ in
     };
   };
 
-  config = lib.mkIf cfg.local.enable (lib.mkMerge [
+  config = lib.mkIf cfg.local.enable (lib.mkMerge ([
     {
       assertions = [{
         assertion = cfg.local.github.enable -> enableSecrets;
@@ -80,6 +80,8 @@ in
         })
       ];
     }
+  ] ++ lib.optionals enableSecrets [
+    # optionals, not mkIf: without enableSecrets the sops options don't exist.
     (lib.mkIf cfg.local.github.enable {
       # Read from the submodule checkout at activation, not copied into the store.
       sops = {
@@ -91,5 +93,5 @@ in
         };
       };
     })
-  ]);
+  ]));
 }
