@@ -27,14 +27,10 @@ in
           owner = "containers";
           repo = "crun";
           tag = "1.31";
-          hash = "sha256-2HJBv5Rsq1+Q7OMB5U8yDm06TdqP+ZGx+pQp7O83Wno=";
+          hash = "sha256-+XBbbD1bHx+ewgQ2dUzmlBjgGZhCscaW/u84MCcmfoY=";
           fetchSubmodules = true;
-          leaveDotGit = true;
-          postFetch = ''
-            cd $out
-            git rev-parse HEAD > COMMIT
-            rm -rf .git
-          '';
+          # nixpkgs' postPatch reads COMMIT for `crun --version`.
+          postFetch = "echo a84965e1278d08d6c75d5b8a41a3e72a7a11fa5b > $out/COMMIT";
         };
       });
     })
