@@ -53,6 +53,32 @@
     };
   };
 
+  # nvidia-ctk mounts each driver .so at its store path, and the module also
+  # mounts the whole driver package there, so the file mounts sit on top of the
+  # directory mount. In a hostUsers: false pod crun builds that directory mount
+  # as an idmapped clone that still shares propagation with the host's
+  # /nix/store, so every file mount stacked on it lands on node3 too, and the
+  # next GPU pod fails with `mount_setattr ... Operation not permitted`. The
+  # directory already provides those files at the same paths, so drop them.
+  systemd.services.nvidia-container-toolkit-cdi-generator.serviceConfig.ExecStartPost =
+    let
+      filter = pkgs.writeText "cdi-drop-nested-mounts.jq" ''
+        if .containerEdits.mounts then
+          [.containerEdits.mounts[] | select(.hostPath == .containerPath) | .containerPath] as $dirs
+          | .containerEdits.mounts |= map(select(
+              . as $x
+              | ($x.hostPath == $x.containerPath)
+                and any($dirs[]; . as $d | $x.containerPath | startswith($d + "/"))
+              | not))
+        else . end
+      '';
+    in
+    pkgs.writeShellScript "cdi-drop-nested-mounts" ''
+      spec="$RUNTIME_DIRECTORY/nvidia-container-toolkit.json"
+      ${lib.getExe pkgs.jq} -f ${filter} "$spec" > "$spec.tmp"
+      mv "$spec.tmp" "$spec"
+    '';
+
   virtualisation.docker.enable = true;
 
   # So kubelet can schedule GPU pods.
