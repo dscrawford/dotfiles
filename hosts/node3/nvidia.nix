@@ -53,13 +53,10 @@
     };
   };
 
-  # nvidia-ctk mounts each driver .so at its store path, and the module also
-  # mounts the whole driver package there, so the file mounts sit on top of the
-  # directory mount. In a hostUsers: false pod crun builds that directory mount
-  # as an idmapped clone that still shares propagation with the host's
-  # /nix/store, so every file mount stacked on it lands on node3 too, and the
-  # next GPU pod fails with `mount_setattr ... Operation not permitted`. The
-  # directory already provides those files at the same paths, so drop them.
+  # The driver .so mounts sit on top of the driver package mount at the same
+  # paths. Under hostUsers: false, crun leaks those stacked mounts onto the
+  # host /nix/store, breaking the next GPU pod. The package mount already has
+  # the files, so drop them.
   systemd.services.nvidia-container-toolkit-cdi-generator.serviceConfig.ExecStartPost =
     let
       filter = pkgs.writeText "cdi-drop-nested-mounts.jq" ''
