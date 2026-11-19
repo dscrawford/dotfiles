@@ -17,6 +17,22 @@ in
           hash = "sha256-lYn9qDmUn8g3nnD4wQqyzKjd/lPXqoER5nZuY0sVK0s=";
         };
       });
+      # crun 1.30.1 leaves the idmapped CDI driver-file mounts of hostUsers: false GPU
+      # pods on node3's /nix/store, so the next one fails with `mount_setattr ...
+      # Operation not permitted`. 1.31 reworks bind-mount setup; drop this once the
+      # pinned nixpkgs has it.
+      crun = prev.crun.overrideAttrs (old: {
+        version = "1.31";
+        src = prev.fetchFromGitHub {
+          owner = "containers";
+          repo = "crun";
+          tag = "1.31";
+          hash = "sha256-+XBbbD1bHx+ewgQ2dUzmlBjgGZhCscaW/u84MCcmfoY=";
+          fetchSubmodules = true;
+          # nixpkgs' postPatch reads COMMIT for `crun --version`.
+          postFetch = "echo a84965e1278d08d6c75d5b8a41a3e72a7a11fa5b > $out/COMMIT";
+        };
+      });
     })
   ];
 
