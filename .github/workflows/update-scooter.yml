@@ -1,0 +1,51 @@
+name: update-scooter
+
+# Bumps the scooter input to the fork's main once its images are on ghcr, so
+# scooter-local runs the current hooks and skills. Opens or updates a PR.
+on:
+  schedule:
+    - cron: "0 9 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Find fork main's rev, if its images are published
+        id: rev
+        run: |
+          head=$(gh api repos/dscrawford/scooter/commits/main --jq .sha)
+          locked=$(jq -r .nodes.scooter.locked.rev flake.lock)
+          published=$(gh run list -R dscrawford/scooter -w publish-images.yml -c "$head" \
+            -s success -L 1 --json headSha --jq '.[0].headSha // ""')
+          echo "head=$head locked=$locked published=$published"
+          if [ "$head" != "$locked" ] && [ "$published" = "$head" ]; then
+            echo "rev=$head" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Update the lock
+        if: steps.rev.outputs.rev != ''
+        run: |
+          nix flake update scooter
+          # main moved since the check: its images may not be out yet.
+          test "$(jq -r .nodes.scooter.locked.rev flake.lock)" = "${{ steps.rev.outputs.rev }}"
+      - name: Evaluate the home that holds scooter-local
+        if: steps.rev.outputs.rev != ''
+        # The system needs secrets/tailscale.yaml, which isn't in git.
+        run: nix eval --raw '.#nixosConfigurations.local.config.home-manager.users.daniel.home.path.drvPath'
+      - uses: peter-evans/create-pull-request@v7
+        if: steps.rev.outputs.rev != ''
+        with:
+          branch: update-scooter
+          commit-message: "chore(flake): bump scooter to ${{ steps.rev.outputs.rev }}"
+          title: "chore(flake): bump scooter"
+          body: |
+            Bumps `scooter` to dscrawford/scooter@${{ steps.rev.outputs.rev }}, whose images are published. The scooter-local home evaluates.
