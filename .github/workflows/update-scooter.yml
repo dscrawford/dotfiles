@@ -37,9 +37,10 @@ jobs:
           nix flake update scooter
           # main moved since the check: its images may not be out yet.
           test "$(jq -r .nodes.scooter.locked.rev flake.lock)" = "${{ steps.rev.outputs.rev }}"
-      - name: Evaluate the scooter-local host
+      - name: Evaluate the home that holds scooter-local
         if: steps.rev.outputs.rev != ''
-        run: nix eval --raw '.#nixosConfigurations.local.config.system.build.toplevel.drvPath'
+        # The system needs secrets/tailscale.yaml, which isn't in git.
+        run: nix eval --raw '.#nixosConfigurations.local.config.home-manager.users.daniel.home.path.drvPath'
       - uses: peter-evans/create-pull-request@v7
         if: steps.rev.outputs.rev != ''
         with:
@@ -47,4 +48,4 @@ jobs:
           commit-message: "chore(flake): bump scooter to ${{ steps.rev.outputs.rev }}"
           title: "chore(flake): bump scooter"
           body: |
-            Bumps `scooter` to dscrawford/scooter@${{ steps.rev.outputs.rev }}, whose images are published. `nixosConfigurations.local` evaluates.
+            Bumps `scooter` to dscrawford/scooter@${{ steps.rev.outputs.rev }}, whose images are published. The scooter-local home evaluates.
