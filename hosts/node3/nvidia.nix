@@ -53,6 +53,29 @@
     };
   };
 
+  # The driver .so mounts sit on top of the driver package mount at the same
+  # paths. Under hostUsers: false, crun leaks those stacked mounts onto the
+  # host /nix/store, breaking the next GPU pod. The package mount already has
+  # the files, so drop them.
+  systemd.services.nvidia-container-toolkit-cdi-generator.serviceConfig.ExecStartPost =
+    let
+      filter = pkgs.writeText "cdi-drop-nested-mounts.jq" ''
+        if .containerEdits.mounts then
+          [.containerEdits.mounts[] | select(.hostPath == .containerPath) | .containerPath] as $dirs
+          | .containerEdits.mounts |= map(select(
+              . as $x
+              | ($x.hostPath == $x.containerPath)
+                and any($dirs[]; . as $d | $x.containerPath | startswith($d + "/"))
+              | not))
+        else . end
+      '';
+    in
+    pkgs.writeShellScript "cdi-drop-nested-mounts" ''
+      spec="$RUNTIME_DIRECTORY/nvidia-container-toolkit.json"
+      ${lib.getExe pkgs.jq} -f ${filter} "$spec" > "$spec.tmp"
+      mv "$spec.tmp" "$spec"
+    '';
+
   virtualisation.docker.enable = true;
 
   # So kubelet can schedule GPU pods.
